@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Normalize Web Data Test</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            font-size: 22px;
+        }
+
+        button {
+            padding: 14px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background: #111;
+            color: white;
+        }
+
+        pre {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Normalize Web Data Test</h1>
+
+    <p>
+        This page sends sample web-data to
+        <strong>/api/normalize-web</strong>.
+    </p>
+
+    <button onclick="testNormalize()">
+        Test Normalize Endpoint
+    </button>
+
+    <pre id="result">Waiting for test...</pre>
+
+    <script>
+        async function testNormalize() {
+
+            const resultBox =
+                document.getElementById("result");
+
+            resultBox.textContent =
+                "Testing...";
+
+            const sampleWebData = {
+
+                searches: [
+
+                    {
+                        type: "form",
+
+                        results: [
+                            {
+                                title:
+                                    "Concepcion recent form",
+
+                                snippet:
+                                    "Concepcion recent matches and results.",
+
+                                link:
+                                    "https://example.com/concepcion-form"
+                            }
+                        ]
+                    },
+
+                    {
+                        type: "h2h",
+
+                        results: [
+                            {
+                                title:
+                                    "Concepcion vs O'Higgins H2H",
+
+                                snippet:
+                                    "Historical head-to-head results between Concepcion and O'Higgins.",
+
+                                link:
+                                    "https://example.com/h2h"
+                            }
+                        ]
+                    },
+
+                    {
+                        type: "stats",
+
+                        results: [
+                            {
+                                title:
+                                    "Concepcion vs O'Higgins statistics",
+
+                                snippet:
+                                    "Match statistics and team information.",
+
+                                link:
+                                    "https://example.com/stats"
+                            }
+                        ]
+                    },
+
+                    {
+                        type: "injuries",
+
+                        results: [
+                            {
+                                title:
+                                    "Concepcion vs O'Higgins injuries",
+
+                                snippet:
+                                    "Latest injury and suspension information.",
+
+                                link:
+                                    "https://example.com/injuries"
+                            }
+                        ]
+                    },
+
+                    {
+                        type: "lineups",
+
+                        results: [
+                            {
+                                title:
+                                    "Concepcion vs O'Higgins lineups",
+
+                                snippet:
+                                    "Expected lineups and team news.",
+
+                                link:
+                                    "https://example.com/lineups"
+                            }
+                        ]
+                    },
+
+                    {
+                        type: "odds",
+
+                        results: [
+                            {
+                                title:
+                                    "Concepcion vs O'Higgins odds",
+
+                                snippet:
+                                    "Latest match betting odds.",
+
+                                link:
+                                    "https://example.com/odds"
+                            }
+                        ]
+                    }
+
+                ]
+
+            };
+
+            try {
+
+                const response =
+                    await fetch("/api/normalize-web", {
+
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            home: "Concepcion",
+
+                            away: "O'Higgins",
+
+                            date: "2026-09-30",
+
+                            webData:
+                                sampleWebData
+
+                        })
+
+                    });
+
+                const data =
+                    await response.json();
+
+                resultBox.textContent =
+                    JSON.stringify(
+                        data,
+                        null,
+                        2
+                    );
+
+            } catch (error) {
+
+                resultBox.textContent =
+                    "ERROR:\n\n" +
+                    error.message;
+
+            }
+
+        }
+    </script>
+
+</body>
+</html>
