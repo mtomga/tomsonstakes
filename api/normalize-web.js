@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     }
 
     const body = req.body || {};
-
+console.log("NORMALIZE V3.3 BODY:", JSON.stringify(body));
     const match =
       body.match ||
       body.data?.match ||
