@@ -2124,3 +2124,27 @@ function removeDuplicates(
         }
     );
 }
+function uniqueDates(dates) {
+
+    const seen = new Set();
+
+    const output = [];
+
+    for (const date of dates) {
+
+        if (!(date instanceof Date)) {
+            continue;
+        }
+
+        const key = date.getTime();
+
+        if (!seen.has(key)) {
+
+            seen.add(key);
+
+            output.push(date);
+        }
+    }
+
+    return output;
+}
