@@ -205,26 +205,19 @@ export default async function handler(req, res) {
             const source = cleanText(text);
 
             const patterns = [
-                /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g,
+            const patterns = [
+    /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g,
 
-                /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,\s*
-                (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+
-                (\d{1,2}),\s*(\d{4})\b/gi,
+    /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2}),\s*(\d{4})\b/gi,
 
-                /\b(January|February|March|April|May|June|July|August|September|October|November|December)
-                \s+(\d{1,2}),\s*(\d{4})\b/gi,
+    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s*(\d{4})\b/gi,
 
-                /\b(\d{1,2})\s+
-                (January|February|March|April|May|June|July|August|September|October|November|December)
-                \s+(\d{4})\b/gi,
+    /\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/gi,
 
-                /\b(\d{1,2})\s+
-                (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)
-                \s+(\d{4})\b/gi,
+    /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})\b/gi,
 
-                /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g
-            ];
-
+    /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g
+];
             const months = {
                 jan: 1,
                 january: 1,
@@ -1503,12 +1496,14 @@ export default async function handler(req, res) {
         });
 
     } catch (error) {
-        console.error(error);
+    console.error("normalize-web ERROR:", error);
 
-        return res.status(500).json({
-            success: false,
-            error: "Web data normalization failed.",
-            details: error.message
-        });
-    }
+    return res.status(500).json({
+        success: false,
+        error: "Web data normalization failed.",
+        details: error?.message || String(error),
+        stack: process.env.NODE_ENV === "development"
+            ? error?.stack
+            : undefined
+    });
 }
