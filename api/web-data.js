@@ -1,185 +1,583 @@
 export default async function handler(req, res) {
     try {
-        const { home, away, date } = req.query;
 
-        if (!home || !away || !date) {
+        const {
+            home,
+            homeIdentity,
+            away,
+            awayIdentity,
+            date
+        } = req.query;
+
+
+        /*
+        ============================================================
+        VALIDATION
+        ============================================================
+        */
+
+        if (
+            !home ||
+            !homeIdentity ||
+            !away ||
+            !awayIdentity ||
+            !date
+        ) {
+
             return res.status(400).json({
-                error: "home, away and date are required."
+
+                error:
+                    "home, homeIdentity, away, awayIdentity and date are required."
+
             });
+
         }
 
-        const apiKey = process.env.SERPER_API_KEY;
+
+        /*
+        ============================================================
+        VALID IDENTITY KEYS
+        ============================================================
+        */
+
+        const validIdentities = [
+
+            "DEPORTES_CONCEPCION",
+
+            "UNIVERSIDAD_DE_CONCEPCION",
+
+            "OHIGGINS"
+
+        ];
+
+
+        if (!validIdentities.includes(homeIdentity)) {
+
+            return res.status(400).json({
+
+                error:
+                    "Invalid homeIdentity.",
+
+                received:
+                    homeIdentity,
+
+                allowed:
+                    validIdentities
+
+            });
+
+        }
+
+
+        if (!validIdentities.includes(awayIdentity)) {
+
+            return res.status(400).json({
+
+                error:
+                    "Invalid awayIdentity.",
+
+                received:
+                    awayIdentity,
+
+                allowed:
+                    validIdentities
+
+            });
+
+        }
+
+
+        /*
+        ============================================================
+        PREVENT SAME-TEAM MATCH
+        ============================================================
+        */
+
+        if (homeIdentity === awayIdentity) {
+
+            return res.status(400).json({
+
+                error:
+                    "Home and away teams cannot have the same identity.",
+
+                identity:
+                    homeIdentity
+
+            });
+
+        }
+
+
+        /*
+        ============================================================
+        API KEY
+        ============================================================
+        */
+
+        const apiKey =
+            process.env.SERPER_API_KEY;
+
 
         if (!apiKey) {
+
             return res.status(500).json({
-                error: "SERPER_API_KEY is not configured."
+
+                error:
+                    "SERPER_API_KEY is not configured."
+
             });
+
         }
 
-        // Get the year directly from the requested match date
-        const matchYear = new Date(date).getUTCFullYear();
 
-        // Targeted searches
+        /*
+        ============================================================
+        MATCH YEAR
+        ============================================================
+        */
+
+        const matchYear =
+            new Date(date).getUTCFullYear();
+
+
+        /*
+        ============================================================
+        CANONICAL SEARCH NAMES
+        ============================================================
+        */
+
+        const canonicalNames = {
+
+            DEPORTES_CONCEPCION:
+                "Deportes Concepcion",
+
+            UNIVERSIDAD_DE_CONCEPCION:
+                "Universidad de Concepcion",
+
+            OHIGGINS:
+                "O'Higgins"
+
+        };
+
+
+        const homeSearchName =
+            canonicalNames[homeIdentity];
+
+
+        const awaySearchName =
+            canonicalNames[awayIdentity];
+
+
+        /*
+        ============================================================
+        SEARCH PHRASE
+        ============================================================
+        */
+
+        const matchPhrase =
+            `"${homeSearchName}" "${awaySearchName}"`;
+
+
+        /*
+        ============================================================
+        TARGETED SEARCHES
+        ============================================================
+        */
+
         const searches = [
+
             {
                 type: "form",
+
                 query:
-                    `"${home}" "${away}" recent form last 5 matches ${matchYear} football`
+                    `${matchPhrase} recent form last 5 matches ${matchYear} football`
             },
+
 
             {
                 type: "h2h",
+
                 query:
-                    `"${home}" "${away}" head to head H2H results football`
+                    `${matchPhrase} head to head H2H results football`
             },
+
 
             {
                 type: "stats",
+
                 query:
-                    `"${home}" "${away}" statistics goals xG BTTS over under ${matchYear} football`
+                    `${matchPhrase} statistics goals xG BTTS over under ${matchYear} football`
             },
+
 
             {
                 type: "injuries",
+
                 query:
-                    `"${home}" "${away}" injuries suspended players team news ${matchYear} football`
+                    `${matchPhrase} injuries suspended players team news ${matchYear} football`
             },
+
 
             {
                 type: "lineups",
+
                 query:
-                    `"${home}" "${away}" predicted lineup starting XI ${matchYear} football`
+                    `${matchPhrase} predicted lineup starting XI ${matchYear} football`
             },
+
 
             {
                 type: "odds",
+
                 query:
-                    `"${home}" "${away}" odds 1X2 over under BTTS ${matchYear} football`
+                    `${matchPhrase} odds 1X2 over under BTTS ${matchYear} football`
             }
+
         ];
+
+
+        /*
+        ============================================================
+        RUN SEARCHES
+        ============================================================
+        */
 
         const results = [];
 
+
         for (const search of searches) {
+
             try {
-                const response = await fetch(
-                    "https://google.serper.dev/search",
-                    {
-                        method: "POST",
 
-                        headers: {
-                            "X-API-KEY": apiKey,
-                            "Content-Type": "application/json"
-                        },
+                const response =
+                    await fetch(
+                        "https://google.serper.dev/search",
+                        {
 
-                        body: JSON.stringify({
-                            q: search.query,
-                            num: 8
-                        })
-                    }
-                );
+                            method: "POST",
 
-                const data = await response.json();
+                            headers: {
+
+                                "X-API-KEY":
+                                    apiKey,
+
+                                "Content-Type":
+                                    "application/json"
+
+                            },
+
+                            body:
+                                JSON.stringify({
+
+                                    q:
+                                        search.query,
+
+                                    num:
+                                        8
+
+                                })
+
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
 
                 results.push({
-                    type: search.type,
-                    query: search.query,
-                    status: response.status,
-                    success: response.ok,
 
-                    results: (data.organic || []).map(item => ({
-                        title: item.title || null,
-                        link: item.link || null,
-                        snippet: item.snippet || null,
-                        date: item.date || null,
-                        position: item.position || null
-                    })),
+                    type:
+                        search.type,
+
+                    query:
+                        search.query,
+
+                    status:
+                        response.status,
+
+                    success:
+                        response.ok,
+
+
+                    results:
+                        (data.organic || [])
+                            .map(item => ({
+
+                                title:
+                                    item.title ||
+                                    null,
+
+                                link:
+                                    item.link ||
+                                    null,
+
+                                snippet:
+                                    item.snippet ||
+                                    null,
+
+                                date:
+                                    item.date ||
+                                    null,
+
+                                position:
+                                    item.position ||
+                                    null
+
+                            })),
+
 
                     knowledgeGraph:
-                        data.knowledgeGraph || null
+                        data.knowledgeGraph ||
+                        null
+
                 });
+
 
             } catch (searchError) {
 
                 results.push({
-                    type: search.type,
-                    query: search.query,
-                    status: 500,
-                    success: false,
-                    error: searchError.message,
-                    results: []
+
+                    type:
+                        search.type,
+
+                    query:
+                        search.query,
+
+                    status:
+                        500,
+
+                    success:
+                        false,
+
+                    error:
+                        searchError.message,
+
+                    results:
+                        []
+
                 });
+
             }
+
         }
 
-        // Flatten all results for easier processing later
+
+        /*
+        ============================================================
+        FLATTEN RESULTS
+        ============================================================
+        */
+
         const allResults = [];
 
+
         for (const search of results) {
+
             for (const item of search.results) {
+
                 allResults.push({
-                    type: search.type,
-                    title: item.title,
-                    link: item.link,
-                    snippet: item.snippet,
-                    date: item.date,
-                    position: item.position
+
+                    type:
+                        search.type,
+
+                    title:
+                        item.title,
+
+                    link:
+                        item.link,
+
+                    snippet:
+                        item.snippet,
+
+                    date:
+                        item.date,
+
+                    position:
+                        item.position
+
                 });
+
             }
+
         }
+
+
+        /*
+        ============================================================
+        QUALITY INFORMATION
+        ============================================================
+        */
+
+        const successfulSearches =
+            results.filter(
+                item => item.success
+            ).length;
+
+
+        const failedSearches =
+            results.filter(
+                item => !item.success
+            ).length;
+
+
+        /*
+        ============================================================
+        RESPONSE
+        ============================================================
+        */
 
         return res.status(200).json({
 
             match: {
-                home,
-                away,
-                date,
-                year: matchYear
+
+                home:
+                    homeSearchName,
+
+                homeInput:
+                    home,
+
+                homeIdentity:
+                    homeIdentity,
+
+                away:
+                    awaySearchName,
+
+                awayInput:
+                    away,
+
+                awayIdentity:
+                    awayIdentity,
+
+                date:
+                    date,
+
+                year:
+                    matchYear
+
             },
 
-            searchedAt: new Date().toISOString(),
 
-            searches: results,
+            searchedAt:
+                new Date().toISOString(),
 
-            allResults: allResults,
+
+            identityResolution: {
+
+                resolved:
+                    true,
+
+                home: {
+
+                    input:
+                        home,
+
+                    canonicalName:
+                        homeSearchName,
+
+                    identity:
+                        homeIdentity
+
+                },
+
+                away: {
+
+                    input:
+                        away,
+
+                    canonicalName:
+                        awaySearchName,
+
+                    identity:
+                        awayIdentity
+
+                }
+
+            },
+
+
+            searches:
+                results,
+
+
+            allResults:
+                allResults,
+
 
             summary: {
-                totalSearches: searches.length,
+
+                totalSearches:
+                    searches.length,
 
                 successfulSearches:
-                    results.filter(item => item.success).length,
+                    successfulSearches,
 
                 failedSearches:
-                    results.filter(item => !item.success).length,
+                    failedSearches,
 
                 totalResults:
                     allResults.length
+
             },
+
 
             analysisReady: {
-                form: true,
-                h2h: true,
-                stats: true,
-                injuries: true,
-                lineups: true,
-                odds: true
+
+                form:
+                    successfulSearches > 0,
+
+                h2h:
+                    successfulSearches > 0,
+
+                stats:
+                    successfulSearches > 0,
+
+                injuries:
+                    successfulSearches > 0,
+
+                lineups:
+                    successfulSearches > 0,
+
+                odds:
+                    successfulSearches > 0
+
             },
 
+
             warnings: [
+
                 "Web results are raw source information.",
+
+                "Team identity has been explicitly resolved before searching.",
+
+                "Deportes Concepcion and Universidad de Concepcion are treated as different clubs.",
+
                 "No prediction has been generated from web results.",
+
                 "Missing statistics must not be guessed.",
+
                 "Source URLs should be retained for verification."
+
             ]
+
         });
+
 
     } catch (error) {
 
         console.error(error);
 
+
         return res.status(500).json({
-            error: "Web data search failed.",
-            details: error.message
+
+            error:
+                "Web data search failed.",
+
+            details:
+                error.message
+
         });
+
     }
+
 }
