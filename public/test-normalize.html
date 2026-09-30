@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Normalize Web Data Test</title>
+
+    <title>Football Web Data Pipeline Test</title>
 
     <style>
         body {
@@ -38,185 +39,133 @@
 
 <body>
 
-    <h1>Normalize Web Data Test</h1>
+<h1>Football Web Data Pipeline Test</h1>
 
-    <p>
-        This page sends sample web-data to
-        <strong>/api/normalize-web</strong>.
-    </p>
+<p>
+    This test will:
+</p>
 
-    <button onclick="testNormalize()">
-        Test Normalize Endpoint
-    </button>
+<ol>
+    <li>Call <strong>/api/web-data</strong></li>
+    <li>Get real Serper results</li>
+    <li>Send those results to <strong>/api/normalize-web</strong></li>
+    <li>Display the normalized result</li>
+</ol>
 
-    <pre id="result">Waiting for test...</pre>
+<button onclick="runTest()">
+    Run Real Pipeline Test
+</button>
 
-    <script>
-        async function testNormalize() {
+<pre id="result">Waiting for test...</pre>
 
-            const resultBox =
-                document.getElementById("result");
+<script>
+
+async function runTest() {
+
+    const resultBox =
+        document.getElementById("result");
+
+    resultBox.textContent =
+        "Step 1: Getting real web data...\n\n";
+
+    try {
+
+        // ------------------------------------------------
+        // STEP 1
+        // Get REAL Serper data
+        // ------------------------------------------------
+
+        const webResponse =
+            await fetch(
+                "/api/web-data" +
+                "?home=" +
+                encodeURIComponent("Concepcion") +
+                "&away=" +
+                encodeURIComponent("O'Higgins") +
+                "&date=2026-09-30"
+            );
+
+        const webData =
+            await webResponse.json();
+
+        if (!webResponse.ok) {
 
             resultBox.textContent =
-                "Testing...";
+                "WEB DATA ERROR:\n\n" +
+                JSON.stringify(
+                    webData,
+                    null,
+                    2
+                );
 
-            const sampleWebData = {
-
-                searches: [
-
-                    {
-                        type: "form",
-
-                        results: [
-                            {
-                                title:
-                                    "Concepcion recent form",
-
-                                snippet:
-                                    "Concepcion recent matches and results.",
-
-                                link:
-                                    "https://example.com/concepcion-form"
-                            }
-                        ]
-                    },
-
-                    {
-                        type: "h2h",
-
-                        results: [
-                            {
-                                title:
-                                    "Concepcion vs O'Higgins H2H",
-
-                                snippet:
-                                    "Historical head-to-head results between Concepcion and O'Higgins.",
-
-                                link:
-                                    "https://example.com/h2h"
-                            }
-                        ]
-                    },
-
-                    {
-                        type: "stats",
-
-                        results: [
-                            {
-                                title:
-                                    "Concepcion vs O'Higgins statistics",
-
-                                snippet:
-                                    "Match statistics and team information.",
-
-                                link:
-                                    "https://example.com/stats"
-                            }
-                        ]
-                    },
-
-                    {
-                        type: "injuries",
-
-                        results: [
-                            {
-                                title:
-                                    "Concepcion vs O'Higgins injuries",
-
-                                snippet:
-                                    "Latest injury and suspension information.",
-
-                                link:
-                                    "https://example.com/injuries"
-                            }
-                        ]
-                    },
-
-                    {
-                        type: "lineups",
-
-                        results: [
-                            {
-                                title:
-                                    "Concepcion vs O'Higgins lineups",
-
-                                snippet:
-                                    "Expected lineups and team news.",
-
-                                link:
-                                    "https://example.com/lineups"
-                            }
-                        ]
-                    },
-
-                    {
-                        type: "odds",
-
-                        results: [
-                            {
-                                title:
-                                    "Concepcion vs O'Higgins odds",
-
-                                snippet:
-                                    "Latest match betting odds.",
-
-                                link:
-                                    "https://example.com/odds"
-                            }
-                        ]
-                    }
-
-                ]
-
-            };
-
-            try {
-
-                const response =
-                    await fetch("/api/normalize-web", {
-
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-
-                            home: "Concepcion",
-
-                            away: "O'Higgins",
-
-                            date: "2026-09-30",
-
-                            webData:
-                                sampleWebData
-
-                        })
-
-                    });
-
-                const data =
-                    await response.json();
-
-                resultBox.textContent =
-                    JSON.stringify(
-                        data,
-                        null,
-                        2
-                    );
-
-            } catch (error) {
-
-                resultBox.textContent =
-                    "ERROR:\n\n" +
-                    error.message;
-
-            }
-
+            return;
         }
-    </script>
+
+        resultBox.textContent =
+            "Step 1 complete.\n\n" +
+            "Real web data received.\n\n" +
+            "Step 2: Normalizing...\n\n";
+
+
+        // ------------------------------------------------
+        // STEP 2
+        // Send REAL web data to normalizer
+        // ------------------------------------------------
+
+        const normalizeResponse =
+            await fetch(
+                "/api/normalize-web",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        home: "Concepcion",
+
+                        away: "O'Higgins",
+
+                        date: "2026-09-30",
+
+                        webData: webData
+
+                    })
+                }
+            );
+
+
+        const normalized =
+            await normalizeResponse.json();
+
+
+        // ------------------------------------------------
+        // STEP 3
+        // Display final result
+        // ------------------------------------------------
+
+        resultBox.textContent =
+            JSON.stringify(
+                normalized,
+                null,
+                2
+            );
+
+
+    } catch (error) {
+
+        resultBox.textContent =
+            "PIPELINE ERROR:\n\n" +
+            error.message;
+
+    }
+
+}
+
+</script>
 
 </body>
 </html>
