@@ -54,7 +54,8 @@ export default async function handler(req, res) {
         if (homeIdentity === awayIdentity) {
             return res.status(400).json({
                 success: false,
-                error: "Home and away teams cannot have the same identity."
+                error:
+                    "Home and away teams cannot have the same identity."
             });
         }
 
@@ -77,9 +78,37 @@ export default async function handler(req, res) {
         if (!canonicalHome || !canonicalAway) {
             return res.status(400).json({
                 success: false,
-                error: "Could not resolve canonical team names."
+                error:
+                    "Could not resolve canonical team names."
             });
         }
+
+        // =====================================================
+        // SEARCH NAME VARIANTS
+        // =====================================================
+
+        const searchNames = {
+
+            DEPORTES_CONCEPCION: [
+                "Deportes Concepcion"
+            ],
+
+            UNIVERSIDAD_DE_CONCEPCION: [
+                "Universidad de Concepcion"
+            ],
+
+            OHIGGINS: [
+                "O'Higgins",
+                "O Higgins",
+                "Club O'Higgins"
+            ]
+        };
+
+        const homeNames =
+            searchNames[homeIdentity];
+
+        const awayNames =
+            searchNames[awayIdentity];
 
         // =====================================================
         // API KEY
@@ -103,133 +132,175 @@ export default async function handler(req, res) {
         // SEARCH DEFINITIONS
         // =====================================================
 
-        const searches = [
-
-            // -------------------------------------------------
-            // HOME FORM
-            // -------------------------------------------------
-
-            {
-                type: "form_home",
-                team: canonicalHome,
-                teamIdentity: homeIdentity,
-                query:
-                    `"${canonicalHome}" results 2026 fixtures recent results football`
-            },
-
-            {
-                type: "form_home_recent",
-                team: canonicalHome,
-                teamIdentity: homeIdentity,
-                query:
-                    `"${canonicalHome}" "Aug" "Sep" 2026 results football`
-            },
-
-            {
-                type: "form_home_fixtures",
-                team: canonicalHome,
-                teamIdentity: homeIdentity,
-                query:
-                    `"${canonicalHome}" fixtures results 2026 FotMob`
-            },
-
-            {
-                type: "form_home_soccerway",
-                team: canonicalHome,
-                teamIdentity: homeIdentity,
-                query:
-                    `"${canonicalHome}" Soccerway results 2026`
-            },
-
-            // -------------------------------------------------
-            // AWAY FORM
-            // -------------------------------------------------
-
-            {
-                type: "form_away",
-                team: canonicalAway,
-                teamIdentity: awayIdentity,
-                query:
-                    `"${canonicalAway}" results 2026 fixtures recent results football`
-            },
-
-            {
-                type: "form_away_recent",
-                team: canonicalAway,
-                teamIdentity: awayIdentity,
-                query:
-                    `"${canonicalAway}" "Aug" "Sep" 2026 results football`
-            },
-
-            {
-                type: "form_away_fixtures",
-                team: canonicalAway,
-                teamIdentity: awayIdentity,
-                query:
-                    `"${canonicalAway}" fixtures results 2026 FotMob`
-            },
-
-            {
-                type: "form_away_soccerway",
-                team: canonicalAway,
-                teamIdentity: awayIdentity,
-                query:
-                    `"${canonicalAway}" Soccerway results 2026`
-            },
-
-            // -------------------------------------------------
-            // H2H
-            // -------------------------------------------------
-
-            {
-                type: "h2h",
-                query:
-                    `"${canonicalHome}" "${canonicalAway}" head to head H2H results football`
-            },
-
-            // -------------------------------------------------
-            // CURRENT STATS
-            // -------------------------------------------------
-
-            {
-                type: "stats",
-                query:
-                    `"${canonicalHome}" "${canonicalAway}" statistics goals xG BTTS over under ${matchYear} football`
-            },
-
-            // -------------------------------------------------
-            // INJURIES
-            // -------------------------------------------------
-
-            {
-                type: "injuries",
-                query:
-                    `"${canonicalHome}" "${canonicalAway}" injuries suspended players team news ${matchYear} football`
-            },
-
-            // -------------------------------------------------
-            // LINEUPS
-            // -------------------------------------------------
-
-            {
-                type: "lineups",
-                query:
-                    `"${canonicalHome}" "${canonicalAway}" predicted lineup starting XI ${matchYear} football`
-            },
-
-            // -------------------------------------------------
-            // ODDS
-            // -------------------------------------------------
-
-            {
-                type: "odds",
-                query:
-                    `"${canonicalHome}" "${canonicalAway}" odds 1X2 over under BTTS football ${matchYear}`
-            }
-        ];
+        const searches = [];
 
         // =====================================================
-        // SERPER SEARCH
+        // HOME FORM SEARCHES
+        // =====================================================
+
+        for (const teamName of homeNames) {
+
+            searches.push(
+                {
+                    type: "form_home",
+                    team: canonicalHome,
+                    teamIdentity: homeIdentity,
+                    query:
+                        `"${teamName}" results 2026 football recent`
+                },
+                {
+                    type: "form_home_recent",
+                    team: canonicalHome,
+                    teamIdentity: homeIdentity,
+                    query:
+                        `"${teamName}" recent results 2026 football`
+                },
+                {
+                    type: "form_home_fixtures",
+                    team: canonicalHome,
+                    teamIdentity: homeIdentity,
+                    query:
+                        `"${teamName}" fixtures results 2026 FotMob`
+                },
+                {
+                    type: "form_home_soccerway",
+                    team: canonicalHome,
+                    teamIdentity: homeIdentity,
+                    query:
+                        `"${teamName}" Soccerway results 2026`
+                }
+            );
+        }
+
+        // =====================================================
+        // AWAY FORM SEARCHES
+        // =====================================================
+
+        for (const teamName of awayNames) {
+
+            searches.push(
+                {
+                    type: "form_away",
+                    team: canonicalAway,
+                    teamIdentity: awayIdentity,
+                    query:
+                        `"${teamName}" results 2026 football recent`
+                },
+                {
+                    type: "form_away_recent",
+                    team: canonicalAway,
+                    teamIdentity: awayIdentity,
+                    query:
+                        `"${teamName}" recent results 2026 football`
+                },
+                {
+                    type: "form_away_fixtures",
+                    team: canonicalAway,
+                    teamIdentity: awayIdentity,
+                    query:
+                        `"${teamName}" fixtures results 2026 FotMob`
+                },
+                {
+                    type: "form_away_soccerway",
+                    team: canonicalAway,
+                    teamIdentity: awayIdentity,
+                    query:
+                        `"${teamName}" Soccerway results 2026`
+                }
+            );
+        }
+
+        // =====================================================
+        // DIRECT TEAM RESULT SEARCHES
+        // =====================================================
+
+        searches.push(
+
+            {
+                type: "form_home_direct",
+                team: canonicalHome,
+                teamIdentity: homeIdentity,
+                query:
+                    `"${canonicalHome}" "2026" "W" "D" "L" football results`
+            },
+
+            {
+                type: "form_away_direct",
+                team: canonicalAway,
+                teamIdentity: awayIdentity,
+                query:
+                    `"O'Higgins" OR "O Higgins" "2026" football results`
+            },
+
+            {
+                type: "form_away_matches",
+                team: canonicalAway,
+                teamIdentity: awayIdentity,
+                query:
+                    `"O'Higgins" football matches results 2026 Chile`
+            },
+
+            {
+                type: "form_away_recent_matches",
+                team: canonicalAway,
+                teamIdentity: awayIdentity,
+                query:
+                    `"O Higgins" recent matches results 2026 Chile`
+            }
+        );
+
+        // =====================================================
+        // H2H
+        // =====================================================
+
+        searches.push({
+            type: "h2h",
+            query:
+                `"${canonicalHome}" "${canonicalAway}" head to head H2H results football`
+        });
+
+        // =====================================================
+        // STATS
+        // =====================================================
+
+        searches.push({
+            type: "stats",
+            query:
+                `"${canonicalHome}" "${canonicalAway}" statistics goals xG BTTS over under ${matchYear} football`
+        });
+
+        // =====================================================
+        // INJURIES
+        // =====================================================
+
+        searches.push({
+            type: "injuries",
+            query:
+                `"${canonicalHome}" "${canonicalAway}" injuries suspended players team news ${matchYear} football`
+        });
+
+        // =====================================================
+        // LINEUPS
+        // =====================================================
+
+        searches.push({
+            type: "lineups",
+            query:
+                `"${canonicalHome}" "${canonicalAway}" predicted lineup starting XI ${matchYear} football`
+        });
+
+        // =====================================================
+        // ODDS
+        // =====================================================
+
+        searches.push({
+            type: "odds",
+            query:
+                `"${canonicalHome}" "${canonicalAway}" odds 1X2 over under BTTS football ${matchYear}`
+        });
+
+        // =====================================================
+        // EXECUTE SEARCHES
         // =====================================================
 
         const results = [];
@@ -297,7 +368,6 @@ export default async function handler(req, res) {
 
                             position:
                                 item.position || null
-
                         })),
 
                     knowledgeGraph:
@@ -372,29 +442,19 @@ export default async function handler(req, res) {
         }
 
         // =====================================================
-        // FORM SEARCH SUMMARY
+        // FORM RESULT COUNTS
         // =====================================================
 
         const homeFormResults =
             allResults.filter(item =>
-                (
-                    item.type === "form_home" ||
-                    item.type === "form_home_recent" ||
-                    item.type === "form_home_fixtures" ||
-                    item.type === "form_home_soccerway"
-                ) &&
-                item.teamIdentity === homeIdentity
+                item.teamIdentity === homeIdentity &&
+                String(item.type).startsWith("form_home")
             );
 
         const awayFormResults =
             allResults.filter(item =>
-                (
-                    item.type === "form_away" ||
-                    item.type === "form_away_recent" ||
-                    item.type === "form_away_fixtures" ||
-                    item.type === "form_away_soccerway"
-                ) &&
-                item.teamIdentity === awayIdentity
+                item.teamIdentity === awayIdentity &&
+                String(item.type).startsWith("form_away")
             );
 
         // =====================================================
@@ -406,7 +466,7 @@ export default async function handler(req, res) {
             success: true,
 
             version:
-                "V3.13",
+                "V3.14",
 
             match: {
 
@@ -546,11 +606,13 @@ export default async function handler(req, res) {
 
                 "Web results are raw source information.",
 
-                "Recent-form searches are separated by team identity.",
+                "Form searches use multiple team-name variants.",
 
-                "Deportes Concepcion and Universidad de Concepcion are separate clubs.",
+                "O'Higgins and unrelated clubs must not be conflated.",
 
                 "Form must be extracted only from results belonging to the requested team.",
+
+                "Deportes Concepcion and Universidad de Concepcion are separate clubs.",
 
                 "Missing statistics must not be guessed.",
 
