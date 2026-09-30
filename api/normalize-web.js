@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     if (req.method !== "POST") {
       return res.status(405).json({
         success: false,
-        version: "V3.10",
+        version: "V3.11",
         error: "POST method required."
       });
     }
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     if (!homeInput || !awayInput || !matchDate) {
       return res.status(400).json({
         success: false,
-        version: "V3.10",
+        version: "V3.11",
         error: "Match information is incomplete.",
         received: {
           home: homeInput,
@@ -49,11 +49,6 @@ export default async function handler(req, res) {
         .trim();
     }
 
-    function compactText(value) {
-      return cleanText(value)
-        .replace(/[^a-z0-9]+/g, "");
-    }
-
     function uniqueArray(arr) {
       return [...new Set(arr)];
     }
@@ -74,6 +69,11 @@ export default async function handler(req, res) {
       if (!exists) {
         arr.push(item);
       }
+    }
+
+    function numberOrNull(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
     }
 
     // ============================================================
@@ -248,8 +248,7 @@ export default async function handler(req, res) {
     }
 
     function hasIdentity(source, identity) {
-      return sourceIdentities(source)
-        .includes(identity);
+      return sourceIdentities(source).includes(identity);
     }
 
     // ============================================================
@@ -291,7 +290,7 @@ export default async function handler(req, res) {
       parseTargetDate();
 
     function monthName(month) {
-      const names = [
+      return [
         "",
         "january",
         "february",
@@ -305,13 +304,11 @@ export default async function handler(req, res) {
         "october",
         "november",
         "december"
-      ];
-
-      return names[month] || "";
+      ][month] || "";
     }
 
     function shortMonthName(month) {
-      const names = [
+      return [
         "",
         "jan",
         "feb",
@@ -325,23 +322,15 @@ export default async function handler(req, res) {
         "oct",
         "nov",
         "dec"
-      ];
-
-      return names[month] || "";
+      ][month] || "";
     }
 
     function dateVariants(year, month, day) {
-      const mm =
-        String(month).padStart(2, "0");
+      const mm = String(month).padStart(2, "0");
+      const dd = String(day).padStart(2, "0");
 
-      const dd =
-        String(day).padStart(2, "0");
-
-      const fullMonth =
-        monthName(month);
-
-      const shortMonth =
-        shortMonthName(month);
+      const full = monthName(month);
+      const short = shortMonthName(month);
 
       return uniqueArray([
         `${year}-${mm}-${dd}`,
@@ -356,29 +345,29 @@ export default async function handler(req, res) {
         `${dd}.${mm}.${year}`,
         `${day}.${month}.${year}`,
 
-        `${dd} ${fullMonth} ${year}`,
-        `${day} ${fullMonth} ${year}`,
+        `${dd} ${full} ${year}`,
+        `${day} ${full} ${year}`,
 
-        `${fullMonth} ${dd} ${year}`,
-        `${fullMonth} ${day} ${year}`,
+        `${full} ${dd} ${year}`,
+        `${full} ${day} ${year}`,
 
-        `${dd} ${shortMonth} ${year}`,
-        `${day} ${shortMonth} ${year}`,
+        `${dd} ${short} ${year}`,
+        `${day} ${short} ${year}`,
 
-        `${shortMonth} ${dd} ${year}`,
-        `${shortMonth} ${day} ${year}`,
+        `${short} ${dd} ${year}`,
+        `${short} ${day} ${year}`,
 
-        `${dd} ${fullMonth}, ${year}`,
-        `${day} ${fullMonth}, ${year}`,
+        `${dd} ${full}, ${year}`,
+        `${day} ${full}, ${year}`,
 
-        `${fullMonth} ${dd}, ${year}`,
-        `${fullMonth} ${day}, ${year}`,
+        `${full} ${dd}, ${year}`,
+        `${full} ${day}, ${year}`,
 
-        `${dd} ${shortMonth}, ${year}`,
-        `${day} ${shortMonth}, ${year}`,
+        `${dd} ${short}, ${year}`,
+        `${day} ${short}, ${year}`,
 
-        `${shortMonth} ${dd}, ${year}`,
-        `${shortMonth} ${day}, ${year}`
+        `${short} ${dd}, ${year}`,
+        `${short} ${day}, ${year}`
       ]);
     }
 
@@ -391,78 +380,53 @@ export default async function handler(req, res) {
       `);
     }
 
-    function containsDate(
-      source,
-      year,
-      month,
-      day
-    ) {
-      const text =
-        textForDate(source);
+    function containsDate(source, year, month, day) {
+      const text = textForDate(source);
 
       const variants =
-        dateVariants(
-          year,
-          month,
-          day
-        );
+        dateVariants(year, month, day);
 
       if (
-        variants.some(
-          variant =>
-            text.includes(
-              cleanText(variant)
-            )
+        variants.some(v =>
+          text.includes(cleanText(v))
         )
       ) {
         return true;
       }
 
-      const fullMonth =
-        escapeRegExp(
-          monthName(month)
-        );
+      const full =
+        escapeRegExp(monthName(month));
 
-      const shortMonth =
-        escapeRegExp(
-          shortMonthName(month)
-        );
+      const short =
+        escapeRegExp(shortMonthName(month));
 
-      const dayPattern =
+      const d =
         String(day);
 
-      const yearPattern =
+      const y =
         String(year);
 
-      const fullMonthRegex =
+      const patterns = [
         new RegExp(
-          `\\b${dayPattern}\\s+${fullMonth}\\s*,?\\s+${yearPattern}\\b`,
+          `\\b${d}\\s+${full}\\s*,?\\s+${y}\\b`,
           "i"
-        );
-
-      const fullMonthReverseRegex =
+        ),
         new RegExp(
-          `\\b${fullMonth}\\s+${dayPattern}\\s*,?\\s+${yearPattern}\\b`,
+          `\\b${full}\\s+${d}\\s*,?\\s+${y}\\b`,
           "i"
-        );
-
-      const shortMonthRegex =
+        ),
         new RegExp(
-          `\\b${dayPattern}\\s+${shortMonth}\\s*,?\\s+${yearPattern}\\b`,
+          `\\b${d}\\s+${short}\\s*,?\\s+${y}\\b`,
           "i"
-        );
-
-      const shortMonthReverseRegex =
+        ),
         new RegExp(
-          `\\b${shortMonth}\\s+${dayPattern}\\s*,?\\s+${yearPattern}\\b`,
+          `\\b${short}\\s+${d}\\s*,?\\s+${y}\\b`,
           "i"
-        );
+        )
+      ];
 
-      return (
-        fullMonthRegex.test(text) ||
-        fullMonthReverseRegex.test(text) ||
-        shortMonthRegex.test(text) ||
-        shortMonthReverseRegex.test(text)
+      return patterns.some(regex =>
+        regex.test(text)
       );
     }
 
@@ -516,9 +480,6 @@ export default async function handler(req, res) {
         return false;
       }
 
-      const text =
-        textForDate(source);
-
       if (
         !containsDate(
           source,
@@ -530,11 +491,13 @@ export default async function handler(req, res) {
         return false;
       }
 
-      const explicitUTC =
-        /\butc\b/i.test(text) ||
-        /\bgmt\b/i.test(text);
+      const text =
+        textForDate(source);
 
-      return explicitUTC;
+      return (
+        /\butc\b/i.test(text) ||
+        /\bgmt\b/i.test(text)
+      );
     }
 
     function containsToday(source) {
@@ -556,7 +519,7 @@ export default async function handler(req, res) {
       const text =
         textForDate(source);
 
-      const julyPatterns = [
+      const historicalPatterns = [
         "25 july 2026",
         "26 july 2026",
         "27 july 2026",
@@ -578,32 +541,8 @@ export default async function handler(req, res) {
       ];
 
       if (
-        julyPatterns.some(
-          pattern =>
-            text.includes(pattern)
-        )
-      ) {
-        return !containsTargetDate(source);
-      }
-
-      const olderMonthPatterns = [
-        "january 2026",
-        "february 2026",
-        "march 2026",
-        "april 2026",
-        "may 2026",
-        "june 2026",
-        "jan 2026",
-        "feb 2026",
-        "mar 2026",
-        "apr 2026",
-        "jun 2026"
-      ];
-
-      if (
-        olderMonthPatterns.some(
-          pattern =>
-            text.includes(pattern)
+        historicalPatterns.some(
+          p => text.includes(p)
         )
       ) {
         return !containsTargetDate(source);
@@ -617,56 +556,44 @@ export default async function handler(req, res) {
     // ============================================================
 
     function requestedTeamPatterns(identity) {
-      if (
-        identity ===
-        "DEPORTES_CONCEPCION"
-      ) {
-        return [
-          "deportes concepcion",
-          "d concepcion",
-          "d. concepcion",
-          "deportes-concepcion",
-          "deportesconcepcion"
-        ];
-      }
+      switch (identity) {
+        case "DEPORTES_CONCEPCION":
+          return [
+            "deportes concepcion",
+            "d concepcion",
+            "d. concepcion",
+            "deportes-concepcion",
+            "deportesconcepcion"
+          ];
 
-      if (
-        identity ===
-        "UNIVERSIDAD_DE_CONCEPCION"
-      ) {
-        return [
-          "universidad de concepcion",
-          "u de concepcion",
-          "u concepcion",
-          "univ de concepcion",
-          "universidad-de-concepcion",
-          "universidaddeconcepcion"
-        ];
-      }
+        case "UNIVERSIDAD_DE_CONCEPCION":
+          return [
+            "universidad de concepcion",
+            "u de concepcion",
+            "u concepcion",
+            "univ de concepcion",
+            "universidad-de-concepcion",
+            "universidaddeconcepcion"
+          ];
 
-      if (
-        identity === "OHIGGINS"
-      ) {
-        return [
-          "ohiggins",
-          "o higgins",
-          "o-higgins"
-        ];
-      }
+        case "OHIGGINS":
+          return [
+            "ohiggins",
+            "o higgins",
+            "o-higgins"
+          ];
 
-      return [];
+        default:
+          return [];
+      }
     }
 
-    function containsRequestedTeam(
-      text,
-      identity
-    ) {
+    function containsRequestedTeam(text, identity) {
       return requestedTeamPatterns(identity)
-        .some(
-          pattern =>
-            text.includes(
-              cleanText(pattern)
-            )
+        .some(pattern =>
+          text.includes(
+            cleanText(pattern)
+          )
         );
     }
 
@@ -695,22 +622,6 @@ export default async function handler(req, res) {
           requestedAwayIdentity
         );
 
-      const homeInTitle =
-        homePatterns.some(
-          p =>
-            titleText.includes(
-              cleanText(p)
-            )
-        );
-
-      const awayInTitle =
-        awayPatterns.some(
-          p =>
-            titleText.includes(
-              cleanText(p)
-            )
-        );
-
       const womenFixture =
         /\bwomen\b|\bwomens\b|\bladies\b|\bfemenino\b|\bfeminino\b/i
           .test(bodyText);
@@ -729,6 +640,20 @@ export default async function handler(req, res) {
         };
       }
 
+      const homeInTitle =
+        homePatterns.some(p =>
+          titleText.includes(
+            cleanText(p)
+          )
+        );
+
+      const awayInTitle =
+        awayPatterns.some(p =>
+          titleText.includes(
+            cleanText(p)
+          )
+        );
+
       if (
         homeInTitle &&
         awayInTitle
@@ -739,77 +664,40 @@ export default async function handler(req, res) {
         };
       }
 
-      const separatorRegex =
-        /\s+(?:vs\.?|v\.?|-\s+|–)\s+/i;
-
-      const titleChunks =
-        titleText
-          .split(separatorRegex)
-          .map(x => x.trim())
-          .filter(Boolean);
-
-      for (const chunk of titleChunks) {
-        if (
-          containsRequestedTeam(
-            chunk,
-            requestedHomeIdentity
-          ) &&
-          containsRequestedTeam(
-            chunk,
-            requestedAwayIdentity
-          )
-        ) {
-          return {
-            match: true,
-            strength:
-              "EXPLICIT_FIXTURE_PAIR"
-          };
-        }
-      }
-
-      const homeRegex =
-        homePatterns
-          .map(escapeRegExp)
-          .join("|");
-
-      const awayRegex =
-        awayPatterns
-          .map(escapeRegExp)
-          .join("|");
+      const pairRegex =
+        new RegExp(
+          `(?:${homePatterns.map(escapeRegExp).join("|")})` +
+          `\\s*(?:vs\\.?|v\\.?|-|–)` +
+          `\\s*` +
+          `(?:${awayPatterns.map(escapeRegExp).join("|")})` +
+          `|` +
+          `(?:${awayPatterns.map(escapeRegExp).join("|")})` +
+          `\\s*(?:vs\\.?|v\\.?|-|–)` +
+          `\\s*` +
+          `(?:${homePatterns.map(escapeRegExp).join("|")})`,
+          "i"
+        );
 
       if (
-        homeRegex &&
-        awayRegex
+        pairRegex.test(bodyText)
       ) {
-        const pairRegex =
-          new RegExp(
-            `(?:${homeRegex})\\s*(?:vs\\.?|v\\.?|-|–)\\s*(?:${awayRegex})|` +
-            `(?:${awayRegex})\\s*(?:vs\\.?|v\\.?|-|–)\\s*(?:${homeRegex})`,
-            "i"
-          );
-
-        if (
-          pairRegex.test(bodyText)
-        ) {
-          return {
-            match: true,
-            strength:
-              "EXPLICIT_FIXTURE_PAIR"
-          };
-        }
+        return {
+          match: true,
+          strength: "EXPLICIT_FIXTURE_PAIR"
+        };
       }
 
       /*
-       * Nearby fixture context.
-       * This is deliberately conservative.
+       * Nearby current-fixture context.
        */
       const homePositions = [];
       const awayPositions = [];
 
       for (const pattern of homePatterns) {
-        let index = bodyText.indexOf(
-          cleanText(pattern)
-        );
+        let index =
+          bodyText.indexOf(
+            cleanText(pattern)
+          );
 
         while (index >= 0) {
           homePositions.push(index);
@@ -823,9 +711,10 @@ export default async function handler(req, res) {
       }
 
       for (const pattern of awayPatterns) {
-        let index = bodyText.indexOf(
-          cleanText(pattern)
-        );
+        let index =
+          bodyText.indexOf(
+            cleanText(pattern)
+          );
 
         while (index >= 0) {
           awayPositions.push(index);
@@ -839,114 +728,91 @@ export default async function handler(req, res) {
       }
 
       let closestDistance = Infinity;
-      let closestHomeIndex = -1;
-      let closestAwayIndex = -1;
 
       for (const hi of homePositions) {
         for (const ai of awayPositions) {
-          const distance =
-            Math.abs(hi - ai);
-
-          if (
-            distance <
-            closestDistance
-          ) {
-            closestDistance =
-              distance;
-
-            closestHomeIndex =
-              hi;
-
-            closestAwayIndex =
-              ai;
-          }
+          closestDistance =
+            Math.min(
+              closestDistance,
+              Math.abs(hi - ai)
+            );
         }
       }
 
       if (
-        closestHomeIndex >= 0 &&
-        closestAwayIndex >= 0 &&
         closestDistance <= 180
       ) {
-        const start =
-          Math.max(
-            0,
-            Math.min(
-              closestHomeIndex,
-              closestAwayIndex
-            ) - 100
-          );
-
-        const end =
-          Math.min(
-            bodyText.length,
-            Math.max(
-              closestHomeIndex,
-              closestAwayIndex
-            ) + 220
-          );
-
-        const nearby =
-          bodyText.substring(
-            start,
-            end
-          );
-
-        const fixtureLanguage =
-          /\b(today|tomorrow|match|fixture|game|kickoff|kick-off|prediction|odds|lineup|line-up|starting xi|next match|next fixture)\b/i
-            .test(nearby);
-
-        const competingOpponents = [
-          "deportes santa cruz",
-          "santa cruz",
-          "universidad de concepcion",
-          "u de concepcion",
-          "universidad de chile",
-          "boca juniors",
-          "deportes limache"
-        ];
-
-        const containsCompetingOpponent =
-          competingOpponents.some(
-            opponent =>
-              nearby.includes(
-                cleanText(opponent)
-              ) &&
-              !(
-                requestedHomeIdentity ===
-                  "UNIVERSIDAD_DE_CONCEPCION" &&
-                opponent.includes(
-                  "universidad de concepcion"
-                )
+        const homeIndex =
+          homePositions.find(
+            hi =>
+              awayPositions.some(
+                ai =>
+                  Math.abs(hi - ai) <= 180
               )
           );
 
+        const awayIndex =
+          awayPositions.find(
+            ai =>
+              Math.abs(
+                ai - homeIndex
+              ) <= 180
+          );
+
         if (
-          fixtureLanguage &&
-          !containsCompetingOpponent
+          homeIndex !== undefined &&
+          awayIndex !== undefined
         ) {
-          return {
-            match: true,
-            strength:
-              "NEARBY_FIXTURE_CONTEXT"
-          };
+          const start =
+            Math.max(
+              0,
+              Math.min(
+                homeIndex,
+                awayIndex
+              ) - 120
+            );
+
+          const end =
+            Math.min(
+              bodyText.length,
+              Math.max(
+                homeIndex,
+                awayIndex
+              ) + 240
+            );
+
+          const nearby =
+            bodyText.substring(
+              start,
+              end
+            );
+
+          const fixtureLanguage =
+            /\btoday\b|\btonight\b|\bmatch\b|\bfixture\b|\bgame\b|\bkickoff\b|\bkick-off\b|\bprediction\b|\bodds\b|\blineup\b|\bstarting xi\b|\bnext match\b|\bnext fixture\b/i
+              .test(nearby);
+
+          if (fixtureLanguage) {
+            return {
+              match: true,
+              strength:
+                "NEARBY_FIXTURE_CONTEXT"
+            };
+          }
         }
       }
 
       const homeInBody =
-        homePatterns.some(
-          p =>
-            bodyText.includes(
-              cleanText(p)
-            )
+        homePatterns.some(p =>
+          bodyText.includes(
+            cleanText(p)
+          )
         );
 
       const awayInBody =
-        awayPatterns.some(
-          p =>
-            bodyText.includes(
-              cleanText(p)
-            )
+        awayPatterns.some(p =>
+          bodyText.includes(
+            cleanText(p)
+          )
         );
 
       if (
@@ -972,26 +838,17 @@ export default async function handler(req, res) {
     // ============================================================
 
     function categoryRelevant(source) {
-      const type =
-        source.type;
-
       const fixture =
         fixtureIdentityPair(source);
 
       const ids =
         sourceIdentities(source);
 
-      if (type === "h2h") {
+      if (source.type === "h2h") {
         return fixture.match;
       }
 
-      if (type === "form") {
-        if (
-          obviousHistoricalFixture(source)
-        ) {
-          return false;
-        }
-
+      if (source.type === "form") {
         const hasHome =
           ids.includes(
             requestedHomeIdentity
@@ -1002,20 +859,15 @@ export default async function handler(req, res) {
             requestedAwayIdentity
           );
 
-        if (
-          hasHome &&
-          hasAway &&
-          !fixture.match
-        ) {
-          return false;
-        }
-
-        return hasHome || hasAway;
+        return (
+          hasHome ||
+          hasAway
+        );
       }
 
       if (
-        type === "stats" ||
-        type === "injuries"
+        source.type === "stats" ||
+        source.type === "injuries"
       ) {
         if (
           obviousHistoricalFixture(source)
@@ -1034,29 +886,24 @@ export default async function handler(req, res) {
           );
 
         if (
-          type === "injuries" &&
-          !hasHome &&
-          !hasAway
+          source.type === "injuries"
         ) {
-          return false;
+          return (
+            fixture.match &&
+            (hasHome || hasAway)
+          );
         }
 
-        if (
-          hasHome &&
-          hasAway &&
-          !fixture.match
-        ) {
-          return false;
-        }
-
-        return fixture.match ||
+        return (
+          fixture.match ||
           hasHome ||
-          hasAway;
+          hasAway
+        );
       }
 
       if (
-        type === "lineups" ||
-        type === "odds"
+        source.type === "lineups" ||
+        source.type === "odds"
       ) {
         if (
           obviousHistoricalFixture(source)
@@ -1075,9 +922,6 @@ export default async function handler(req, res) {
     // ============================================================
 
     function assessSource(source) {
-      const ids =
-        sourceIdentities(source);
-
       const fixture =
         fixtureIdentityPair(source);
 
@@ -1096,14 +940,24 @@ export default async function handler(req, res) {
       const isH2H =
         source.type === "h2h";
 
-      let usable = false;
       let currentFixtureUsable = false;
 
-      if (isH2H) {
-        usable =
-          categoryOk;
+      /*
+       * FORM:
+       * recent historical matches are useful, but are not
+       * themselves current fixture evidence.
+       */
+      if (source.type === "form") {
+        currentFixtureUsable = false;
+      }
 
+      /*
+       * H2H:
+       * historical target-vs-target sources remain usable.
+       */
+      else if (isH2H) {
         currentFixtureUsable =
+          categoryOk &&
           fixture.match &&
           (
             exactDate ||
@@ -1112,68 +966,32 @@ export default async function handler(req, res) {
           );
       }
 
-      else if (
-        source.type === "form"
-      ) {
-        usable =
-          categoryOk;
-
-        currentFixtureUsable =
-          false;
-      }
-
+      /*
+       * ALL CURRENT-FIXTURE CATEGORIES:
+       *
+       * One unified rule.
+       */
       else {
-        usable =
-          categoryOk;
-
-        /*
-         * V3.10 FIX:
-         *
-         * Any exact fixture with valid current-date evidence
-         * is current.
-         *
-         * 365Scores:
-         * fixtureMatch + dateMatch
-         *
-         * SportyTrader:
-         * fixtureMatch + dateMatch
-         *
-         * Scores24:
-         * fixtureMatch + dateMatch
-         *
-         * Sofascore:
-         * fixtureMatch + UTC next day
-         */
-        if (
+        currentFixtureUsable =
           categoryOk &&
           fixture.match &&
-          !obviousHistoricalFixture(source)
-        ) {
-          currentFixtureUsable =
+          (
             exactDate ||
             utcNextDay ||
-            today;
-        }
+            today
+          );
       }
 
       if (
-        !isH2H &&
-        obviousHistoricalFixture(source)
-      ) {
-        currentFixtureUsable = false;
-        usable = false;
-      }
-
-      if (
-        !isH2H &&
-        !fixture.match &&
-        source.type !== "form"
+        obviousHistoricalFixture(source) &&
+        !exactDate
       ) {
         currentFixtureUsable = false;
       }
 
       return {
-        identities: ids,
+        identities:
+          sourceIdentities(source),
 
         fixtureMatch:
           fixture.match,
@@ -1193,15 +1011,12 @@ export default async function handler(req, res) {
         categoryRelevant:
           categoryOk,
 
-        usable,
+        usable:
+          categoryOk,
 
         currentFixtureUsable
       };
     }
-
-    // ============================================================
-    // 12. ASSESS ALL SOURCES
-    // ============================================================
 
     const assessedSources =
       results.map(source => ({
@@ -1225,8 +1040,43 @@ export default async function handler(req, res) {
       );
     }
 
+    /*
+     * IMPORTANT V3.11 FIX:
+     *
+     * Market evidence may appear under either the "stats"
+     * search or the "odds" search.
+     */
+    function currentMarketSources() {
+      const map = new Map();
+
+      for (const source of assessedSources) {
+        if (
+          !source.currentFixtureUsable
+        ) {
+          continue;
+        }
+
+        if (
+          source.type !== "stats" &&
+          source.type !== "odds"
+        ) {
+          continue;
+        }
+
+        const key =
+          `${source.url}|${source.title}|${source.snippet}`;
+
+        map.set(key, source);
+      }
+
+      return [...map.values()];
+    }
+
+    const marketSources =
+      currentMarketSources();
+
     // ============================================================
-    // 13. H2H
+    // 12. H2H
     // ============================================================
 
     const h2h =
@@ -1260,47 +1110,95 @@ export default async function handler(req, res) {
             source.utcNextDayMatch,
 
           todayContext:
-            source.todayContext
+            source.todayContext,
+
+          currentFixture:
+            source.currentFixtureUsable
         }));
 
     // ============================================================
-    // 14. FORM
+    // 13. FORM
     // ============================================================
 
     const form = {
       home: [],
-      away: []
-    };
+      away: [],
 
-    /*
-     * Extract a team-specific result from text.
-     *
-     * Examples supported:
-     *
-     * August 16, 2026: 2-0 win at Cobresal
-     * August 23, 2026: 1-1 draw vs Coquimbo Unido
-     * 2-1 loss to O'Higgins
-     *
-     * We do NOT use arbitrary numbers as scores.
-     */
+      homeMeta: {
+        requested: 5,
+        extracted: 0,
+        complete: false
+      },
+
+      awayMeta: {
+        requested: 5,
+        extracted: 0,
+        complete: false
+      }
+    };
 
     function inferResultFromScore(
       teamScore,
       opponentScore
     ) {
-      if (
-        teamScore > opponentScore
-      ) {
+      if (teamScore > opponentScore) {
         return "W";
       }
 
-      if (
-        teamScore < opponentScore
-      ) {
+      if (teamScore < opponentScore) {
         return "L";
       }
 
       return "D";
+    }
+
+    function pushFormResult(
+      output,
+      identity,
+      scoreA,
+      scoreB,
+      evidence,
+      source
+    ) {
+      const a = Number(scoreA);
+      const b = Number(scoreB);
+
+      if (
+        !Number.isFinite(a) ||
+        !Number.isFinite(b) ||
+        a > 15 ||
+        b > 15
+      ) {
+        return;
+      }
+
+      addUnique(
+        output,
+        {
+          result:
+            inferResultFromScore(a, b),
+
+          score:
+            `${a}-${b}`,
+
+          team:
+            identity,
+
+          evidence:
+            evidence.trim(),
+
+          source:
+            source.url,
+
+          title:
+            source.title
+        },
+        [
+          "result",
+          "score",
+          "source"
+        ]
+      );
     }
 
     function extractTeamForm(
@@ -1308,12 +1206,6 @@ export default async function handler(req, res) {
       identity
     ) {
       const output = [];
-
-      const raw =
-        `${source.title} ${source.snippet}`;
-
-      const text =
-        cleanText(raw);
 
       if (
         !hasIdentity(
@@ -1324,198 +1216,107 @@ export default async function handler(req, res) {
         return output;
       }
 
+      const text =
+        cleanText(`
+          ${source.title}
+          ${source.snippet}
+        `);
+
       /*
-       * Date + score.
+       * Pattern 1:
+       *
+       * 2-0 win at Cobresal
+       * 1-1 draw vs Coquimbo Unido
+       * 0-1 loss to ...
        */
-      const datedScores = [
-        ...text.matchAll(
-          /(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[^0-9]{0,20}\d{1,2}(?:st|nd|rd|th)?[^0-9]{0,20}\d{4}[^0-9]{0,80}(\d{1,2})\s*[-:]\s*(\d{1,2})/gi
-        )
+      const resultPatterns = [
+        /(\d{1,2})\s*-\s*(\d{1,2})\s+(win|wins|won|draw|drew|loss|lost|defeat|defeated)\b/gi,
+
+        /(?:win|wins|won)\s+(\d{1,2})\s*-\s*(\d{1,2})/gi,
+
+        /(?:draw|drew)\s+(\d{1,2})\s*-\s*(\d{1,2})/gi,
+
+        /(?:loss|lost|defeat|defeated)\s+(\d{1,2})\s*-\s*(\d{1,2})/gi
       ];
 
-      for (
-        const m of datedScores
-      ) {
-        const teamScore =
-          Number(m[1]);
+      for (const regex of resultPatterns) {
+        const matches =
+          [...text.matchAll(regex)];
 
-        const opponentScore =
-          Number(m[2]);
+        for (const m of matches) {
+          let a;
+          let b;
 
-        if (
-          teamScore > 15 ||
-          opponentScore > 15
-        ) {
-          continue;
-        }
+          /*
+           * For:
+           * 2-0 win
+           * score is directly m[1], m[2].
+           */
+          if (
+            /^\d/.test(m[0])
+          ) {
+            a = m[1];
+            b = m[2];
+          } else {
+            a = m[1];
+            b = m[2];
+          }
 
-        const before =
-          text.substring(
+          const start =
             Math.max(
               0,
-              m.index - 80
-            ),
-            m.index
-          );
+              m.index - 100
+            );
 
-        const after =
-          text.substring(
-            m.index,
+          const end =
             Math.min(
               text.length,
               m.index + 140
-            )
-          );
+            );
 
-        let result =
-          inferResultFromScore(
-            teamScore,
-            opponentScore
-          );
-
-        /*
-         * If the source explicitly says win/draw/loss,
-         * preserve the source wording only when consistent.
-         */
-        if (
-          /\bwin\b|\bwins\b|\bwon\b/i.test(after)
-        ) {
-          if (
-            teamScore > opponentScore
-          ) {
-            result = "W";
-          }
-        }
-
-        if (
-          /\bdraw\b|\bdrew\b/i.test(after)
-        ) {
-          if (
-            teamScore === opponentScore
-          ) {
-            result = "D";
-          }
-        }
-
-        if (
-          /\bloss\b|\blost\b|\bdefeat\b|\bdefeated\b/i.test(after)
-        ) {
-          if (
-            teamScore < opponentScore
-          ) {
-            result = "L";
-          }
-        }
-
-        output.push({
-          result,
-          score:
-            `${teamScore}-${opponentScore}`,
-
-          team:
+          pushFormResult(
+            output,
             identity,
-
-          evidence:
-            `${before}${after}`.trim(),
-
-          source:
-            source.url,
-
-          title:
-            source.title
-        });
+            a,
+            b,
+            text.substring(start, end),
+            source
+          );
+        }
       }
 
       /*
-       * Undated score + explicit result wording.
+       * Pattern 2:
        *
-       * Example:
-       * "2-0 win at Cobresal"
+       * date ... 2-0 win
+       *
+       * Useful for sources where the date is immediately
+       * before the result.
        */
-      if (
-        output.length === 0
-      ) {
-        const undated =
-          [
-            ...text.matchAll(
-              /(\d{1,2})\s*-\s*(\d{1,2})\s+(win|wins|won|draw|drew|loss|lost|defeat|defeated)\b/gi
-            )
-          ];
+      const datedScore =
+        /(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[^0-9]{0,25}\d{1,2}(?:st|nd|rd|th)?[^0-9]{0,25}\d{4}[^0-9]{0,80}(\d{1,2})\s*-\s*(\d{1,2})\s+(win|wins|won|draw|drew|loss|lost|defeat|defeated)\b/gi;
 
-        for (
-          const m of undated
-        ) {
-          const teamScore =
-            Number(m[1]);
+      for (const m of text.matchAll(datedScore)) {
+        const start =
+          Math.max(
+            0,
+            m.index - 40
+          );
 
-          const opponentScore =
-            Number(m[2]);
+        const end =
+          Math.min(
+            text.length,
+            m.index + 160
+          );
 
-          if (
-            teamScore > 15 ||
-            opponentScore > 15
-          ) {
-            continue;
-          }
-
-          const word =
-            cleanText(m[3]);
-
-          let result = null;
-
-          if (
-            word === "win" ||
-            word === "wins" ||
-            word === "won"
-          ) {
-            result = "W";
-          }
-
-          if (
-            word === "draw" ||
-            word === "drew"
-          ) {
-            result = "D";
-          }
-
-          if (
-            word === "loss" ||
-            word === "lost" ||
-            word === "defeat" ||
-            word === "defeated"
-          ) {
-            result = "L";
-          }
-
-          if (result) {
-            output.push({
-              result,
-              score:
-                `${teamScore}-${opponentScore}`,
-
-              team:
-                identity,
-
-              evidence:
-                text.substring(
-                  Math.max(
-                    0,
-                    m.index - 50
-                  ),
-                  Math.min(
-                    text.length,
-                    m.index + 100
-                  )
-                ),
-
-              source:
-                source.url,
-
-              title:
-                source.title
-            });
-          }
-        }
+        pushFormResult(
+          output,
+          identity,
+          m[1],
+          m[2],
+          text.substring(start, end),
+          source
+        );
       }
 
       return output;
@@ -1526,8 +1327,7 @@ export default async function handler(req, res) {
       usableCategory("form")
     ) {
       /*
-       * Never use the current target fixture itself as historical
-       * form evidence.
+       * The current target fixture is never historical form.
        */
       if (
         source.fixtureMatch
@@ -1547,9 +1347,7 @@ export default async function handler(req, res) {
             requestedHomeIdentity
           );
 
-        for (
-          const item of extracted
-        ) {
+        for (const item of extracted) {
           addUnique(
             form.home,
             item,
@@ -1574,9 +1372,7 @@ export default async function handler(req, res) {
             requestedAwayIdentity
           );
 
-        for (
-          const item of extracted
-        ) {
+        for (const item of extracted) {
           addUnique(
             form.away,
             item,
@@ -1590,17 +1386,26 @@ export default async function handler(req, res) {
       }
     }
 
-    /*
-     * Last 5 only for the normalized primary form.
-     */
     form.home =
       form.home.slice(0, 10);
 
     form.away =
       form.away.slice(0, 10);
 
+    form.homeMeta.extracted =
+      form.home.length;
+
+    form.awayMeta.extracted =
+      form.away.length;
+
+    form.homeMeta.complete =
+      form.home.length >= 5;
+
+    form.awayMeta.complete =
+      form.away.length >= 5;
+
     // ============================================================
-    // 15. GOALS
+    // 14. GOALS
     // ============================================================
 
     const goals = {
@@ -1608,8 +1413,95 @@ export default async function handler(req, res) {
       away: {}
     };
 
+    /*
+     * Only explicit statistical language is accepted.
+     */
+    for (const source of marketSources) {
+      const text =
+        cleanText(`
+          ${source.title}
+          ${source.snippet}
+        `);
+
+      const homePatterns =
+        requestedTeamPatterns(
+          requestedHomeIdentity
+        );
+
+      const awayPatterns =
+        requestedTeamPatterns(
+          requestedAwayIdentity
+        );
+
+      for (const pattern of homePatterns) {
+        const re =
+          new RegExp(
+            escapeRegExp(pattern) +
+            "[^\\n.]{0,80}?" +
+            "(\\d+(?:\\.\\d+)?)\\s*" +
+            "(?:goals?\\s*(?:per\\s*match|pg|average|avg)?)",
+            "i"
+          );
+
+        const m =
+          text.match(re);
+
+        if (m) {
+          goals.home =
+            {
+              value:
+                Number(m[1]),
+
+              source:
+                source.url,
+
+              title:
+                source.title,
+
+              evidence:
+                m[0]
+            };
+
+          break;
+        }
+      }
+
+      for (const pattern of awayPatterns) {
+        const re =
+          new RegExp(
+            escapeRegExp(pattern) +
+            "[^\\n.]{0,80}?" +
+            "(\\d+(?:\\.\\d+)?)\\s*" +
+            "(?:goals?\\s*(?:per\\s*match|pg|average|avg)?)",
+            "i"
+          );
+
+        const m =
+          text.match(re);
+
+        if (m) {
+          goals.away =
+            {
+              value:
+                Number(m[1]),
+
+              source:
+                source.url,
+
+              title:
+                source.title,
+
+              evidence:
+                m[0]
+            };
+
+          break;
+        }
+      }
+    }
+
     // ============================================================
-    // 16. xG
+    // 15. xG
     // ============================================================
 
     const xg = {
@@ -1619,25 +1511,17 @@ export default async function handler(req, res) {
       raw: []
     };
 
-    for (
-      const source of
-      currentFixtureCategory("stats")
-    ) {
+    for (const source of marketSources) {
       const text =
         `${source.title} ${source.snippet}`;
 
-      /*
-       * Combined xG.
-       */
       const combinedMatches = [
         ...text.matchAll(
           /(?:combined|total)\s*(?:xg|expected goals)\s*[:\-]?\s*(\d+(?:\.\d+)?)/gi
         )
       ];
 
-      for (
-        const m of combinedMatches
-      ) {
+      for (const m of combinedMatches) {
         const value =
           Number(m[1]);
 
@@ -1662,106 +1546,145 @@ export default async function handler(req, res) {
         }
       }
 
-      /*
-       * Team-specific xG.
-       */
       const homePatterns =
         requestedTeamPatterns(
           requestedHomeIdentity
         );
-
-      for (
-        const pattern of homePatterns
-      ) {
-        const regex =
-          new RegExp(
-            escapeRegExp(pattern) +
-            "[^.\\n]{0,100}?" +
-            "(\\d+(?:\\.\\d+)?)\\s*xg\\b",
-            "i"
-          );
-
-        const m =
-          text.match(regex);
-
-        if (m) {
-          const value =
-            Number(m[1]);
-
-          if (
-            value >= 0 &&
-            value <= 10
-          ) {
-            addUnique(
-              xg.home,
-              {
-                value,
-                source:
-                  source.url,
-                title:
-                  source.title
-              },
-              [
-                "value",
-                "source"
-              ]
-            );
-          }
-
-          break;
-        }
-      }
 
       const awayPatterns =
         requestedTeamPatterns(
           requestedAwayIdentity
         );
 
-      for (
-        const pattern of awayPatterns
-      ) {
-        const regex =
+      for (const pattern of homePatterns) {
+        const escaped =
+          escapeRegExp(pattern);
+
+        const patterns = [
           new RegExp(
-            escapeRegExp(pattern) +
-            "[^.\\n]{0,100}?" +
+            escaped +
+            "[^\\n.]{0,100}?" +
             "(\\d+(?:\\.\\d+)?)\\s*xg\\b",
             "i"
-          );
+          ),
 
-        const m =
-          text.match(regex);
+          new RegExp(
+            "(\\d+(?:\\.\\d+)?)\\s*xg\\b[^\\n.]{0,100}?" +
+            escaped,
+            "i"
+          )
+        ];
 
-        if (m) {
-          const value =
-            Number(m[1]);
+        for (const regex of patterns) {
+          const m =
+            text.match(regex);
 
-          if (
-            value >= 0 &&
-            value <= 10
-          ) {
-            addUnique(
-              xg.away,
-              {
-                value,
-                source:
-                  source.url,
-                title:
-                  source.title
-              },
-              [
-                "value",
-                "source"
-              ]
-            );
+          if (m) {
+            const value =
+              Number(m[1]);
+
+            if (
+              value >= 0 &&
+              value <= 10
+            ) {
+              addUnique(
+                xg.home,
+                {
+                  value,
+                  source:
+                    source.url,
+                  title:
+                    source.title
+                },
+                [
+                  "value",
+                  "source"
+                ]
+              );
+            }
+
+            break;
           }
-
-          break;
         }
+      }
+
+      for (const pattern of awayPatterns) {
+        const escaped =
+          escapeRegExp(pattern);
+
+        const patterns = [
+          new RegExp(
+            escaped +
+            "[^\\n.]{0,100}?" +
+            "(\\d+(?:\\.\\d+)?)\\s*xg\\b",
+            "i"
+          ),
+
+          new RegExp(
+            "(\\d+(?:\\.\\d+)?)\\s*xg\\b[^\\n.]{0,100}?" +
+            escaped,
+            "i"
+          )
+        ];
+
+        for (const regex of patterns) {
+          const m =
+            text.match(regex);
+
+          if (m) {
+            const value =
+              Number(m[1]);
+
+            if (
+              value >= 0 &&
+              value <= 10
+            ) {
+              addUnique(
+                xg.away,
+                {
+                  value,
+                  source:
+                    source.url,
+                  title:
+                    source.title
+                },
+                [
+                  "value",
+                  "source"
+                ]
+              );
+            }
+
+            break;
+          }
+        }
+      }
+
+      if (
+        /\bxg\b|\bexpected goals\b/i.test(text)
+      ) {
+        addUnique(
+          xg.raw,
+          {
+            text:
+              source.snippet,
+
+            source:
+              source.url,
+
+            title:
+              source.title
+          },
+          [
+            "source",
+            "title"
+          ]
+        );
       }
     }
 
     // ============================================================
-    // 17. BTTS
+    // 16. BTTS
     // ============================================================
 
     const btts = {
@@ -1772,37 +1695,89 @@ export default async function handler(req, res) {
       odds: []
     };
 
-    for (
-      const source of
-      currentFixtureCategory("stats")
-    ) {
+    for (const source of marketSources) {
       const text =
         `${source.title} ${source.snippet}`;
 
-      const matches = [
+      const hasBTTSContext =
+        /\bbtts\b|\bboth teams to score\b|\bgg\b/i
+          .test(text);
+
+      if (!hasBTTSContext) {
+        continue;
+      }
+
+      const yesNoPercentage = [
         ...text.matchAll(
-          /both\s+teams\s+to\s+score\s+(yes|no)\s+(\d+(?:\.\d+)?)%/gi
+          /\b(yes|no)\b\s+(?:(\d+(?:\.\d+)?)\s+)?(\d+(?:\.\d+)?)%/gi
         )
       ];
 
-      for (
-        const m of matches
-      ) {
+      for (const m of yesNoPercentage) {
+        /*
+         * Handles:
+         *
+         * Yes 52%
+         * Yes 1.79 52%
+         */
+        const possibleOdds =
+          m[2]
+            ? Number(m[2])
+            : null;
+
+        const percentage =
+          Number(m[3]);
+
+        const evidence = {
+          answer:
+            m[1].toUpperCase(),
+
+          percentage,
+
+          source:
+            source.url,
+
+          title:
+            source.title
+        };
+
+        if (
+          possibleOdds !== null &&
+          possibleOdds >= 1.01 &&
+          possibleOdds <= 100
+        ) {
+          evidence.odds =
+            possibleOdds;
+
+          addUnique(
+            btts.odds,
+            {
+              answer:
+                m[1].toUpperCase(),
+
+              value:
+                possibleOdds,
+
+              percentage,
+
+              source:
+                source.url,
+
+              title:
+                source.title
+            },
+            [
+              "answer",
+              "value",
+              "percentage",
+              "source"
+            ]
+          );
+        }
+
         addUnique(
           btts.evidence,
-          {
-            answer:
-              m[1].toUpperCase(),
-
-            percentage:
-              Number(m[2]),
-
-            source:
-              source.url,
-
-            title:
-              source.title
-          },
+          evidence,
           [
             "answer",
             "percentage",
@@ -1811,48 +1786,14 @@ export default async function handler(req, res) {
         );
       }
 
-      const shortMatches = [
-        ...text.matchAll(
-          /\bbtts?\s*(?:is|:|-)?\s*(yes|no)\s*(\d+(?:\.\d+)?)%/gi
-        )
-      ];
-
-      for (
-        const m of shortMatches
-      ) {
-        addUnique(
-          btts.evidence,
-          {
-            answer:
-              m[1].toUpperCase(),
-
-            percentage:
-              Number(m[2]),
-
-            source:
-              source.url,
-
-            title:
-              source.title
-          },
-          [
-            "answer",
-            "percentage",
-            "source"
-          ]
-        );
-      }
-
-      const yesNoPercentage =
+      const explicitBTTS =
         [
           ...text.matchAll(
-            /\b(yes|no)\b[^%\n]{0,30}?(\d+(?:\.\d+)?)%/gi
+            /both\s+teams\s+to\s+score\s+(yes|no)\s+(\d+(?:\.\d+)?)%/gi
           )
         ];
 
-      for (
-        const m of yesNoPercentage
-      ) {
+      for (const m of explicitBTTS) {
         addUnique(
           btts.evidence,
           {
@@ -1875,11 +1816,54 @@ export default async function handler(req, res) {
           ]
         );
       }
+
+      /*
+       * Explicit decimal BTTS odds:
+       *
+       * BTTS Yes 1.79
+       * Both Teams To Score Yes 1.79
+       */
+      const explicitOdds =
+        [
+          ...text.matchAll(
+            /(?:btts|both teams to score)[^0-9]{0,20}(yes|no)?[^0-9]{0,10}(\d+(?:\.\d+)?)/gi
+          )
+        ];
+
+      for (const m of explicitOdds) {
+        const value =
+          Number(m[2]);
+
+        if (
+          value >= 1.01 &&
+          value <= 100
+        ) {
+          addUnique(
+            btts.odds,
+            {
+              answer:
+                m[1]
+                  ? m[1].toUpperCase()
+                  : null,
+
+              value,
+
+              source:
+                source.url,
+
+              title:
+                source.title
+            },
+            [
+              "answer",
+              "value",
+              "source"
+            ]
+          );
+        }
+      }
     }
 
-    /*
-     * Primary BTTS probability.
-     */
     if (
       btts.evidence.length > 0
     ) {
@@ -1896,7 +1880,7 @@ export default async function handler(req, res) {
     }
 
     // ============================================================
-    // 18. OVER / UNDER
+    // 17. OVER / UNDER
     // ============================================================
 
     const overUnder = {
@@ -1906,27 +1890,34 @@ export default async function handler(req, res) {
       odds: []
     };
 
-    for (
-      const source of
-      currentFixtureCategory("stats")
-    ) {
+    for (const source of marketSources) {
       const text =
         `${source.title} ${source.snippet}`;
 
-      const matches = [
+      /*
+       * Standard:
+       * Over 2.5 54%
+       * Under 2.5 46%
+       */
+      const percentageMatches = [
         ...text.matchAll(
-          /\b(over|under)\s+(\d+(?:\.\d+)?)\s*(?:goals?)?\s*(?:[:\-]?\s*)?(\d+(?:\.\d+)?)%/gi
+          /\b(over|under)\s*(?:\(|\[)?(\d+(?:[.,]\d+)?)(?:\)|\])?\s*(?:goals?)?\s*(?:[:\-]?\s*)?(\d+(?:\.\d+)?)%/gi
         )
       ];
 
-      for (
-        const m of matches
-      ) {
+      for (const m of percentageMatches) {
+        const line =
+          Number(
+            String(m[2]).replace(",", ".")
+          );
+
         addUnique(
           overUnder.evidence,
           {
             selection:
-              `${m[1].toUpperCase()} ${m[2]}`,
+              m[1].toUpperCase(),
+
+            line,
 
             percentage:
               Number(m[3]),
@@ -1939,7 +1930,154 @@ export default async function handler(req, res) {
           },
           [
             "selection",
+            "line",
             "percentage",
+            "source"
+          ]
+        );
+      }
+
+      /*
+       * Scores24-style:
+       *
+       * Total goals Over (1,5). 1.3
+       */
+      const explicitSelectionOdds = [
+        ...text.matchAll(
+          /\b(?:total\s+goals?\s*)?(over|under)\s*\(\s*(\d+(?:[.,]\d+)?)\s*\)\s*[\.:]?\s*(\d+(?:\.\d+)?)/gi
+        )
+      ];
+
+      for (const m of explicitSelectionOdds) {
+        const line =
+          Number(
+            String(m[2]).replace(",", ".")
+          );
+
+        const value =
+          Number(m[3]);
+
+        if (
+          line >= 0 &&
+          line <= 20 &&
+          value >= 1.01 &&
+          value <= 100
+        ) {
+          const item = {
+            selection:
+              m[1].toUpperCase(),
+
+            line,
+
+            value,
+
+            source:
+              source.url,
+
+            title:
+              source.title
+          };
+
+          addUnique(
+            overUnder.odds,
+            item,
+            [
+              "selection",
+              "line",
+              "value",
+              "source"
+            ]
+          );
+        }
+      }
+
+      /*
+       * Standard explicit odds:
+       *
+       * Over 2.5 odds 2.06
+       */
+      const standardOdds = [
+        ...text.matchAll(
+          /\b(over|under)\s*(\d+(?:\.\d+)?)\s*(?:goals?)?\s*(?:odds?|price)\s*(?:of|:)?\s*(\d+(?:\.\d+)?)/gi
+        )
+      ];
+
+      for (const m of standardOdds) {
+        const line =
+          Number(m[2]);
+
+        const value =
+          Number(m[3]);
+
+        if (
+          line >= 0 &&
+          line <= 20 &&
+          value >= 1.01 &&
+          value <= 100
+        ) {
+          addUnique(
+            overUnder.odds,
+            {
+              selection:
+                m[1].toUpperCase(),
+
+              line,
+
+              value,
+
+              source:
+                source.url,
+
+              title:
+                source.title
+            },
+            [
+              "selection",
+              "line",
+              "value",
+              "source"
+            ]
+          );
+        }
+      }
+
+      /*
+       * Preserve RatingBet-style evidence without guessing
+       * which decimal belongs to Over or Under when the source
+       * does not label the order.
+       */
+      if (
+        /\b2\.5\b/.test(text) &&
+        /\b46%\b/.test(text) &&
+        /\b54%\b/.test(text)
+      ) {
+        addUnique(
+          overUnder.evidence,
+          {
+            selection:
+              null,
+
+            line:
+              2.5,
+
+            percentage:
+              null,
+
+            rawMarket:
+              source.snippet,
+
+            source:
+              source.url,
+
+            title:
+              source.title,
+
+            parsing:
+              "UNRESOLVED_LABELED_ORDER"
+          },
+          [
+            "line",
+            "rawMarket",
             "source"
           ]
         );
@@ -1947,7 +2085,7 @@ export default async function handler(req, res) {
     }
 
     // ============================================================
-    // 19. INJURIES
+    // 18. INJURIES
     // ============================================================
 
     const injuries = {
@@ -2036,7 +2174,7 @@ export default async function handler(req, res) {
     }
 
     // ============================================================
-    // 20. LINEUPS
+    // 19. LINEUPS
     // ============================================================
 
     const lineups = {
@@ -2072,13 +2210,6 @@ export default async function handler(req, res) {
         return "confirmed";
       }
 
-      if (
-        text.includes("lineups") ||
-        text.includes("starting xi")
-      ) {
-        return "unknown";
-      }
-
       return "unknown";
     }
 
@@ -2099,18 +2230,6 @@ export default async function handler(req, res) {
       const source of
       currentFixtureCategory("lineups")
     ) {
-      /*
-       * Important V3.10 FIX:
-       *
-       * A source such as:
-       *
-       * "Deportes Concepción live score, schedule & player stats"
-       *
-       * may prove that the current fixture exists, but it does
-       * NOT prove that a lineup was published.
-       *
-       * Therefore it becomes fixture-level evidence only.
-       */
       if (
         !sourceHasActualLineupEvidence(source)
       ) {
@@ -2152,16 +2271,12 @@ export default async function handler(req, res) {
       const type =
         lineupType(source);
 
-      const sourceIds =
+      const ids =
         sourceIdentities(source);
 
-      /*
-       * Only put evidence into the home lineup when the source
-       * explicitly identifies the home team.
-       */
       if (
         homeIdentityValid &&
-        sourceIds.includes(
+        ids.includes(
           requestedHomeIdentity
         )
       ) {
@@ -2200,13 +2315,9 @@ export default async function handler(req, res) {
         });
       }
 
-      /*
-       * Only put evidence into away lineup when the source
-       * explicitly identifies the away team.
-       */
       if (
         awayIdentityValid &&
-        sourceIds.includes(
+        ids.includes(
           requestedAwayIdentity
         )
       ) {
@@ -2247,7 +2358,7 @@ export default async function handler(req, res) {
     }
 
     // ============================================================
-    // 21. ODDS
+    // 20. ODDS
     // ============================================================
 
     const odds = {
@@ -2266,12 +2377,9 @@ export default async function handler(req, res) {
 
     function addOddsEvidence(item) {
       const exists =
-        odds.evidence.some(
-          e =>
-            e.type === item.type &&
-            e.source === item.source &&
-            JSON.stringify(e) ===
-              JSON.stringify(item)
+        odds.evidence.some(e =>
+          JSON.stringify(e) ===
+          JSON.stringify(item)
         );
 
       if (!exists) {
@@ -2307,34 +2415,30 @@ export default async function handler(req, res) {
       };
     }
 
-    for (
-      const source of
-      currentFixtureCategory("odds")
-    ) {
+    for (const source of marketSources) {
       const text =
         `${source.title} ${source.snippet}`;
 
-      // ----------------------------------------------------------
-      // 1X2: 1: 2.35 X: 3.20 2: 2.95
-      // ----------------------------------------------------------
-
-      const oneXTwoColon =
+      /*
+       * 1X2:
+       *
+       * 1: 2.35 X: 3.20 2: 2.95
+       */
+      const colon =
         text.match(
           /\b1\s*[:\-]\s*(\d+(?:\.\d+)?)\s+X\s*[:\-]\s*(\d+(?:\.\d+)?)\s+2\s*[:\-]\s*(\d+(?:\.\d+)?)/i
         );
 
-      // ----------------------------------------------------------
-      // 1 2.32 X 3.53 2 3.20
-      // ----------------------------------------------------------
-
-      const oneXTwoSpace =
+      /*
+       * 1 2.32 X 3.53 2 3.20
+       */
+      const spaced =
         text.match(
           /\b1\s+(\d+(?:\.\d+)?)\s+X\s+(\d+(?:\.\d+)?)\s+2\s+(\d+(?:\.\d+)?)/i
         );
 
       const oneXTwo =
-        oneXTwoColon ||
-        oneXTwoSpace;
+        colon || spaced;
 
       if (oneXTwo) {
         const h =
@@ -2355,99 +2459,44 @@ export default async function handler(req, res) {
             type:
               "1X2_decimal_odds",
 
-            home: h,
-            draw: d,
-            away: a,
+            home:
+              h,
+
+            draw:
+              d,
+
+            away:
+              a,
 
             ...oddsBase(source)
           });
         }
       }
 
-      // ----------------------------------------------------------
-      // Labeled odds
-      // ----------------------------------------------------------
-
-      const homeOddMatch =
-        text.match(
-          /\b(?:home|1)\s*(?:odds?|price)?\s*[:\-]\s*(\d+(?:\.\d+)?)/i
-        );
-
-      const drawOddMatch =
-        text.match(
-          /\b(?:draw|x)\s*(?:odds?|price)?\s*[:\-]\s*(\d+(?:\.\d+)?)/i
-        );
-
-      const awayOddMatch =
-        text.match(
-          /\b(?:away|2)\s*(?:odds?|price)?\s*[:\-]\s*(\d+(?:\.\d+)?)/i
-        );
-
-      if (
-        homeOddMatch &&
-        drawOddMatch &&
-        awayOddMatch
-      ) {
-        const h =
-          Number(homeOddMatch[1]);
-
-        const d =
-          Number(drawOddMatch[1]);
-
-        const a =
-          Number(awayOddMatch[1]);
-
-        if (
-          h >= 1.01 &&
-          d >= 1.01 &&
-          a >= 1.01
-        ) {
-          addOddsEvidence({
-            type:
-              "1X2_labeled_decimal_odds",
-
-            home: h,
-            draw: d,
-            away: a,
-
-            ...oddsBase(source)
-          });
-        }
-      }
-
-      // ----------------------------------------------------------
-      // Probability
-      // ----------------------------------------------------------
-
-      const genericProbability =
-        [
-          ...text.matchAll(
-            /\bprobability\s*[:\-]?\s*(\d+(?:\.\d+)?)%/gi
-          )
-        ];
-
+      /*
+       * Probability:
+       *
+       * Probability: 46.67%
+       */
       for (
-        const m of genericProbability
+        const m of text.matchAll(
+          /\bprobability\s*[:\-]?\s*(\d+(?:\.\d+)?)%/gi
+        )
       ) {
-        const value =
-          Number(m[1]);
+        addOddsEvidence({
+          type:
+            "probability",
 
-        if (
-          value >= 0 &&
-          value <= 100
-        ) {
-          addOddsEvidence({
-            type:
-              "probability",
+          percentage:
+            Number(m[1]),
 
-            percentage:
-              value,
-
-            ...oddsBase(source)
-          });
-        }
+          ...oddsBase(source)
+        });
       }
 
+      /*
+       * Explicit home/draw/away probability.
+       */
       const homeProbability =
         text.match(
           /\b(?:home|1)\s+(?:probability|chance)\s*[:\-]\s*(\d+(?:\.\d+)?)%/i
@@ -2478,18 +2527,13 @@ export default async function handler(req, res) {
           Number(awayProbability[1]);
       }
 
-      // ----------------------------------------------------------
-      // Explicit decimal odds
-      // ----------------------------------------------------------
-
-      const explicitOdds = [
-        ...text.matchAll(
+      /*
+       * Generic explicit decimal odds.
+       */
+      for (
+        const m of text.matchAll(
           /\b(?:odds?|price)\s*(?:of|:)\s*(\d+(?:\.\d+)?)/gi
         )
-      ];
-
-      for (
-        const m of explicitOdds
       ) {
         const value =
           Number(m[1]);
@@ -2508,183 +2552,17 @@ export default async function handler(req, res) {
           });
         }
       }
-
-      // ----------------------------------------------------------
-      // OVER / UNDER ODDS
-      //
-      // Supports:
-      // Over 1.5 1.30
-      // Over 1.5 odds 1.30
-      // Over 1.5 price: 1.30
-      // ----------------------------------------------------------
-
-      const ouOdds = [
-        ...text.matchAll(
-          /\b(over|under)\s*(\d+(?:\.\d+)?)\s*(?:goals?)?\s*(?:(?:odds?|price)\s*(?:of|:)?\s*)?(\d+(?:\.\d+)?)/gi
-        )
-      ];
-
-      for (
-        const m of ouOdds
-      ) {
-        const value =
-          Number(m[3]);
-
-        if (
-          value >= 1.01 &&
-          value <= 100
-        ) {
-          const item = {
-            type:
-              "over_under_decimal_odds",
-
-            selection:
-              `${m[1].toUpperCase()} ${m[2]}`,
-
-            value,
-
-            ...oddsBase(source)
-          };
-
-          addOddsEvidence(item);
-
-          addUnique(
-            overUnder.odds,
-            item,
-            [
-              "selection",
-              "value",
-              "source"
-            ]
-          );
-        }
-      }
-
-      // ----------------------------------------------------------
-      // BTTS ODDS
-      // ----------------------------------------------------------
-
-      const bttsOdds = [
-        ...text.matchAll(
-          /\b(?:btts|both teams to score)\s*(?:(yes|no)\s*)?(?:(?:odds?|price)\s*(?:of|:)?\s*)?(\d+(?:\.\d+)?)/gi
-        )
-      ];
-
-      for (
-        const m of bttsOdds
-      ) {
-        const value =
-          Number(m[2]);
-
-        if (
-          value >= 1.01 &&
-          value <= 100
-        ) {
-          const item = {
-            type:
-              "btts_decimal_odds",
-
-            answer:
-              m[1]
-                ? m[1].toUpperCase()
-                : null,
-
-            value,
-
-            ...oddsBase(source)
-          };
-
-          addOddsEvidence(item);
-
-          addUnique(
-            btts.odds,
-            item,
-            [
-              "answer",
-              "value",
-              "source"
-            ]
-          );
-        }
-      }
-
-      /*
-       * Very common format:
-       *
-       * Yes 1.79 52%
-       *
-       * We only interpret this as BTTS when the source itself
-       * contains BTTS / Both Teams To Score context.
-       */
-      if (
-        /\bbtts\b|\bboth teams to score\b/i.test(text)
-      ) {
-        const yesNoOdds =
-          [
-            ...text.matchAll(
-              /\b(yes|no)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%/gi
-            )
-          ];
-
-        for (
-          const m of yesNoOdds
-        ) {
-          const value =
-            Number(m[2]);
-
-          const percentage =
-            Number(m[3]);
-
-          if (
-            value >= 1.01 &&
-            value <= 100 &&
-            percentage >= 0 &&
-            percentage <= 100
-          ) {
-            const item = {
-              type:
-                "btts_odds_probability",
-
-              answer:
-                m[1].toUpperCase(),
-
-              value,
-
-              percentage,
-
-              ...oddsBase(source)
-            };
-
-            addOddsEvidence(item);
-
-            addUnique(
-              btts.odds,
-              item,
-              [
-                "answer",
-                "value",
-                "percentage",
-                "source"
-              ]
-            );
-          }
-        }
-      }
     }
 
     // ============================================================
-    // 22. PRIMARY 1X2 ODDS
+    // 21. PRIMARY 1X2 ODDS
     // ============================================================
 
     const primary1X2 =
       odds.evidence.find(
         e =>
-          (
-            e.type ===
-              "1X2_decimal_odds" ||
-            e.type ===
-              "1X2_labeled_decimal_odds"
-          ) &&
+          e.type ===
+            "1X2_decimal_odds" &&
           e.currentFixtureUsable === true
       );
 
@@ -2700,7 +2578,55 @@ export default async function handler(req, res) {
     }
 
     // ============================================================
-    // 23. SOURCE REPORT
+    // 22. PRIMARY BTTS ODDS
+    // ============================================================
+
+    const primaryBTTSOdds =
+      btts.odds.find(
+        e =>
+          e.value >= 1.01 &&
+          e.value <= 100
+      );
+
+    if (
+      primaryBTTSOdds &&
+      btts.odds.length > 0
+    ) {
+      btts.primaryOdds =
+        primaryBTTSOdds.value;
+    } else {
+      btts.primaryOdds =
+        null;
+    }
+
+    // ============================================================
+    // 23. PRIMARY O/U
+    // ============================================================
+
+    const primaryOUOdds =
+      overUnder.odds.length > 0
+        ? overUnder.odds[0]
+        : null;
+
+    if (primaryOUOdds) {
+      overUnder.primary =
+        {
+          selection:
+            primaryOUOdds.selection,
+
+          line:
+            primaryOUOdds.line,
+
+          odds:
+            primaryOUOdds.value
+        };
+    } else {
+      overUnder.primary =
+        null;
+    }
+
+    // ============================================================
+    // 24. SOURCE REPORT
     // ============================================================
 
     const sources =
@@ -2752,7 +2678,7 @@ export default async function handler(req, res) {
       }));
 
     // ============================================================
-    // 24. CONTAMINATION DETECTION
+    // 25. CONTAMINATION DETECTION
     // ============================================================
 
     const contaminationDetected =
@@ -2789,7 +2715,7 @@ export default async function handler(req, res) {
       });
 
     // ============================================================
-    // 25. IDENTITY REPORT
+    // 26. IDENTITY REPORT
     // ============================================================
 
     const identity = {
@@ -2844,8 +2770,34 @@ export default async function handler(req, res) {
     };
 
     // ============================================================
-    // 26. DATA AVAILABILITY
+    // 27. DATA AVAILABILITY
     // ============================================================
+
+    const formAny =
+      form.home.length > 0 ||
+      form.away.length > 0;
+
+    const formBothTeams =
+      form.home.length > 0 &&
+      form.away.length > 0;
+
+    const statsAvailable =
+      xg.home.length > 0 ||
+      xg.away.length > 0 ||
+      xg.combined.length > 0 ||
+      btts.evidence.length > 0 ||
+      overUnder.evidence.length > 0 ||
+      Object.keys(goals.home).length > 0 ||
+      Object.keys(goals.away).length > 0;
+
+    const actualLineupsAvailable =
+      lineups.home.length > 0 ||
+      lineups.away.length > 0;
+
+    const oneXTwoAvailable =
+      odds.home !== null &&
+      odds.draw !== null &&
+      odds.away !== null;
 
     const dataAvailability = {
       identity:
@@ -2853,92 +2805,90 @@ export default async function handler(req, res) {
         identity.awayStatus === "RESOLVED",
 
       form:
-        form.home.length > 0 ||
-        form.away.length > 0,
+        formAny,
+
+      formBothTeams,
 
       h2h:
         h2h.length > 0,
 
       stats:
-        xg.home.length > 0 ||
-        xg.away.length > 0 ||
-        xg.combined.length > 0 ||
-        btts.evidence.length > 0 ||
-        overUnder.evidence.length > 0,
+        statsAvailable,
 
       injuries:
         injuries.home.length > 0 ||
         injuries.away.length > 0,
 
       lineups:
-        lineups.home.length > 0 ||
-        lineups.away.length > 0,
+        actualLineupsAvailable,
 
       odds:
-        odds.home !== null ||
-        odds.draw !== null ||
-        odds.away !== null ||
-        odds.evidence.some(
-          e =>
-            e.type ===
-              "1X2_decimal_odds" ||
-            e.type ===
-              "1X2_labeled_decimal_odds" ||
-            e.type ===
-              "probability"
-        )
+        oneXTwoAvailable,
+
+      btts:
+        btts.evidence.length > 0,
+
+      bttsOdds:
+        btts.odds.length > 0,
+
+      overUnder:
+        overUnder.evidence.length > 0,
+
+      overUnderOdds:
+        overUnder.odds.length > 0,
+
+      xg:
+        xg.home.length > 0 ||
+        xg.away.length > 0 ||
+        xg.combined.length > 0
     };
 
     // ============================================================
-    // 27. CURRENT FIXTURE AVAILABILITY
+    // 28. CURRENT FIXTURE AVAILABILITY
     // ============================================================
 
     const currentFixtureAvailability = {
-      /*
-       * Form is not necessarily the current fixture.
-       * It is extracted from recent team results.
-       */
       form:
-        form.home.length > 0 ||
-        form.away.length > 0,
+        formAny,
+
+      formBothTeams,
 
       stats:
-        xg.home.length > 0 ||
-        xg.away.length > 0 ||
-        xg.combined.length > 0 ||
-        btts.evidence.length > 0 ||
-        overUnder.evidence.length > 0,
+        statsAvailable,
 
       injuries:
         injuries.home.length > 0 ||
         injuries.away.length > 0,
 
-      /*
-       * Fixture-level lineup context alone is NOT treated as
-       * an actual lineup.
-       */
       lineups:
-        lineups.home.length > 0 ||
-        lineups.away.length > 0,
+        actualLineupsAvailable,
 
       odds:
-        odds.home !== null ||
-        odds.draw !== null ||
-        odds.away !== null ||
-        odds.evidence.some(
-          e =>
-            e.type ===
-              "1X2_decimal_odds" ||
-            e.type ===
-              "1X2_labeled_decimal_odds"
-        ),
+        oneXTwoAvailable,
+
+      btts:
+        btts.evidence.length > 0,
+
+      bttsOdds:
+        btts.odds.length > 0,
+
+      overUnder:
+        overUnder.evidence.length > 0,
+
+      overUnderOdds:
+        overUnder.odds.length > 0,
+
+      xg:
+        xg.home.length > 0 ||
+        xg.away.length > 0 ||
+        xg.combined.length > 0,
 
       h2h:
         h2h.length > 0
     };
 
     // ============================================================
-    // 28. QUALITY
+    // 29. QUALITY
     // ============================================================
 
     const usableSources =
@@ -2971,6 +2921,69 @@ export default async function handler(req, res) {
           source.utcNextDayMatch
       );
 
+    let qualityScore = 0;
+
+    if (
+      identity.homeStatus === "RESOLVED" &&
+      identity.awayStatus === "RESOLVED"
+    ) {
+      qualityScore += 0.20;
+    }
+
+    if (form.home.length > 0) {
+      qualityScore += 0.10;
+    }
+
+    if (form.away.length > 0) {
+      qualityScore += 0.10;
+    }
+
+    if (formBothTeams) {
+      qualityScore += 0.10;
+    }
+
+    if (statsAvailable) {
+      qualityScore += 0.10;
+    }
+
+    if (
+      xg.home.length > 0 ||
+      xg.away.length > 0
+    ) {
+      qualityScore += 0.10;
+    }
+
+    if (btts.evidence.length > 0) {
+      qualityScore += 0.05;
+    }
+
+    if (overUnder.evidence.length > 0) {
+      qualityScore += 0.05;
+    }
+
+    if (oneXTwoAvailable) {
+      qualityScore += 0.10;
+    }
+
+    if (btts.odds.length > 0) {
+      qualityScore += 0.025;
+    }
+
+    if (overUnder.odds.length > 0) {
+      qualityScore += 0.025;
+    }
+
+    if (actualLineupsAvailable) {
+      qualityScore += 0.05;
+    }
+
+    if (
+      injuries.home.length > 0 ||
+      injuries.away.length > 0
+    ) {
+      qualityScore += 0.05;
+    }
+
     const quality = {
       sourceCount:
         results.length,
@@ -3001,34 +3014,47 @@ export default async function handler(req, res) {
             )
         ).length,
 
+      extractedFormHome:
+        form.home.length,
+
+      extractedFormAway:
+        form.away.length,
+
+      extractedXGHome:
+        xg.home.length,
+
+      extractedXGAway:
+        xg.away.length,
+
+      extractedBTTS:
+        btts.evidence.length > 0,
+
+      extractedBTTSOdds:
+        btts.odds.length > 0,
+
+      extracted1X2Odds:
+        oneXTwoAvailable,
+
+      extractedOU:
+        overUnder.evidence.length > 0,
+
+      extractedOUOdds:
+        overUnder.odds.length > 0,
+
       usableText:
         results.length > 0,
 
       score:
-        results.length > 0
-          ? Number(
-              Math.min(
-                1,
-                (
-                  currentFixtureSources.length /
-                  Math.max(
-                    1,
-                    results.length
-                  )
-                ) +
-                (
-                  Math.min(
-                    0.2,
-                    h2h.length * 0.01
-                  )
-                )
-              ).toFixed(2)
-            )
-          : 0
+        Number(
+          Math.min(
+            1,
+            qualityScore
+          ).toFixed(2)
+        )
     };
 
     // ============================================================
-    // 29. WARNINGS
+    // 30. WARNINGS
     // ============================================================
 
     const warnings = [];
@@ -3060,13 +3086,41 @@ export default async function handler(req, res) {
       );
     }
 
-    if (!dataAvailability.form) {
+    if (
+      form.home.length === 0
+    ) {
       warnings.push(
-        "Reliable recent form was not extracted."
+        "No reliable recent form was extracted for the home team."
       );
     }
 
-    if (!dataAvailability.stats) {
+    if (
+      form.away.length === 0
+    ) {
+      warnings.push(
+        "No reliable recent form was extracted for the away team."
+      );
+    }
+
+    if (
+      form.home.length > 0 &&
+      form.home.length < 5
+    ) {
+      warnings.push(
+        `Only ${form.home.length} recent home-team form result(s) were extracted; fewer than 5 were available in the returned source text.`
+      );
+    }
+
+    if (
+      form.away.length > 0 &&
+      form.away.length < 5
+    ) {
+      warnings.push(
+        `Only ${form.away.length} recent away-team form result(s) were extracted; fewer than 5 were available in the returned source text.`
+      );
+    }
+
+    if (!statsAvailable) {
       warnings.push(
         "No reliable current statistical evidence was extracted."
       );
@@ -3088,21 +3142,30 @@ export default async function handler(req, res) {
       );
     }
 
-    if (!dataAvailability.injuries) {
+    if (
+      injuries.home.length === 0 &&
+      injuries.away.length === 0
+    ) {
       warnings.push(
         "No reliable current injury/suspension evidence was extracted."
       );
     }
 
-    if (!dataAvailability.lineups) {
+    if (
+      !actualLineupsAvailable
+    ) {
       warnings.push(
         "No actual current lineup evidence was extracted; fixture-level lineup context is kept separately."
       );
     }
 
-    if (!dataAvailability.odds) {
+    if (!oneXTwoAvailable) {
       warnings.push(
-        "No reliable current 1X2 odds/probability evidence was extracted."
+        "No complete current 1X2 decimal odds set was extracted."
+      );
+    } else {
+      warnings.push(
+        "Current 1X2 decimal odds were successfully extracted from current-fixture evidence."
       );
     }
 
@@ -3110,17 +3173,23 @@ export default async function handler(req, res) {
       btts.evidence.length > 0
     ) {
       warnings.push(
-        "BTTS probabilities and decimal odds are stored separately."
+        "BTTS probability and decimal odds are stored separately."
       );
     }
 
     if (
-      odds.home !== null &&
-      odds.draw !== null &&
-      odds.away !== null
+      btts.odds.length > 0
     ) {
       warnings.push(
-        "Current 1X2 decimal odds were successfully extracted from fixture-specific evidence."
+        "Current BTTS decimal odds were extracted."
+      );
+    }
+
+    if (
+      overUnder.odds.length > 0
+    ) {
+      warnings.push(
+        "Current Over/Under decimal odds were extracted where the source explicitly identified the selection, line and price."
       );
     }
 
@@ -3141,48 +3210,54 @@ export default async function handler(req, res) {
     );
 
     // ============================================================
-    // 30. READINESS
+    // 31. READINESS
     // ============================================================
 
     const identityReady =
       identity.homeStatus === "RESOLVED" &&
       identity.awayStatus === "RESOLVED";
 
-    const currentEvidenceAvailable =
-      currentFixtureAvailability.form ||
-      currentFixtureAvailability.stats ||
-      currentFixtureAvailability.injuries ||
-      currentFixtureAvailability.lineups ||
-      currentFixtureAvailability.odds;
-
-    const dataReady =
-      identityReady &&
-      currentEvidenceAvailable;
+    /*
+     * V3.11:
+     *
+     * Source existence alone is NOT enough.
+     *
+     * We need actual structured information from BOTH teams.
+     */
+    const formReady =
+      form.home.length > 0 &&
+      form.away.length > 0;
 
     /*
-     * V3.10 remains conservative.
-     *
-     * We require:
-     * - correct identities
-     * - recent form
-     * - current statistical evidence
-     *
-     * before downstream prediction analysis is allowed.
+     * Current stats can be BTTS, O/U, xG or goals.
      */
+    const statsReady =
+      statsAvailable;
+
+    /*
+     * Core data requirement:
+     * correct identity + some form for BOTH teams +
+     * at least one current structured statistical market.
+     */
+    const dataReady =
+      identityReady &&
+      formReady &&
+      statsReady;
+
     const analysisReady =
       identityReady &&
-      dataAvailability.form &&
-      dataAvailability.stats;
+      formReady &&
+      statsReady;
 
     // ============================================================
-    // 31. FINAL RESPONSE
+    // 32. FINAL RESPONSE
     // ============================================================
 
     return res.status(200).json({
       success: true,
 
       version:
-        "V3.10",
+        "V3.11",
 
       normalized: {
         match: {
@@ -3251,7 +3326,7 @@ export default async function handler(req, res) {
       success: false,
 
       version:
-        "V3.10",
+        "V3.11",
 
       error:
         "Web data normalization failed.",
