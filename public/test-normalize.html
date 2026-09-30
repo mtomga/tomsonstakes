@@ -1,76 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>TomsonStakes Normalize Test</title>
 
+
     <style>
+
         body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background: #f4f4f4;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+            padding:
+                20px;
+
+            background:
+                #f4f4f4;
+
         }
+
 
         h1 {
-            font-size: 22px;
+
+            font-size:
+                22px;
+
         }
+
 
         button {
-            padding: 12px 18px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-bottom: 15px;
+
+            padding:
+                12px 18px;
+
+            font-size:
+                16px;
+
+            cursor:
+                pointer;
+
+            margin-bottom:
+                15px;
+
         }
+
 
         pre {
-            background: #111;
-            color: #00ff88;
-            padding: 15px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            border-radius: 8px;
+
+            background:
+                #111;
+
+            color:
+                #00ff88;
+
+            padding:
+                15px;
+
+            overflow-x:
+                auto;
+
+            white-space:
+                pre-wrap;
+
+            word-break:
+                break-word;
+
+            border-radius:
+                8px;
+
         }
 
+
         .status {
-            padding: 10px;
-            background: white;
-            margin-bottom: 15px;
-            border-radius: 6px;
+
+            padding:
+                10px;
+
+            background:
+                white;
+
+            margin-bottom:
+                15px;
+
+            border-radius:
+                6px;
+
         }
+
     </style>
+
 </head>
+
 
 <body>
 
-    <h1>TomsonStakes Web Data → Normalize Test</h1>
 
-    <div class="status" id="status">
+    <h1>
+        TomsonStakes Web Data → Normalize Test
+    </h1>
+
+
+    <div
+        class="status"
+        id="status"
+    >
         Ready.
     </div>
+
 
     <button onclick="runTest()">
         Run Real Pipeline Test
     </button>
 
-    <pre id="output">No test has been run yet.</pre>
+
+    <pre id="output">
+No test has been run yet.
+    </pre>
+
 
 
 <script>
 
+
 async function runTest() {
 
+
     const status =
-        document.getElementById("status");
+        document.getElementById(
+            "status"
+        );
+
 
     const output =
-        document.getElementById("output");
+        document.getElementById(
+            "output"
+        );
 
 
     status.textContent =
-        "Step 1/2: Getting web data...";
+        "Step 1/3: Resolving team identities...";
+
 
     output.textContent =
         "Working...";
@@ -83,10 +162,20 @@ async function runTest() {
     */
 
     const home =
-        "Concepcion";
+        "Deportes Concepcion";
+
+
+    const homeIdentity =
+        "DEPORTES_CONCEPCION";
+
 
     const away =
         "O'Higgins";
+
+
+    const awayIdentity =
+        "OHIGGINS";
+
 
     const date =
         "2026-09-30";
@@ -94,16 +183,33 @@ async function runTest() {
 
     try {
 
+
         /*
         ========================================================
         STEP 1
-        Call /api/web-data
+        GET WEB DATA
         ========================================================
         */
 
+        status.textContent =
+            "Step 1/3: Getting targeted web data...";
+
+
         const webResponse =
             await fetch(
-                `/api/web-data?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`
+
+                `/api/web-data` +
+
+                `?home=${encodeURIComponent(home)}` +
+
+                `&homeIdentity=${encodeURIComponent(homeIdentity)}` +
+
+                `&away=${encodeURIComponent(away)}` +
+
+                `&awayIdentity=${encodeURIComponent(awayIdentity)}` +
+
+                `&date=${encodeURIComponent(date)}`
+
             );
 
 
@@ -114,43 +220,57 @@ async function runTest() {
         if (!webResponse.ok) {
 
             throw new Error(
+
                 "Web-data request failed: " +
+
                 JSON.stringify(
                     webData,
                     null,
                     2
                 )
+
             );
+
         }
-
-
-        status.textContent =
-            "Step 2/2: Normalizing web data...";
 
 
         /*
         ========================================================
         STEP 2
-        Send the ENTIRE web-data response to normalize-web
+        NORMALIZE
         ========================================================
         */
 
+        status.textContent =
+            "Step 2/3: Normalizing identity-safe web data...";
+
+
         const normalizeResponse =
             await fetch(
+
                 "/api/normalize-web",
+
                 {
-                    method: "POST",
+
+                    method:
+                        "POST",
+
 
                     headers: {
+
                         "Content-Type":
                             "application/json"
+
                     },
+
 
                     body:
                         JSON.stringify(
                             webData
                         )
+
                 }
+
             );
 
 
@@ -161,45 +281,61 @@ async function runTest() {
         if (!normalizeResponse.ok) {
 
             throw new Error(
+
                 "Normalize request failed: " +
+
                 JSON.stringify(
                     normalizedData,
                     null,
                     2
                 )
+
             );
+
         }
-
-
-        status.textContent =
-            "Pipeline completed successfully.";
 
 
         /*
         ========================================================
-        DISPLAY RESULT
+        STEP 3
+        COMPLETE
         ========================================================
         */
 
+        status.textContent =
+            "Step 3/3: Pipeline completed successfully.";
+
+
         output.textContent =
             JSON.stringify(
+
                 normalizedData,
+
                 null,
+
                 2
+
             );
 
 
     } catch (error) {
 
+
         status.textContent =
             "Pipeline failed.";
 
+
         output.textContent =
             error.message;
+
     }
+
 }
+
 
 </script>
 
+
 </body>
+
 </html>
