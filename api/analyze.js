@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
     try {
 
-        const { team, from, to } = req.query;
+        const { team, from, to, season } = req.query;
 
         if (!team) {
             return res.status(400).json({
@@ -9,10 +9,10 @@ export default async function handler(req, res) {
             });
         }
 
-        if (!from || !to) {
-            return res.status(400).json({
-                error: "Both from and to dates are required. Use YYYY-MM-DD."
-            });
+        if (!from || !to || !season) {
+    return res.status(400).json({
+        error: "Team, from, to and season are required."
+    });
         }
 
         const apiKey = process.env.APIFOOTBALL_KEY;
@@ -24,10 +24,11 @@ export default async function handler(req, res) {
         }
 
         const url =
-            `https://v3.football.api-sports.io/fixtures` +
-            `?team=${encodeURIComponent(team)}` +
-            `&from=${encodeURIComponent(from)}` +
-            `&to=${encodeURIComponent(to)}`;
+    `https://v3.football.api-sports.io/fixtures` +
+    `?team=${encodeURIComponent(team)}` +
+    `&season=${encodeURIComponent(season)}` +
+    `&from=${encodeURIComponent(from)}` +
+    `&to=${encodeURIComponent(to)}`;
 
         const response = await fetch(url, {
             headers: {
