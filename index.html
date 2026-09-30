@@ -89,7 +89,7 @@
 
 <script>
 
-function analyzeMatches() {
+async function analyzeMatches() {
 
     const date = document.getElementById("matchDate").value;
     const results = document.getElementById("results");
@@ -106,31 +106,144 @@ function analyzeMatches() {
     results.innerHTML = `
         <div class="notice">
             <h2>🔥 TOMSONSTAKES</h2>
-
-            <p>
-                Searching football fixtures for:
-                <strong>${date}</strong>
-            </p>
-
-            <p>
-                🌍 Global fixture scanning will be connected here.
-            </p>
-
-            <p>
-                🇳🇬 Kickoff times will be converted to Nigeria WAT.
-            </p>
-
-            <p>
-                📊 Form, goals, xG/xGA, BTTS, O/U,
-                injuries, lineups, odds and value analysis
-                will be added in the next stage.
-            </p>
-
-            <p>
-                <strong>⚙️ Prediction engine currently being configured.</strong>
-            </p>
+            <p>🔎 Scanning global football fixtures for
+            <strong>${date}</strong>...</p>
+            <p>⏳ Connecting to live football data...</p>
         </div>
     `;
+
+    try {
+
+        const response = await fetch(
+            `/api/fixtures?date=${encodeURIComponent(date)}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message ||
+                data.error ||
+                "Unable to retrieve football fixtures."
+            );
+        }
+
+        if (!data.response || data.response.length === 0) {
+
+            results.innerHTML = `
+                <div class="notice">
+                    <h2>🔥 TOMSONSTAKES</h2>
+                    <p>📅 Date: <strong>${date}</strong></p>
+                    <p>⚠️ No fixtures were returned for this date.</p>
+                </div>
+            `;
+
+            return;
+        }
+
+        let html = `
+            <div class="notice">
+                <h2>🔥 TOMSONSTAKES GLOBAL FIXTURES</h2>
+
+                <p>
+                    📅 Date:
+                    <strong>${date}</strong>
+                </p>
+
+                <p>
+                    🌍 Fixtures found:
+                    <strong>${data.response.length}</strong>
+                </p>
+
+                <hr>
+            </div>
+        `;
+
+        data.response.forEach(match => {
+
+            const league =
+                match.league?.name || "Unknown Competition";
+
+            const country =
+                match.league?.country || "";
+
+            const home =
+                match.teams?.home?.name || "Home Team";
+
+            const away =
+                match.teams?.away?.name || "Away Team";
+
+            const kickoffUTC =
+                match.fixture?.date;
+
+            let kickoffWAT = "Time unavailable";
+
+            if (kickoffUTC) {
+
+                const dateObject =
+                    new Date(kickoffUTC);
+
+                kickoffWAT =
+                    dateObject.toLocaleTimeString(
+                        "en-NG",
+                        {
+                            timeZone: "Africa/Lagos",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false
+                        }
+                    ) + " WAT";
+            }
+
+            html += `
+                <div class="notice" style="margin-top:15px;">
+
+                    <h3>⚽ ${home} vs ${away}</h3>
+
+                    <p>
+                        🏆 <strong>${league}</strong>
+                        ${country ? ` — ${country}` : ""}
+                    </p>
+
+                    <p>
+                        🕐 Kickoff:
+                        <strong>${kickoffWAT}</strong>
+                    </p>
+
+                    <p>
+                        📊 Prediction analysis:
+                        <strong>Coming next</strong>
+                    </p>
+
+                </div>
+            `;
+        });
+
+        results.innerHTML = html;
+
+    } catch (error) {
+
+        console.error(error);
+
+        results.innerHTML = `
+            <div class="notice">
+
+                <h2>🔥 TOMSONSTAKES</h2>
+
+                <p>❌ Unable to load football fixtures.</p>
+
+                <p>
+                    <strong>Error:</strong>
+                    ${error.message}
+                </p>
+
+                <p>
+                    Please try again shortly.
+                </p>
+
+            </div>
+        `;
+    }
 }
 
 </script>
