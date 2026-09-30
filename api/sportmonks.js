@@ -8,8 +8,11 @@ export default async function handler(req, res) {
             });
         }
 
+        const teamId = req.query.team || "5635";
+
         const url =
-            "https://api.sportmonks.com/v3/football/fixtures/date/2026-09-30";
+            `https://api.sportmonks.com/v3/football/teams/${teamId}` +
+            `?include=country;venue;activeSeasons;latest;upcoming;sidelined;statistics`;
 
         const response = await fetch(url, {
             headers: {
@@ -23,10 +26,11 @@ export default async function handler(req, res) {
         return res.status(response.status).json(data);
 
     } catch (error) {
+
         console.error(error);
 
         return res.status(500).json({
-            error: "Sportmonks connection failed.",
+            error: "Sportmonks request failed.",
             details: error.message
         });
     }
