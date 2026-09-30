@@ -1,80 +1,155 @@
 export default async function handler(req, res) {
     try {
+
         if (req.method !== "POST") {
             return res.status(405).json({
                 error: "Method not allowed. Use POST."
             });
         }
 
-        const body = req.body || {};
+        /*
+        ============================================================
+        TOMSONSTAKES
+        WEB DATA NORMALIZER V3.2
+        ============================================================
+
+        PURPOSE
+        -------
+        Converts raw Serper/web-data results into structured,
+        date-aware football evidence.
+
+        IMPORTANT PRINCIPLES
+        --------------------
+        1. Current-match evidence must refer to THIS fixture.
+        2. Historical H2H is allowed, but never becomes current data.
+        3. Future fixtures are excluded from current analysis.
+        4. Generic team pages are NOT automatically current.
+        5. Publication date and event date are stored separately.
+        6. Universidad de Concepcion is NOT the same as
+           Deportes Concepcion.
+        7. Missing statistics are null, never guessed.
+        8. Prediction percentages from websites are not automatically
+           treated as TomsonStakes model probabilities.
+        9. Lineups and injuries require stronger attribution.
+        ============================================================
+        */
+
+
+        // =========================================================
+        // 1. READ REQUEST BODY
+        // =========================================================
+
+        let body = req.body;
+
+        if (typeof body === "string") {
+            try {
+                body = JSON.parse(body);
+            } catch (error) {
+                return res.status(400).json({
+                    error: "Request body must contain valid JSON."
+                });
+            }
+        }
+
+        if (!body || typeof body !== "object") {
+            return res.status(400).json({
+                error: "Request body is missing or invalid."
+            });
+        }
+
 
         /*
-         * ------------------------------------------------------------
-         * INPUT COMPATIBILITY
-         * ------------------------------------------------------------
-         *
-         * Expected:
-         * {
-         *   match: {...},
-         *   searches: [...],
-         *   allResults: [...]
-         * }
-         *
-         * We also retain the compatibility fallbacks used by V3.1.
-         */
+        ------------------------------------------------------------
+        The test page sends the entire /api/web-data response.
+
+        Expected:
+        {
+            match: {
+                home,
+                away,
+                date
+            },
+            searches: [...]
+        }
+
+        We also support:
+        {
+            home,
+            away,
+            date,
+            searches: [...]
+        }
+        ------------------------------------------------------------
+        */
 
         const inputMatch =
-            body.match ||
-            (body.data && body.data.match) ||
-            (body.normalized && body.normalized.match);
+            body.match || {};
 
-        if (
-            !inputMatch ||
-            !inputMatch.home ||
-            !inputMatch.away ||
-            !inputMatch.date
-        ) {
+        const home =
+            cleanString(
+                inputMatch.home ||
+                body.home
+            );
+
+        const away =
+            cleanString(
+                inputMatch.away ||
+                body.away
+            );
+
+        const targetDate =
+            normalizeISODate(
+                inputMatch.date ||
+                body.date
+            );
+
+
+        if (!home || !away || !targetDate) {
             return res.status(400).json({
                 error:
                     "match.home, match.away and match.date are required."
             });
         }
 
-        const match = {
-            home: String(inputMatch.home).trim(),
-            away: String(inputMatch.away).trim(),
-            date: normalizeISODate(inputMatch.date),
-            year:
-                inputMatch.year ||
-                getYearFromDate(inputMatch.date)
-        };
 
-        if (!match.date) {
-            return res.status(400).json({
-                error: "Invalid match.date."
-            });
-        }
+        const targetYear =
+            Number(
+                targetDate.substring(0, 4)
+            );
+
+
+        // =========================================================
+        // 2. COLLECT RAW SEARCH RESULTS
+        // =========================================================
+
+        const rawSearches =
+            Array.isArray(body.searches)
+                ? body.searches
+                : [];
+
+        const rawAllResults =
+            Array.isArray(body.allResults)
+                ? body.allResults
+                : [];
+
+
+        let rawSources = [];
+
 
         /*
-         * ------------------------------------------------------------
-         * COLLECT RAW SEARCH RESULTS
-         * ------------------------------------------------------------
-         */
+        ------------------------------------------------------------
+        Prefer searches because they retain the search type.
 
-        const searches = Array.isArray(body.searches)
-            ? body.searches
-            : [];
+        If searches are absent, fall back to allResults.
+        ------------------------------------------------------------
+        */
 
-        const allResults = Array.isArray(body.allResults)
-            ? body.allResults
-            : flattenSearches(searches);
+        for (const search of rawSearches) {
 
-        const rawSources = [];
-
-        for (const search of searches) {
-            const type = search && search.type
-                ? String(search.type).toLowerCase()
-                : "unknown";
+            const type =
+                cleanString(
+                    search.type
+                ) || "unknown";
 
             const results =
                 Array.isArray(search.results)
@@ -82,392 +157,1111 @@ export default async function handler(req, res) {
                     : [];
 
             for (const item of results) {
+
                 rawSources.push({
                     type,
-                    source: item.title || "",
-                    url: item.link || "",
-                    snippet: item.snippet || "",
-                    date: item.date || null
+                    source:
+                        cleanString(
+                            item.title
+                        ),
+
+                    url:
+                        cleanString(
+                            item.link
+                        ),
+
+                    snippet:
+                        cleanString(
+                            item.snippet
+                        ),
+
+                    date:
+                        cleanString(
+                            item.date
+                        ),
+
+                    position:
+                        item.position ||
+                        null
                 });
             }
         }
 
+
         /*
-         * If searches[] was unavailable, use allResults[].
-         */
+        ------------------------------------------------------------
+        If searches produced nothing, use allResults.
+        ------------------------------------------------------------
+        */
 
         if (rawSources.length === 0) {
-            for (const item of allResults) {
+
+            for (const item of rawAllResults) {
+
                 rawSources.push({
-                    type: item.type || "unknown",
-                    source: item.title || item.source || "",
-                    url: item.link || item.url || "",
-                    snippet: item.snippet || "",
-                    date: item.date || null
+                    type:
+                        cleanString(
+                            item.type
+                        ) || "unknown",
+
+                    source:
+                        cleanString(
+                            item.title
+                        ),
+
+                    url:
+                        cleanString(
+                            item.link
+                        ),
+
+                    snippet:
+                        cleanString(
+                            item.snippet
+                        ),
+
+                    date:
+                        cleanString(
+                            item.date
+                        ),
+
+                    position:
+                        item.position ||
+                        null
                 });
             }
         }
 
-        /*
-         * ------------------------------------------------------------
-         * NORMALIZED CONTAINERS
-         * ------------------------------------------------------------
-         */
 
-        const normalized = {
-            match,
-
-            form: {
-                home: [],
-                away: []
-            },
-
-            formEvidence: {
-                home: [],
-                away: []
-            },
-
-            h2h: [],
-
-            goals: {
-                home: null,
-                away: null
-            },
-
-            xg: {
-                home: null,
-                away: null,
-                total: null
-            },
-
-            btts: {
-                home: null,
-                away: null,
-                h2h: null
-            },
-
-            overUnder: {
-                over15: null,
-                over25: null,
-                over35: null,
-                under25: null,
-                under35: null
-            },
-
-            statsEvidence: [],
-            undatedStatsEvidence: [],
-
-            injuries: {
-                home: [],
-                away: [],
-                unknown: []
-            },
-
-            lineups: {
-                home: null,
-                away: null,
-                matchEvidence: [],
-                unknown: []
-            },
-
-            odds: {
-                home: null,
-                draw: null,
-                away: null,
-                over25: null,
-                under25: null,
-                bttsYes: null,
-                bttsNo: null
-            },
-
-            oddsEvidence: [],
-            undatedOddsEvidence: [],
-
-            sources: [],
-
-            warnings: []
-        };
+        // =========================================================
+        // 3. TEAM IDENTITY
+        // =========================================================
 
         /*
-         * ------------------------------------------------------------
-         * SOURCE CLASSIFICATION
-         * ------------------------------------------------------------
-         */
+        ------------------------------------------------------------
+        IMPORTANT:
 
-        for (const raw of rawSources) {
-            const classified = classifySource(
-                raw,
-                match
+        "Concepcion" can represent Deportes Concepcion.
+
+        BUT:
+
+        "Universidad de Concepcion"
+
+        is a DIFFERENT club and must NOT automatically be treated
+        as Deportes Concepcion.
+        ------------------------------------------------------------
+        */
+
+        const homeIdentity =
+            buildTeamIdentity(
+                home,
+                "home"
             );
 
-            normalized.sources.push(classified);
+        const awayIdentity =
+            buildTeamIdentity(
+                away,
+                "away"
+            );
 
-            /*
-             * --------------------------------------------------------
-             * H2H
-             * --------------------------------------------------------
-             */
 
-            if (
-                raw.type === "h2h" ||
-                isH2HSource(raw)
-            ) {
-                if (isActualH2HSource(raw)) {
-                    normalized.h2h.push({
-                        source: raw.source,
-                        url: raw.url,
-                        snippet: raw.snippet,
-                        relevance:
-                            classified.eventDate === match.date
-                                ? "CURRENT_MATCH"
-                                : "HISTORICAL",
-                        dataRelevance: "HISTORICAL_H2H",
-                        eventDate:
-                            classified.eventDate || null,
-                        publishedDate:
-                            classified.publishedDate || null
-                    });
-                }
+        // =========================================================
+        // 4. NORMALIZE SOURCES
+        // =========================================================
 
-                continue;
-            }
+        const normalizedSources = [];
 
-            /*
-             * --------------------------------------------------------
-             * FORM
-             * --------------------------------------------------------
-             */
 
-            if (raw.type === "form") {
-                processFormSource(
+        for (const raw of rawSources) {
+
+            const normalized =
+                normalizeSource(
                     raw,
-                    classified,
-                    match,
-                    normalized
+                    homeIdentity,
+                    awayIdentity,
+                    targetDate
                 );
 
-                continue;
-            }
-
-            /*
-             * --------------------------------------------------------
-             * STATS
-             * --------------------------------------------------------
-             */
-
-            if (raw.type === "stats") {
-                processStatsSource(
-                    raw,
-                    classified,
-                    match,
+            if (normalized) {
+                normalizedSources.push(
                     normalized
                 );
-
-                continue;
-            }
-
-            /*
-             * --------------------------------------------------------
-             * INJURIES
-             * --------------------------------------------------------
-             */
-
-            if (raw.type === "injuries") {
-                processInjurySource(
-                    raw,
-                    classified,
-                    match,
-                    normalized
-                );
-
-                continue;
-            }
-
-            /*
-             * --------------------------------------------------------
-             * LINEUPS
-             * --------------------------------------------------------
-             */
-
-            if (raw.type === "lineups") {
-                processLineupSource(
-                    raw,
-                    classified,
-                    match,
-                    normalized
-                );
-
-                continue;
-            }
-
-            /*
-             * --------------------------------------------------------
-             * ODDS
-             * --------------------------------------------------------
-             */
-
-            if (raw.type === "odds") {
-                processOddsSource(
-                    raw,
-                    classified,
-                    match,
-                    normalized
-                );
-
-                continue;
             }
         }
 
-        /*
-         * ------------------------------------------------------------
-         * NUMERICAL DEDUPLICATION
-         * ------------------------------------------------------------
-         */
 
-        normalized.h2h =
+        // =========================================================
+        // 5. DEDUPLICATE SOURCES
+        // =========================================================
+
+        const sources =
             removeDuplicateEvidence(
-                normalized.h2h
+                normalizedSources
             );
 
-        normalized.statsEvidence =
-            removeDuplicateEvidence(
-                normalized.statsEvidence
-            );
 
-        normalized.undatedStatsEvidence =
-            removeDuplicateEvidence(
-                normalized.undatedStatsEvidence
-            );
+        // =========================================================
+        // 6. CONTAINERS
+        // =========================================================
 
-        normalized.oddsEvidence =
-            removeDuplicateEvidence(
-                normalized.oddsEvidence
-            );
-
-        normalized.undatedOddsEvidence =
-            removeDuplicateEvidence(
-                normalized.undatedOddsEvidence
-            );
-
-        normalized.formEvidence.home =
-            removeDuplicateEvidence(
-                normalized.formEvidence.home
-            );
-
-        normalized.formEvidence.away =
-            removeDuplicateEvidence(
-                normalized.formEvidence.away
-            );
-
-        normalized.injuries.home =
-            removeDuplicateEvidence(
-                normalized.injuries.home
-            );
-
-        normalized.injuries.away =
-            removeDuplicateEvidence(
-                normalized.injuries.away
-            );
-
-        normalized.injuries.unknown =
-            removeDuplicateEvidence(
-                normalized.injuries.unknown
-            );
-
-        normalized.lineups.matchEvidence =
-            removeDuplicateEvidence(
-                normalized.lineups.matchEvidence
-            );
-
-        /*
-         * ------------------------------------------------------------
-         * SAFETY CLEANUP
-         * ------------------------------------------------------------
-         *
-         * Remove obviously unsafe odds values.
-         */
-
-        validateOdds(normalized);
-
-        /*
-         * ------------------------------------------------------------
-         * WARNINGS
-         * ------------------------------------------------------------
-         */
-
-        addWarnings(
-            normalized,
-            match
-        );
-
-        /*
-         * ------------------------------------------------------------
-         * QUALITY
-         * ------------------------------------------------------------
-         */
-
-        const quality = buildQuality(
-            normalized
-        );
-
-        /*
-         * ------------------------------------------------------------
-         * DATA AVAILABILITY
-         * ------------------------------------------------------------
-         */
-
-        const dataAvailability =
-            buildDataAvailability(
-                normalized,
-                quality
-            );
-
-        /*
-         * ------------------------------------------------------------
-         * ANALYSIS READY
-         * ------------------------------------------------------------
-         */
-
-        const analysisReady = {
-            exactMatchEvidence:
-                quality.currentMatchSources > 0,
-
-            recentEvidence:
-                quality.formEvidence > 0,
-
-            h2hEvidence:
-                quality.h2hSources > 0,
-
-            formEvidence:
-                quality.formEvidence > 0,
-
-            injuryEvidence:
-                quality.injuryEvidence > 0,
-
-            lineupEvidence:
-                quality.lineupEvidence > 0,
-
-            statsEvidence:
-                quality.statsEvidence > 0,
-
-            oddsEvidence:
-                quality.oddsEvidence > 0,
-
-            structuredOdds:
-                dataAvailability.odds.structured1X2,
-
-            actualLineups:
-                dataAvailability.lineups.playersAvailable
+        const formEvidence = {
+            home: [],
+            away: []
         };
 
-        /*
-         * ------------------------------------------------------------
-         * RESPONSE
-         * ------------------------------------------------------------
-         */
+        const h2h = [];
+
+        const statsEvidence = [];
+
+        const undatedStatsEvidence = [];
+
+        const injuries = {
+            home: [],
+            away: [],
+            unknown: []
+        };
+
+        const lineups = {
+            home: null,
+            away: null,
+            matchEvidence: [],
+            unknown: []
+        };
+
+        const oddsEvidence = [];
+
+        const undatedOddsEvidence = [];
+
+
+        // =========================================================
+        // 7. PROCESS EACH SOURCE
+        // =========================================================
+
+        for (const item of sources) {
+
+            const type =
+                item.type;
+
+            /*
+            --------------------------------------------------------
+            H2H
+            --------------------------------------------------------
+            */
+
+            if (
+                type === "h2h" &&
+                isActualH2HSource(item)
+            ) {
+
+                /*
+                Current fixture pages containing H2H language
+                are NOT themselves historical H2H evidence.
+
+                They can describe past H2H, but we keep them as
+                H2H source context rather than a historical result.
+                */
+
+                h2h.push({
+                    source: item.source,
+                    url: item.url,
+                    snippet: item.snippet,
+                    relevance:
+                        item.relevance,
+                    dataRelevance:
+                        item.eventDate &&
+                        item.eventDate < targetDate
+                            ? "HISTORICAL_H2H"
+                            : "H2H_CONTEXT",
+                    eventDate:
+                        item.eventDate,
+                    publishedDate:
+                        item.publishedDate
+                });
+
+                continue;
+            }
+
+
+            /*
+            --------------------------------------------------------
+            FORM
+            --------------------------------------------------------
+            */
+
+            if (
+                type === "form" ||
+                type === "stats"
+            ) {
+
+                const formMatches =
+                    extractFormResults(
+                        item,
+                        homeIdentity,
+                        awayIdentity,
+                        targetDate
+                    );
+
+
+                for (const result of formMatches) {
+
+                    if (
+                        result.team === "home"
+                    ) {
+                        formEvidence.home.push(
+                            result
+                        );
+                    }
+
+                    if (
+                        result.team === "away"
+                    ) {
+                        formEvidence.away.push(
+                            result
+                        );
+                    }
+                }
+            }
+
+
+            /*
+            --------------------------------------------------------
+            STATISTICS
+            --------------------------------------------------------
+            */
+
+            if (type === "stats") {
+
+                if (
+                    item.relevance ===
+                    "CURRENT_MATCH"
+                ) {
+
+                    if (
+                        isStrongCurrentStatsSource(
+                            item,
+                            homeIdentity,
+                            awayIdentity
+                        )
+                    ) {
+
+                        statsEvidence.push(
+                            item
+                        );
+                    }
+
+                } else if (
+                    item.relevance ===
+                    "UNDATED_TEAM_SOURCE"
+                ) {
+
+                    if (
+                        isUsefulUndatedStatsSource(
+                            item,
+                            homeIdentity,
+                            awayIdentity
+                        )
+                    ) {
+
+                        undatedStatsEvidence.push(
+                            item
+                        );
+                    }
+                }
+            }
+
+
+            /*
+            --------------------------------------------------------
+            INJURIES
+            --------------------------------------------------------
+            */
+
+            if (type === "injuries") {
+
+                const injuryEvidence =
+                    extractCurrentInjuries(
+                        item,
+                        homeIdentity,
+                        awayIdentity,
+                        targetDate
+                    );
+
+
+                for (
+                    const injury
+                    of injuryEvidence
+                ) {
+
+                    if (
+                        injury.team === "home"
+                    ) {
+
+                        injuries.home.push(
+                            injury
+                        );
+
+                    } else if (
+                        injury.team === "away"
+                    ) {
+
+                        injuries.away.push(
+                            injury
+                        );
+
+                    } else {
+
+                        injuries.unknown.push(
+                            injury
+                        );
+                    }
+                }
+            }
+
+
+            /*
+            --------------------------------------------------------
+            LINEUPS
+            --------------------------------------------------------
+            */
+
+            if (type === "lineups") {
+
+                if (
+                    isStrongCurrentLineupSource(
+                        item,
+                        homeIdentity,
+                        awayIdentity
+                    )
+                ) {
+
+                    lineups.matchEvidence.push(
+                        item
+                    );
+                }
+            }
+
+
+            /*
+            --------------------------------------------------------
+            ODDS
+            --------------------------------------------------------
+            */
+
+            if (type === "odds") {
+
+                if (
+                    item.relevance ===
+                    "CURRENT_MATCH"
+                ) {
+
+                    if (
+                        isStrongCurrentOddsSource(
+                            item,
+                            homeIdentity,
+                            awayIdentity
+                        )
+                    ) {
+
+                        oddsEvidence.push(
+                            item
+                        );
+                    }
+
+                } else if (
+                    item.relevance ===
+                    "UNDATED_TEAM_SOURCE"
+                ) {
+
+                    if (
+                        isUsefulUndatedOddsSource(
+                            item,
+                            homeIdentity,
+                            awayIdentity
+                        )
+                    ) {
+
+                        undatedOddsEvidence.push(
+                            item
+                        );
+                    }
+                }
+            }
+        }
+
+
+        // =========================================================
+        // 8. DEDUPLICATE EVIDENCE
+        // =========================================================
+
+        formEvidence.home =
+            removeDuplicateEvidence(
+                formEvidence.home
+            );
+
+        formEvidence.away =
+            removeDuplicateEvidence(
+                formEvidence.away
+            );
+
+        const cleanH2H =
+            removeDuplicateEvidence(
+                h2h
+            );
+
+        const cleanStats =
+            removeDuplicateEvidence(
+                statsEvidence
+            );
+
+        const cleanUndatedStats =
+            removeDuplicateEvidence(
+                undatedStatsEvidence
+            );
+
+        injuries.home =
+            removeDuplicateEvidence(
+                injuries.home
+            );
+
+        injuries.away =
+            removeDuplicateEvidence(
+                injuries.away
+            );
+
+        injuries.unknown =
+            removeDuplicateEvidence(
+                injuries.unknown
+            );
+
+        lineups.matchEvidence =
+            removeDuplicateEvidence(
+                lineups.matchEvidence
+            );
+
+        const cleanOdds =
+            removeDuplicateEvidence(
+                oddsEvidence
+            );
+
+        const cleanUndatedOdds =
+            removeDuplicateEvidence(
+                undatedOddsEvidence
+            );
+
+
+        // =========================================================
+        // 9. STRUCTURED STAT EXTRACTION
+        // =========================================================
+
+        const extractedStats =
+            extractStructuredStats(
+                cleanStats,
+                homeIdentity,
+                awayIdentity
+            );
+
+
+        // =========================================================
+        // 10. STRUCTURED ODDS EXTRACTION
+        // =========================================================
+
+        const extractedOdds =
+            extractStructuredOdds(
+                cleanOdds,
+                homeIdentity,
+                awayIdentity
+            );
+
+
+        // =========================================================
+        // 11. CURRENT LINEUP EXTRACTION
+        // =========================================================
+
+        const lineupResult =
+            extractLineupEvidence(
+                lineups.matchEvidence,
+                homeIdentity,
+                awayIdentity
+            );
+
+
+        lineups.home =
+            lineupResult.home;
+
+        lineups.away =
+            lineupResult.away;
+
+        lineups.matchEvidence =
+            lineupResult.matchEvidence;
+
+        lineups.unknown =
+            lineupResult.unknown;
+
+
+        // =========================================================
+        // 12. BUILD WARNINGS
+        // =========================================================
+
+        const warnings = [];
+
+
+        const historicalCount =
+            sources.filter(
+                item =>
+                    item.relevance ===
+                    "HISTORICAL"
+            ).length;
+
+
+        const futureCount =
+            sources.filter(
+                item =>
+                    item.relevance ===
+                    "FUTURE"
+            ).length;
+
+
+        const undatedCount =
+            sources.filter(
+                item =>
+                    item.relevance ===
+                    "UNDATED_TEAM_SOURCE"
+            ).length;
+
+
+        if (historicalCount > 0) {
+
+            warnings.push(
+                "Historical evidence was detected and must not be treated as current-match information."
+            );
+        }
+
+
+        if (futureCount > 0) {
+
+            warnings.push(
+                "Future fixture or future-dated information was detected and excluded from current-match evidence."
+            );
+        }
+
+
+        if (undatedCount > 0) {
+
+            warnings.push(
+                "Some team-related sources had no reliable event date and were kept separately instead of being treated as recent."
+            );
+        }
+
+
+        if (
+            cleanStats.length === 0
+        ) {
+
+            warnings.push(
+                "No date-qualified statistical evidence was found."
+            );
+        }
+
+
+        if (
+            injuries.home.length === 0 &&
+            injuries.away.length === 0
+        ) {
+
+            warnings.push(
+                "No current-match injury evidence was confidently attributed."
+            );
+        }
+
+
+        if (
+            lineups.home === null &&
+            lineups.away === null &&
+            lineups.matchEvidence.length === 0
+        ) {
+
+            warnings.push(
+                "No current-match lineup evidence was confidently identified."
+            );
+        }
+
+
+        if (
+            cleanUndatedStats.length > 0
+        ) {
+
+            warnings.push(
+                "Undated statistical sources were retained separately and must not be treated as current-match statistics."
+            );
+        }
+
+
+        if (
+            cleanOdds.length === 0
+        ) {
+
+            warnings.push(
+                "No date-qualified current-match odds source was confidently identified."
+            );
+        }
+
+
+        // =========================================================
+        // 13. DATA AVAILABILITY
+        // =========================================================
+
+        const fixtureAvailable =
+            sources.some(
+                item =>
+                    item.relevance ===
+                    "CURRENT_MATCH"
+            );
+
+
+        const formAvailable =
+            formEvidence.home.length > 0 ||
+            formEvidence.away.length > 0;
+
+
+        const injuryAvailable =
+            injuries.home.length > 0 ||
+            injuries.away.length > 0;
+
+
+        const lineupAvailable =
+            lineups.home !== null ||
+            lineups.away !== null ||
+            lineups.matchEvidence.length > 0;
+
+
+        const statsAvailable =
+            cleanStats.length > 0;
+
+
+        const oddsAvailable =
+            cleanOdds.length > 0;
+
+
+        // =========================================================
+        // 14. FINAL NORMALIZED OBJECT
+        // =========================================================
+
+        const normalized = {
+
+            match: {
+                home,
+                away,
+                date: targetDate,
+                year: targetYear
+            },
+
+
+            form: {
+                home:
+                    buildFormSummary(
+                        formEvidence.home
+                    ),
+
+                away:
+                    buildFormSummary(
+                        formEvidence.away
+                    )
+            },
+
+
+            formEvidence: {
+                home:
+                    formEvidence.home,
+
+                away:
+                    formEvidence.away
+            },
+
+
+            h2h:
+                cleanH2H,
+
+
+            goals: {
+                home:
+                    extractedStats.goals.home,
+
+                away:
+                    extractedStats.goals.away
+            },
+
+
+            xg: {
+                home:
+                    extractedStats.xg.home,
+
+                away:
+                    extractedStats.xg.away,
+
+                total:
+                    extractedStats.xg.total
+            },
+
+
+            btts: {
+                home:
+                    extractedStats.btts.home,
+
+                away:
+                    extractedStats.btts.away,
+
+                h2h:
+                    extractedStats.btts.h2h
+            },
+
+
+            overUnder: {
+                over15:
+                    extractedStats.overUnder.over15,
+
+                over25:
+                    extractedStats.overUnder.over25,
+
+                over35:
+                    extractedStats.overUnder.over35,
+
+                under25:
+                    extractedStats.overUnder.under25,
+
+                under35:
+                    extractedStats.overUnder.under35
+            },
+
+
+            statsEvidence:
+                cleanStats,
+
+
+            undatedStatsEvidence:
+                cleanUndatedStats,
+
+
+            injuries: {
+                home:
+                    injuries.home,
+
+                away:
+                    injuries.away,
+
+                unknown:
+                    injuries.unknown
+            },
+
+
+            lineups: {
+                home:
+                    lineups.home,
+
+                away:
+                    lineups.away,
+
+                matchEvidence:
+                    lineups.matchEvidence,
+
+                unknown:
+                    lineups.unknown
+            },
+
+
+            odds: {
+                home:
+                    extractedOdds.home,
+
+                draw:
+                    extractedOdds.draw,
+
+                away:
+                    extractedOdds.away,
+
+                over25:
+                    extractedOdds.over25,
+
+                under25:
+                    extractedOdds.under25,
+
+                bttsYes:
+                    extractedOdds.bttsYes,
+
+                bttsNo:
+                    extractedOdds.bttsNo
+            },
+
+
+            oddsEvidence:
+                cleanOdds,
+
+
+            undatedOddsEvidence:
+                cleanUndatedOdds,
+
+
+            sources,
+
+
+            warnings
+        };
+
+
+        // =========================================================
+        // 15. QUALITY COUNTS
+        // =========================================================
+
+        const quality = {
+
+            totalSources:
+                sources.length,
+
+            currentMatchSources:
+                countRelevance(
+                    sources,
+                    "CURRENT_MATCH"
+                ),
+
+            recentSources:
+                countRelevance(
+                    sources,
+                    "RECENT"
+                ),
+
+            historicalSources:
+                countRelevance(
+                    sources,
+                    "HISTORICAL"
+                ),
+
+            futureSources:
+                countRelevance(
+                    sources,
+                    "FUTURE"
+                ),
+
+            undatedTeamSources:
+                countRelevance(
+                    sources,
+                    "UNDATED_TEAM_SOURCE"
+                ),
+
+            irrelevantSources:
+                countRelevance(
+                    sources,
+                    "IRRELEVANT"
+                ),
+
+            h2hSources:
+                cleanH2H.length,
+
+            formEvidence:
+                formEvidence.home.length +
+                formEvidence.away.length,
+
+            statsEvidence:
+                cleanStats.length,
+
+            undatedStatsEvidence:
+                cleanUndatedStats.length,
+
+            injuryEvidence:
+                injuries.home.length +
+                injuries.away.length,
+
+            injurySources:
+                sources.filter(
+                    item =>
+                        item.type ===
+                        "injuries"
+                ).length,
+
+            lineupEvidence:
+                lineups.matchEvidence.length,
+
+            oddsEvidence:
+                cleanOdds.length,
+
+            undatedOddsEvidence:
+                cleanUndatedOdds.length
+        };
+
+
+        // =========================================================
+        // 16. ANALYSIS READINESS
+        // =========================================================
+
+        const analysisReady = {
+
+            exactMatchEvidence:
+                fixtureAvailable,
+
+            recentEvidence:
+                formAvailable,
+
+            h2hEvidence:
+                cleanH2H.length > 0,
+
+            formEvidence:
+                formAvailable,
+
+            injuryEvidence:
+                injuryAvailable,
+
+            lineupEvidence:
+                lineupAvailable,
+
+            statsEvidence:
+                statsAvailable,
+
+            oddsEvidence:
+                oddsAvailable,
+
+            structuredOdds:
+                extractedOdds.home !== null ||
+                extractedOdds.draw !== null ||
+                extractedOdds.away !== null,
+
+            actualLineups:
+                lineupAvailable
+        };
+
+
+        // =========================================================
+        // 17. DATA AVAILABILITY
+        // =========================================================
+
+        const dataAvailability = {
+
+            fixture: {
+                available:
+                    fixtureAvailable,
+
+                confidence:
+                    fixtureAvailable
+                        ? "HIGH"
+                        : "NONE"
+            },
+
+
+            form: {
+                available:
+                    formAvailable,
+
+                confidence:
+                    formAvailable
+                        ? "MEDIUM"
+                        : "NONE",
+
+                reason:
+                    formAvailable
+                        ? "Date-qualified previous results were found."
+                        : "No date-qualified recent results extracted."
+            },
+
+
+            h2h: {
+                available:
+                    cleanH2H.length > 0,
+
+                confidence:
+                    cleanH2H.length >= 2
+                        ? "MEDIUM"
+                        : cleanH2H.length === 1
+                            ? "LOW"
+                            : "NONE"
+            },
+
+
+            injuries: {
+                available:
+                    injuryAvailable,
+
+                confidence:
+                    injuryAvailable
+                        ? "MEDIUM"
+                        : "NONE",
+
+                sourceAvailable:
+                    sources.some(
+                        item =>
+                            item.type ===
+                            "injuries"
+                    ),
+
+                currentEvidence:
+                    injuryAvailable
+            },
+
+
+            lineups: {
+                sourceAvailable:
+                    lineups.matchEvidence.length > 0,
+
+                playersAvailable:
+                    lineupAvailable,
+
+                confirmed:
+                    false
+            },
+
+
+            stats: {
+                available:
+                    statsAvailable,
+
+                confidence:
+                    statsAvailable
+                        ? "MEDIUM"
+                        : "NONE",
+
+                undatedAvailable:
+                    cleanUndatedStats.length > 0
+            },
+
+
+            xg: {
+                available:
+                    extractedStats.xg.home !== null ||
+                    extractedStats.xg.away !== null,
+
+                confidence:
+                    extractedStats.xg.home !== null ||
+                    extractedStats.xg.away !== null
+                        ? "MEDIUM"
+                        : "NONE"
+            },
+
+
+            odds: {
+                sourceAvailable:
+                    cleanOdds.length > 0,
+
+                structured1X2:
+                    extractedOdds.home !== null ||
+                    extractedOdds.draw !== null ||
+                    extractedOdds.away !== null,
+
+                confidence:
+                    cleanOdds.length > 0
+                        ? "MEDIUM"
+                        : "NONE",
+
+                undatedAvailable:
+                    cleanUndatedOdds.length > 0
+            }
+        };
+
+
+        // =========================================================
+        // 18. RESPONSE
+        // =========================================================
 
         return res.status(200).json({
+
             success: true,
+
+            version:
+                "V3.2",
 
             normalized,
 
@@ -478,13 +1272,16 @@ export default async function handler(req, res) {
             analysisReady
         });
 
+
     } catch (error) {
+
         console.error(
-            "normalize-web error:",
+            "V3.2 normalization error:",
             error
         );
 
         return res.status(500).json({
+
             error:
                 "Web data normalization failed.",
 
@@ -495,236 +1292,134 @@ export default async function handler(req, res) {
 }
 
 
-/* ================================================================
-   BASIC HELPERS
-   ================================================================ */
+// ================================================================
+// HELPER FUNCTIONS
+// ================================================================
 
-function flattenSearches(searches) {
-    const output = [];
 
-    for (const search of searches || []) {
-        const type =
-            search && search.type
-                ? search.type
-                : "unknown";
+// ---------------------------------------------------------------
+// CLEAN STRING
+// ---------------------------------------------------------------
 
-        for (const item of search.results || []) {
-            output.push({
-                type,
-                title:
-                    item.title || "",
-                link:
-                    item.link || "",
-                snippet:
-                    item.snippet || "",
-                date:
-                    item.date || null
-            });
-        }
+function cleanString(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
     }
 
-    return output;
+    return String(value)
+        .replace(/\s+/g, " ")
+        .trim();
 }
 
 
-function getYearFromDate(value) {
-    const date = parseDateValue(value);
-
-    if (!date) {
-        return null;
-    }
-
-    return date.getUTCFullYear();
-}
-
+// ---------------------------------------------------------------
+// NORMALIZE ISO DATE
+// ---------------------------------------------------------------
 
 function normalizeISODate(value) {
-    const date = parseDateValue(value);
 
-    if (!date) {
-        return null;
-    }
-
-    return formatDateUTC(date);
-}
-
-
-function formatDateUTC(date) {
-    const y =
-        date.getUTCFullYear();
-
-    const m =
-        String(
-            date.getUTCMonth() + 1
-        ).padStart(2, "0");
-
-    const d =
-        String(
-            date.getUTCDate()
-        ).padStart(2, "0");
-
-    return `${y}-${m}-${d}`;
-}
-
-
-/* ================================================================
-   DATE PARSER
-   ================================================================ */
-
-function parseDateValue(value) {
     if (!value) {
         return null;
     }
 
-    if (value instanceof Date) {
-        return isNaN(value.getTime())
-            ? null
-            : value;
-    }
-
     const text =
-        String(value)
-            .replace(/\u00a0/g, " ")
-            .trim();
+        cleanString(value);
 
-    if (!text) {
-        return null;
-    }
+    let match;
 
-    /*
-     * ISO:
-     * 2026-09-30
-     * 2026-09-30T23:00:00Z
-     */
 
-    let match =
+    // YYYY-MM-DD
+    match =
         text.match(
             /\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/
         );
 
     if (match) {
-        return makeUTCDate(
+
+        return makeISODate(
             Number(match[1]),
             Number(match[2]),
             Number(match[3])
         );
     }
 
-    /*
-     * Month-name formats:
-     *
-     * Sep 30, 2026
-     * September 30, 2026
-     * 30 Sep 2026
-     * 30 September 2026
-     * Wed, Sep 30, 2026
-     */
 
-    const months = {
-        jan: 1,
-        january: 1,
-        feb: 2,
-        february: 2,
-        mar: 3,
-        march: 3,
-        apr: 4,
-        april: 4,
-        may: 5,
-        jun: 6,
-        june: 6,
-        jul: 7,
-        july: 7,
-        aug: 8,
-        august: 8,
-        sep: 9,
-        sept: 9,
-        september: 9,
-        oct: 10,
-        october: 10,
-        nov: 11,
-        november: 11,
-        dec: 12,
-        december: 12
-    };
-
+    // September 30, 2026
     match =
         text.match(
-            /\b(?:mon|tue|wed|thu|fri|sat|sun)(?:day)?[,]?\s+([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(20\d{2})\b/i
+            /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(20\d{2})\b/i
         );
 
     if (match) {
-        const month =
-            months[
-                match[1].toLowerCase()
-            ];
 
-        if (month) {
-            return makeUTCDate(
-                Number(match[3]),
-                month,
-                Number(match[2])
-            );
-        }
+        return makeISODate(
+            Number(match[3]),
+            monthNumber(match[1]),
+            Number(match[2])
+        );
     }
 
+
+    // 30 September 2026
     match =
         text.match(
-            /\b([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(20\d{2})\b/i
+            /\b(\d{1,2})(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d{2})\b/i
         );
 
     if (match) {
-        const month =
-            months[
-                match[1].toLowerCase()
-            ];
 
-        if (month) {
-            return makeUTCDate(
-                Number(match[3]),
-                month,
-                Number(match[2])
-            );
-        }
+        return makeISODate(
+            Number(match[3]),
+            monthNumber(match[2]),
+            Number(match[1])
+        );
     }
 
+
+    // Sep 30, 2026
     match =
         text.match(
-            /\b(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})\b/i
+            /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(20\d{2})\b/i
         );
 
     if (match) {
-        const month =
-            months[
-                match[2].toLowerCase()
-            ];
 
-        if (month) {
-            return makeUTCDate(
-                Number(match[3]),
-                month,
-                Number(match[1])
-            );
-        }
+        return makeISODate(
+            Number(match[3]),
+            monthNumber(match[1]),
+            Number(match[2])
+        );
     }
 
-    /*
-     * Numeric dates.
-     *
-     * When the year is 2026 and the first number > 12,
-     * it is safely DD/MM/YYYY.
-     *
-     * When both are <= 12, preserve both possibilities
-     * internally and choose the one supported by context
-     * elsewhere. Here we default to DD/MM/YYYY because
-     * football sources commonly use that format.
-     */
 
+    // 30 Sep 2026
+    match =
+        text.match(
+            /\b(\d{1,2})(?:st|nd|rd|th)?\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(20\d{2})\b/i
+        );
+
+    if (match) {
+
+        return makeISODate(
+            Number(match[3]),
+            monthNumber(match[2]),
+            Number(match[1])
+        );
+    }
+
+
+    // DD/MM/YYYY or MM/DD/YYYY
     match =
         text.match(
             /\b(\d{1,2})[\/.-](\d{1,2})[\/.-](20\d{2})\b/
         );
 
     if (match) {
+
         const first =
             Number(match[1]);
 
@@ -734,55 +1429,76 @@ function parseDateValue(value) {
         const year =
             Number(match[3]);
 
-        let day;
-        let month;
+
+        /*
+        If one component is >12, interpretation is obvious.
+        Otherwise use contextual heuristics.
+        */
 
         if (first > 12) {
-            day = first;
-            month = second;
-        } else if (second > 12) {
-            month = first;
-            day = second;
-        } else {
-            /*
-             * Football/web-data default:
-             * DD/MM/YYYY
-             */
-            day = first;
-            month = second;
+
+            return makeISODate(
+                year,
+                second,
+                first
+            );
         }
 
-        return makeUTCDate(
+        if (second > 12) {
+
+            return makeISODate(
+                year,
+                first,
+                second
+            );
+        }
+
+
+        /*
+        For ambiguous numeric dates we use DD/MM first because
+        most football sources outside the US use that convention.
+        */
+
+        return makeISODate(
             year,
-            month,
-            day
+            second,
+            first
         );
     }
 
-    /*
-     * Native parser fallback.
-     */
-
-    const parsed =
-        new Date(text);
-
-    if (
-        !isNaN(
-            parsed.getTime()
-        )
-    ) {
-        return parsed;
-    }
 
     return null;
 }
 
 
-function makeUTCDate(
+// ---------------------------------------------------------------
+// MAKE ISO DATE
+// ---------------------------------------------------------------
+
+function makeISODate(
     year,
     month,
     day
 ) {
+
+    if (
+        !Number.isInteger(year) ||
+        !Number.isInteger(month) ||
+        !Number.isInteger(day)
+    ) {
+        return null;
+    }
+
+    if (
+        month < 1 ||
+        month > 12 ||
+        day < 1 ||
+        day > 31
+    ) {
+        return null;
+    }
+
+
     const date =
         new Date(
             Date.UTC(
@@ -792,6 +1508,7 @@ function makeUTCDate(
             )
         );
 
+
     if (
         date.getUTCFullYear() !== year ||
         date.getUTCMonth() !== month - 1 ||
@@ -800,1858 +1517,2513 @@ function makeUTCDate(
         return null;
     }
 
-    return date;
+
+    return date
+        .toISOString()
+        .slice(0, 10);
 }
 
 
-/* ================================================================
-   DATE EXTRACTION
-   ================================================================ */
+// ---------------------------------------------------------------
+// MONTH NUMBER
+// ---------------------------------------------------------------
 
-function extractDatesFromText(text) {
-    if (!text) {
-        return [];
-    }
+function monthNumber(value) {
 
-    const dates = [];
+    const month =
+        cleanString(value)
+            .toLowerCase()
+            .slice(0, 3);
 
-    const patterns = [
-        /\b20\d{2}-\d{1,2}-\d{1,2}\b/g,
 
-        /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?:day)?[,]?\s+[A-Za-z]+\s+\d{1,2}(?:st|nd|rd|th)?[,]?\s+20\d{2}\b/gi,
+    const months = {
+        jan: 1,
+        feb: 2,
+        mar: 3,
+        apr: 4,
+        may: 5,
+        jun: 6,
+        jul: 7,
+        aug: 8,
+        sep: 9,
+        oct: 10,
+        nov: 11,
+        dec: 12
+    };
 
-        /\b[A-Za-z]+\s+\d{1,2}(?:st|nd|rd|th)?[,]?\s+20\d{2}\b/gi,
 
-        /\b\d{1,2}\s+[A-Za-z]+\s+20\d{2}\b/gi,
-
-        /\b\d{1,2}[\/.-]\d{1,2}[\/.-]20\d{2}\b/g
-    ];
-
-    for (const pattern of patterns) {
-        const matches =
-            text.match(pattern) || [];
-
-        for (const item of matches) {
-            const parsed =
-                parseDateValue(item);
-
-            if (parsed) {
-                dates.push(parsed);
-            }
-        }
-    }
-
-    return uniqueDates(dates);
+    return months[month] || null;
 }
 
 
-function uniqueDates(dates) {
-    const seen =
-        new Set();
+// ---------------------------------------------------------------
+// TEAM IDENTITY
+// ---------------------------------------------------------------
 
-    const output = [];
+function buildTeamIdentity(
+    team,
+    side
+) {
 
-    for (const date of dates || []) {
-        if (!(date instanceof Date)) {
-            continue;
-        }
-
-        if (isNaN(date.getTime())) {
-            continue;
-        }
-
-        const key =
-            date.getTime();
-
-        if (!seen.has(key)) {
-            seen.add(key);
-            output.push(date);
-        }
-    }
-
-    return output;
-}
+    const original =
+        cleanString(team);
 
 
-/* ================================================================
-   TEAM MATCHING
-   ================================================================ */
-
-function normalizeTeamName(value) {
-    return String(value || "")
-        .toLowerCase()
-        .replace(/[.'’`]/g, "")
-        .replace(/[-_/]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-}
-
-
-function teamAliases(team) {
     const normalized =
-        normalizeTeamName(team);
+        normalizeTeamName(
+            original
+        );
+
 
     const aliases =
-        new Set([
-            normalized
-        ]);
+        new Set();
+
+
+    aliases.add(
+        normalized
+    );
+
+
+    /*
+    Deportes Concepcion handling.
+
+    "Concepcion" from API-Football can refer to
+    Deportes Concepcion.
+
+    We allow the generic Concepcion form.
+
+    We DO NOT add Universidad de Concepcion.
+    */
 
     if (
-        normalized.includes(
-            "concepcion"
-        )
+        normalized ===
+        "concepcion" ||
+        normalized ===
+        "deportes concepcion"
     ) {
+
+        aliases.add(
+            "concepcion"
+        );
+
         aliases.add(
             "deportes concepcion"
         );
-
-        aliases.add(
-            "universidad de concepcion"
-        );
-
-        aliases.add(
-            "univ de concepcion"
-        );
-
-        aliases.add(
-            "u de concepcion"
-        );
-
-        aliases.add(
-            "d concepcion"
-        );
     }
 
+
+    /*
+    O'Higgins spelling variations.
+    */
+
     if (
-        normalized.includes(
-            "ohiggins"
-        )
+        normalized ===
+        "ohiggins"
     ) {
+
         aliases.add(
             "o higgins"
         );
 
         aliases.add(
-            "o'higgins"
-        );
-
-        aliases.add(
             "ohiggins"
         );
     }
 
-    return Array.from(
-        aliases
-    );
+
+    return {
+        original,
+        normalized,
+        side,
+        aliases:
+            Array.from(
+                aliases
+            )
+    };
 }
 
 
-function containsTeam(
-    text,
-    team
+// ---------------------------------------------------------------
+// NORMALIZE TEAM NAME
+// ---------------------------------------------------------------
+
+function normalizeTeamName(
+    value
 ) {
-    const normalized =
-        normalizeTeamName(text);
 
-    const aliases =
-        teamAliases(team);
+    return cleanString(value)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .replace(
+            /['’`]/g,
+            ""
+        )
+        .replace(
+            /[^a-z0-9]+/g,
+            " "
+        )
+        .replace(
+            /\b(cd|fc|cf|club)\b/g,
+            " "
+        )
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .trim();
+}
 
-    return aliases.some(
-        alias =>
-            alias &&
-            normalized.includes(alias)
+
+// ---------------------------------------------------------------
+// TEXT TEAM MATCH
+// ---------------------------------------------------------------
+
+function textContainsTeam(
+    text,
+    identity
+) {
+
+    if (!text) {
+        return false;
+    }
+
+    const normalizedText =
+        normalizeTeamName(
+            text
+        );
+
+
+    return identity.aliases.some(
+        alias => {
+
+            if (!alias) {
+                return false;
+            }
+
+            return normalizedText
+                .includes(alias);
+        }
     );
 }
 
+
+// ---------------------------------------------------------------
+// BOTH TEAMS
+// ---------------------------------------------------------------
 
 function containsBothTeams(
     text,
-    match
+    homeIdentity,
+    awayIdentity
 ) {
+
     return (
-        containsTeam(
+        textContainsTeam(
             text,
-            match.home
+            homeIdentity
         ) &&
-        containsTeam(
+        textContainsTeam(
             text,
-            match.away
+            awayIdentity
         )
     );
 }
 
 
-/* ================================================================
-   SOURCE CLASSIFICATION
-   ================================================================ */
+// ---------------------------------------------------------------
+// SOURCE NORMALIZATION
+// ---------------------------------------------------------------
 
-function classifySource(
+function normalizeSource(
     raw,
-    match
+    homeIdentity,
+    awayIdentity,
+    targetDate
 ) {
-    const text =
-        `${raw.source || ""} ${raw.snippet || ""}`;
 
-    const dates =
-        extractDatesFromText(text);
+    const source =
+        cleanString(
+            raw.source
+        );
+
+    const url =
+        cleanString(
+            raw.url
+        );
+
+    const snippet =
+        cleanString(
+            raw.snippet
+        );
 
     const publishedDate =
-        parseDateValue(
+        normalizeISODate(
             raw.date
         );
 
-    let eventDate = null;
+
+    const combined =
+        [
+            source,
+            url,
+            snippet
+        ]
+        .filter(Boolean)
+        .join(" ");
+
+
+    if (!combined) {
+        return null;
+    }
+
+
+    const eventDate =
+        extractBestEventDate(
+            combined,
+            targetDate
+        );
+
+
+    const bothTeams =
+        containsBothTeams(
+            combined,
+            homeIdentity,
+            awayIdentity
+        );
+
+
+    const hasHome =
+        textContainsTeam(
+            combined,
+            homeIdentity
+        );
+
+
+    const hasAway =
+        textContainsTeam(
+            combined,
+            awayIdentity
+        );
+
+
+    const type =
+        normalizeSourceType(
+            raw.type
+        );
+
+
+    let relevance =
+        "IRRELEVANT";
+
 
     /*
-     * Prefer an exact target-date match.
-     */
-
-    const targetDate =
-        parseDateValue(
-            match.date
-        );
-
-    const targetTime =
-        targetDate
-            ? targetDate.getTime()
-            : null;
+    =============================================================
+    CURRENT MATCH
+    =============================================================
+    */
 
     const exactTargetDate =
-        dates.find(
-            date =>
-                date.getTime() ===
-                targetTime
+        eventDate === targetDate;
+
+
+    const explicitCurrentMatch =
+        isExplicitCurrentMatch(
+            combined,
+            source,
+            url,
+            homeIdentity,
+            awayIdentity,
+            targetDate
         );
 
-    if (exactTargetDate) {
-        eventDate =
-            exactTargetDate;
-    } else if (dates.length > 0) {
-        /*
-         * If this looks like a match-specific source,
-         * use the first relevant date.
-         */
 
-        eventDate =
-            chooseLikelyEventDate(
-                dates,
-                text,
-                targetDate
-            );
+    /*
+    H2H pages should not become current-match evidence simply
+    because they mention the target date.
+    */
+
+    const h2hPage =
+        isH2HText(
+            combined
+        );
+
+
+    if (
+        exactTargetDate &&
+        bothTeams &&
+        !h2hPage
+    ) {
+
+        relevance =
+            "CURRENT_MATCH";
     }
 
     /*
-     * A search-result publication date is kept separately.
-     */
+    A matchup-specific page with no detectable event date can
+    still be considered current for lineups/injury/odds context,
+    but we DO NOT mark it globally CURRENT_MATCH unless there
+    is stronger evidence.
+    */
 
-    let relevance =
-        "UNDATED_TEAM_SOURCE";
-
-    if (
-        eventDate &&
-        eventDate.getTime() === targetTime
+    else if (
+        explicitCurrentMatch &&
+        bothTeams &&
+        !h2hPage
     ) {
+
         relevance =
             "CURRENT_MATCH";
-    } else if (
+    }
+
+
+    /*
+    =============================================================
+    FUTURE
+    =============================================================
+    */
+
+    else if (
         eventDate &&
-        eventDate.getTime() > targetTime
+        eventDate > targetDate &&
+        bothTeams
     ) {
+
         relevance =
             "FUTURE";
-    } else if (
+    }
+
+
+    /*
+    =============================================================
+    HISTORICAL
+    =============================================================
+    */
+
+    else if (
         eventDate &&
-        eventDate.getTime() < targetTime
+        eventDate < targetDate &&
+        bothTeams
     ) {
+
         relevance =
             "HISTORICAL";
-    } else if (
-        publishedDate &&
-        daysBetween(
-            publishedDate,
-            targetDate
-        ) <= 30 &&
-        daysBetween(
-            publishedDate,
-            targetDate
-        ) >= 0
+    }
+
+
+    /*
+    H2H pages without an event date remain historical/contextual,
+    not current.
+    */
+
+    else if (
+        h2hPage &&
+        bothTeams
     ) {
+
+        relevance =
+            "HISTORICAL";
+    }
+
+
+    /*
+    =============================================================
+    RECENT
+    =============================================================
+    */
+
+    else if (
+        publishedDate &&
+        isWithinPrevious30Days(
+            publishedDate,
+            targetDate
+        ) &&
+        (hasHome || hasAway)
+    ) {
+
         relevance =
             "RECENT";
     }
 
+
     /*
-     * Determine date basis.
-     */
+    =============================================================
+    UNDATED TEAM SOURCE
+    =============================================================
+    */
 
-    let dateBasis = null;
+    else if (
+        (hasHome || hasAway) &&
+        !eventDate &&
+        !publishedDate
+    ) {
 
-    if (eventDate) {
-        dateBasis =
-            "TEXT_DATE";
-    } else if (publishedDate) {
-        dateBasis =
-            "PUBLICATION_DATE";
+        relevance =
+            "UNDATED_TEAM_SOURCE";
     }
 
-    /*
-     * Stronger irrelevant detection.
-     */
 
-    if (
-        !containsBothTeams(
-            text,
-            match
-        )
-    ) {
+    /*
+    =============================================================
+    OTHERWISE IRRELEVANT
+    =============================================================
+    */
+
+    else {
+
         relevance =
             "IRRELEVANT";
     }
 
+
+    /*
+    Date basis
+    */
+
+    let dateBasis =
+        null;
+
+
+    if (eventDate) {
+
+        dateBasis =
+            "TEXT_DATE";
+
+    } else if (publishedDate) {
+
+        dateBasis =
+            "PUBLICATION_DATE";
+    }
+
+
     return {
-        type:
-            raw.type || "unknown",
 
-        source:
-            raw.source || "",
+        type,
 
-        url:
-            raw.url || "",
+        source,
 
-        snippet:
-            raw.snippet || "",
+        url,
+
+        snippet,
 
         relevance,
 
-        eventDate:
-            eventDate
-                ? formatDateUTC(eventDate)
-                : null,
+        eventDate,
 
-        publishedDate:
-            publishedDate
-                ? formatDateUTC(
-                    publishedDate
-                )
-                : null,
+        publishedDate,
 
         dateBasis
     };
 }
 
 
-function chooseLikelyEventDate(
-    dates,
+// ---------------------------------------------------------------
+// SOURCE TYPE
+// ---------------------------------------------------------------
+
+function normalizeSourceType(
+    type
+) {
+
+    const value =
+        cleanString(
+            type
+        ).toLowerCase();
+
+
+    if (
+        value.includes("injur")
+    ) {
+        return "injuries";
+    }
+
+    if (
+        value.includes("lineup")
+    ) {
+        return "lineups";
+    }
+
+    if (
+        value.includes("odd")
+    ) {
+        return "odds";
+    }
+
+    if (
+        value.includes("stat")
+    ) {
+        return "stats";
+    }
+
+    if (
+        value.includes("h2h")
+    ) {
+        return "h2h";
+    }
+
+    if (
+        value.includes("form")
+    ) {
+        return "form";
+    }
+
+    return value || "unknown";
+}
+
+
+// ---------------------------------------------------------------
+// BEST EVENT DATE
+// ---------------------------------------------------------------
+
+function extractBestEventDate(
     text,
     targetDate
 ) {
-    if (!dates.length) {
+
+    if (!text) {
         return null;
     }
 
-    /*
-     * Prefer dates near the target date.
-     */
 
-    const sorted =
-        dates
-            .slice()
-            .sort(
-                (a, b) =>
-                    Math.abs(
-                        a.getTime() -
-                        targetDate.getTime()
-                    ) -
-                    Math.abs(
-                        b.getTime() -
-                        targetDate.getTime()
-                    )
-            );
+    const candidates = [];
+
 
     /*
-     * Match-related sources should generally use
-     * their nearest explicit date.
-     */
+    Find all common date formats.
+    */
 
-    return sorted[0];
-}
+    const patterns = [
 
+        /\b20\d{2}-\d{1,2}-\d{1,2}\b/g,
 
-/* ================================================================
-   H2H
-   ================================================================ */
+        /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?[,]?\s+20\d{2}\b/gi,
 
-function isH2HSource(raw) {
-    const text =
-        `${raw.source || ""} ${raw.snippet || ""}`
-            .toLowerCase();
+        /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+20\d{2}\b/gi,
 
-    return (
-        /\bh2h\b/.test(text) ||
-        /head[- ]to[- ]head/.test(text) ||
-        /head to head/.test(text) ||
-        /past h2h/.test(text) ||
-        /previous meetings/.test(text) ||
-        /past meetings/.test(text)
-    );
-}
+        /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?[,]?\s+20\d{2}\b/gi,
+
+        /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+20\d{2}\b/gi,
+
+        /\b\d{1,2}[\/.-]\d{1,2}[\/.-]20\d{2}\b/g
+    ];
 
 
-function isActualH2HSource(raw) {
-    const text =
-        `${raw.source || ""} ${raw.snippet || ""}`
-            .toLowerCase();
+    for (
+        const pattern
+        of patterns
+    ) {
+
+        const matches =
+            text.match(pattern) || [];
+
+
+        for (
+            const value
+            of matches
+        ) {
+
+            const parsed =
+                normalizeISODate(
+                    value
+                );
+
+
+            if (parsed) {
+                candidates.push(
+                    parsed
+                );
+            }
+        }
+    }
+
+
+    const unique =
+        Array.from(
+            new Set(candidates)
+        );
+
+
+    if (unique.length === 0) {
+        return null;
+    }
+
+
+    /*
+    Prefer target date when explicitly present.
+    */
 
     if (
-        !isH2HSource(raw)
+        unique.includes(
+            targetDate
+        )
+    ) {
+
+        return targetDate;
+    }
+
+
+    /*
+    Prefer dates in the target year.
+    */
+
+    const targetYear =
+        Number(
+            targetDate.slice(0, 4)
+        );
+
+
+    const sameYear =
+        unique.filter(
+            date =>
+                Number(
+                    date.slice(0, 4)
+                ) === targetYear
+        );
+
+
+    if (
+        sameYear.length > 0
+    ) {
+
+        /*
+        Return the first same-year date.
+        */
+        return sameYear[0];
+    }
+
+
+    return unique[0];
+}
+
+
+// ---------------------------------------------------------------
+// EXPLICIT CURRENT MATCH
+// ---------------------------------------------------------------
+
+function isExplicitCurrentMatch(
+    combined,
+    source,
+    url,
+    homeIdentity,
+    awayIdentity,
+    targetDate
+) {
+
+    const text =
+        combined.toLowerCase();
+
+
+    if (
+        !containsBothTeams(
+            combined,
+            homeIdentity,
+            awayIdentity
+        )
     ) {
         return false;
     }
 
+
+    /*
+    Current fixture indicators.
+    */
+
+    const currentTerms = [
+
+        "live score",
+
+        "upcoming",
+
+        "fixture",
+
+        "match preview",
+
+        "match preview & prediction",
+
+        "predicted lineups",
+
+        "predicted lineup",
+
+        "starting xi",
+
+        "starting 11",
+
+        "starting eleven",
+
+        "lineups",
+
+        "lineup",
+
+        "team news",
+
+        "injuries",
+
+        "suspended",
+
+        "unavailable players",
+
+        "match odds",
+
+        "1x2 odds",
+
+        "over/under",
+
+        "both teams to score"
+    ];
+
+
+    const hasCurrentTerm =
+        currentTerms.some(
+            term =>
+                text.includes(term)
+        );
+
+
+    /*
+    Do NOT allow H2H-only pages.
+    */
+
+    if (
+        isH2HText(
+            combined
+        ) &&
+        !hasCurrentTerm
+    ) {
+
+        return false;
+    }
+
+
+    /*
+    A source that explicitly contains the target date
+    is strong current evidence.
+    */
+
+    if (
+        text.includes(
+            targetDate
+        )
+    ) {
+
+        return true;
+    }
+
+
+    /*
+    For pages with matchup-specific URLs/titles, allow current
+    context even if the date is absent.
+
+    This is particularly useful for predicted lineups and
+    current team-news pages.
+    */
+
+    return hasCurrentTerm;
+}
+
+
+// ---------------------------------------------------------------
+// H2H DETECTION
+// ---------------------------------------------------------------
+
+function isH2HText(
+    text
+) {
+
+    const value =
+        cleanString(
+            text
+        ).toLowerCase();
+
+
     return (
-        /past/.test(text) ||
-        /previous/.test(text) ||
-        /meetings/.test(text) ||
-        /h2h/.test(text) ||
-        /head[- ]to[- ]head/.test(text) ||
-        /history/.test(text) ||
-        /results/.test(text)
+
+        value.includes("head to head") ||
+
+        value.includes("head-to-head") ||
+
+        value.includes("h2h") ||
+
+        value.includes("past h2h") ||
+
+        value.includes("previous meetings") ||
+
+        value.includes("past meetings") ||
+
+        value.includes("last meetings") ||
+
+        value.includes("previous encounters") ||
+
+        value.includes("recent head-to-head")
     );
 }
 
 
-/* ================================================================
-   FORM
-   ================================================================ */
+// ---------------------------------------------------------------
+// ACTUAL H2H SOURCE
+// ---------------------------------------------------------------
 
-function processFormSource(
-    raw,
-    classified,
-    match,
-    normalized
+function isActualH2HSource(
+    item
 ) {
-    /*
-     * Do not accept undated team pages as actual form.
-     */
 
-    if (
-        classified.relevance ===
-            "IRRELEVANT" ||
-        classified.relevance ===
-            "FUTURE" ||
-        classified.relevance ===
-            "UNDATED_TEAM_SOURCE"
-    ) {
-        return;
-    }
+    const combined =
+        [
+            item.source,
+            item.url,
+            item.snippet
+        ]
+        .filter(Boolean)
+        .join(" ");
 
-    /*
-     * A historical match page can be form evidence
-     * if it contains an actual result.
-     */
 
-    if (
-        classified.relevance !==
-        "HISTORICAL"
-    ) {
-        return;
-    }
-
-    const text =
-        raw.snippet || "";
-
-    const result =
-        extractResult(
-            text,
-            match
-        );
-
-    if (!result) {
-        return;
-    }
-
-    const evidence = {
-        source:
-            raw.source,
-
-        url:
-            raw.url,
-
-        snippet:
-            raw.snippet,
-
-        relevance:
-            classified.relevance,
-
-        eventDate:
-            classified.eventDate,
-
-        result
-    };
-
-    const homeMention =
-        containsTeam(
-            text,
-            match.home
-        );
-
-    const awayMention =
-        containsTeam(
-            text,
-            match.away
-        );
-
-    if (
-        homeMention &&
-        !awayMention
-    ) {
-        normalized.formEvidence.home.push(
-            evidence
-        );
-
-        normalized.form.home.push(
-            result
-        );
-    } else if (
-        awayMention &&
-        !homeMention
-    ) {
-        normalized.formEvidence.away.push(
-            evidence
-        );
-
-        normalized.form.away.push(
-            result
-        );
-    }
+    return (
+        item.type === "h2h" ||
+        isH2HText(
+            combined
+        )
+    );
 }
 
 
-/* ================================================================
-   RESULT EXTRACTION
-   ================================================================ */
+// ---------------------------------------------------------------
+// PREVIOUS 30 DAYS
+// ---------------------------------------------------------------
 
-function extractResult(
-    text,
-    match
+function isWithinPrevious30Days(
+    publishedDate,
+    targetDate
 ) {
-    if (!text) {
-        return null;
-    }
 
-    const scoreMatch =
-        text.match(
-            /\b(\d+)\s*[-:]\s*(\d+)\b/
+    const pub =
+        dateToUTC(
+            publishedDate
         );
 
-    if (!scoreMatch) {
-        return null;
-    }
+    const target =
+        dateToUTC(
+            targetDate
+        );
 
-    const first =
-        Number(scoreMatch[1]);
-
-    const second =
-        Number(scoreMatch[2]);
 
     if (
-        !Number.isFinite(first) ||
-        !Number.isFinite(second)
+        !pub ||
+        !target
     ) {
-        return null;
+        return false;
     }
 
-    const home =
-        containsTeam(
-            text,
-            match.home
-        );
 
-    const away =
-        containsTeam(
-            text,
-            match.away
-        );
+    const difference =
+        target - pub;
 
-    if (!home && !away) {
-        return null;
-    }
 
-    return {
-        homeGoals:
-            first,
+    const thirtyDays =
+        30 *
+        24 *
+        60 *
+        60 *
+        1000;
 
-        awayGoals:
-            second
-    };
+
+    return (
+        difference >= 0 &&
+        difference <= thirtyDays
+    );
 }
 
 
-/* ================================================================
-   STATS
-   ================================================================ */
+// ---------------------------------------------------------------
+// DATE TO UTC
+// ---------------------------------------------------------------
 
-function processStatsSource(
-    raw,
-    classified,
-    match,
-    normalized
+function dateToUTC(
+    iso
 ) {
-    if (
-        classified.relevance ===
-        "IRRELEVANT"
-    ) {
-        return;
+
+    if (!iso) {
+        return null;
     }
 
-    const evidence = {
-        source:
-            raw.source,
 
-        url:
-            raw.url,
+    const parts =
+        iso.split("-")
+            .map(Number);
 
-        snippet:
-            raw.snippet,
-
-        relevance:
-            classified.relevance,
-
-        eventDate:
-            classified.eventDate,
-
-        publishedDate:
-            classified.publishedDate,
-
-        dateBasis:
-            classified.dateBasis
-    };
-
-    /*
-     * Only date-qualified current-match stats
-     * enter statsEvidence.
-     */
 
     if (
-        classified.relevance ===
+        parts.length !== 3 ||
+        parts.some(
+            Number.isNaN
+        )
+    ) {
+        return null;
+    }
+
+
+    return Date.UTC(
+        parts[0],
+        parts[1] - 1,
+        parts[2]
+    );
+}
+
+
+// ---------------------------------------------------------------
+// STRONG CURRENT STATS SOURCE
+// ---------------------------------------------------------------
+
+function isStrongCurrentStatsSource(
+    item,
+    homeIdentity,
+    awayIdentity
+) {
+
+    const combined =
+        [
+            item.source,
+            item.url,
+            item.snippet
+        ]
+        .filter(Boolean)
+        .join(" ");
+
+
+    if (
+        item.relevance !==
         "CURRENT_MATCH"
     ) {
-        normalized.statsEvidence.push(
-            evidence
-        );
-
-        extractCurrentStats(
-            raw.snippet,
-            normalized
-        );
-
-        return;
+        return false;
     }
 
-    /*
-     * Historical stats remain historical.
-     */
 
     if (
-        classified.relevance ===
-        "HISTORICAL"
+        !containsBothTeams(
+            combined,
+            homeIdentity,
+            awayIdentity
+        )
     ) {
-        return;
+        return false;
     }
+
 
     /*
-     * Undated team statistics are preserved
-     * separately.
-     */
+    Reject H2H-only statistics pages.
+    */
 
     if (
-        classified.relevance ===
-        "UNDATED_TEAM_SOURCE"
+        isH2HText(
+            combined
+        ) &&
+        !hasDirectMatchStatsLanguage(
+            combined
+        )
     ) {
-        normalized.undatedStatsEvidence.push(
-            evidence
-        );
+
+        return false;
     }
+
+
+    return hasDirectMatchStatsLanguage(
+        combined
+    );
 }
 
 
-function extractCurrentStats(
-    text,
-    normalized
+// ---------------------------------------------------------------
+// DIRECT MATCH STATS LANGUAGE
+// ---------------------------------------------------------------
+
+function hasDirectMatchStatsLanguage(
+    text
 ) {
-    if (!text) {
-        return;
-    }
-
-    /*
-     * xG extraction is intentionally strict.
-     *
-     * Examples accepted:
-     * "Concepcion xG 1.24"
-     * "O'Higgins xG 0.91"
-     */
-
-    const homeXG =
-        extractLabeledNumber(
-            text,
-            /(?:concepcion|deportes concepcion|universidad de concepcion)[^.\n]{0,50}?\bxg\b\s*[:=]?\s*(\d+(?:\.\d+)?)/i
-        );
-
-    const awayXG =
-        extractLabeledNumber(
-            text,
-            /(?:o['’]?higgins|ohiggins)[^.\n]{0,50}?\bxg\b\s*[:=]?\s*(\d+(?:\.\d+)?)/i
-        );
-
-    if (
-        homeXG !== null
-    ) {
-        normalized.xg.home =
-            homeXG;
-    }
-
-    if (
-        awayXG !== null
-    ) {
-        normalized.xg.away =
-            awayXG;
-    }
-
-    if (
-        normalized.xg.home !== null &&
-        normalized.xg.away !== null
-    ) {
-        normalized.xg.total =
-            Number(
-                (
-                    normalized.xg.home +
-                    normalized.xg.away
-                ).toFixed(2)
-            );
-    }
-}
-
-
-function extractLabeledNumber(
-    text,
-    pattern
-) {
-    const match =
-        text.match(pattern);
-
-    if (!match) {
-        return null;
-    }
 
     const value =
-        Number(
-            match[1]
-        );
+        text.toLowerCase();
 
-    return Number.isFinite(value)
-        ? value
-        : null;
+
+    const terms = [
+
+        "match statistics",
+
+        "match stats",
+
+        "team stats",
+
+        "match statistics and data",
+
+        "possession",
+
+        "shots on target",
+
+        "shots",
+
+        "corners",
+
+        "xg",
+
+        "expected goals",
+
+        "goals per match",
+
+        "over 2.5",
+
+        "under 2.5",
+
+        "btts"
+    ];
+
+
+    return terms.some(
+        term =>
+            value.includes(term)
+    );
 }
 
 
-/* ================================================================
-   INJURIES
-   ================================================================ */
+// ---------------------------------------------------------------
+// UNDATED STATS
+// ---------------------------------------------------------------
 
-function processInjurySource(
-    raw,
-    classified,
-    match,
-    normalized
+function isUsefulUndatedStatsSource(
+    item,
+    homeIdentity,
+    awayIdentity
 ) {
+
+    const combined =
+        [
+            item.source,
+            item.url,
+            item.snippet
+        ]
+        .filter(Boolean)
+        .join(" ");
+
+
     if (
-        classified.relevance ===
-        "IRRELEVANT" ||
-        classified.relevance ===
-        "HISTORICAL" ||
-        classified.relevance ===
-        "FUTURE"
+        !(
+            textContainsTeam(
+                combined,
+                homeIdentity
+            ) ||
+            textContainsTeam(
+                combined,
+                awayIdentity
+            )
+        )
     ) {
-        return;
+        return false;
     }
 
-    /*
-     * Only current-match or explicitly recent
-     * injury information can enter the injury
-     * evidence layer.
-     */
+
+    return hasDirectMatchStatsLanguage(
+        combined
+    );
+}
+
+
+// ---------------------------------------------------------------
+// EXTRACT FORM RESULTS
+// ---------------------------------------------------------------
+
+function extractFormResults(
+    item,
+    homeIdentity,
+    awayIdentity,
+    targetDate
+) {
+
+    const results = [];
+
+
+    if (
+        !item ||
+        !item.snippet
+    ) {
+        return results;
+    }
+
+
+    if (
+        item.relevance !== "HISTORICAL" &&
+        item.relevance !== "RECENT" &&
+        item.relevance !== "CURRENT_MATCH"
+    ) {
+        return results;
+    }
+
 
     const text =
-        raw.snippet || "";
+        item.snippet;
 
-    const sentences =
-        splitSentences(
-            text
-        );
 
-    let found =
-        false;
+    /*
+    ------------------------------------------------------------
+    Basic result pattern:
 
-    for (const sentence of sentences) {
-        const home =
-            containsTeam(
-                sentence,
-                match.home
+    Team 2 - 1 Opponent
+    Team 1: 0-1
+    Team 1 2-0
+    ------------------------------------------------------------
+    */
+
+    const scorePattern =
+        /([A-Za-zÀ-ÿ0-9'.&() -]{2,50})\s+(\d{1,2})\s*[-:]\s*(\d{1,2})\s+([A-Za-zÀ-ÿ0-9'.&() -]{2,50})/g;
+
+
+    let match;
+
+
+    while (
+        (match =
+            scorePattern.exec(
+                text
+            )) !== null
+    ) {
+
+        const teamA =
+            cleanString(
+                match[1]
             );
 
-        const away =
-            containsTeam(
-                sentence,
-                match.away
+        const scoreA =
+            Number(
+                match[2]
             );
 
+        const scoreB =
+            Number(
+                match[3]
+            );
+
+        const teamB =
+            cleanString(
+                match[4]
+            );
+
+
+        const aHome =
+            textContainsTeam(
+                teamA,
+                homeIdentity
+            );
+
+
+        const aAway =
+            textContainsTeam(
+                teamA,
+                awayIdentity
+            );
+
+
+        const bHome =
+            textContainsTeam(
+                teamB,
+                homeIdentity
+            );
+
+
+        const bAway =
+            textContainsTeam(
+                teamB,
+                awayIdentity
+            );
+
+
         if (
-            !home &&
-            !away
+            aHome &&
+            !aAway
         ) {
-            continue;
+
+            results.push({
+
+                team: "home",
+
+                opponent:
+                    teamB,
+
+                goalsFor:
+                    scoreA,
+
+                goalsAgainst:
+                    scoreB,
+
+                result:
+                    scoreA > scoreB
+                        ? "W"
+                        : scoreA < scoreB
+                            ? "L"
+                            : "D",
+
+                eventDate:
+                    item.eventDate,
+
+                source:
+                    item.source,
+
+                url:
+                    item.url
+            });
         }
 
-        const injuryTerms =
-            /\binjur(?:y|ed|ies)\b|\bsuspend(?:ed|sion)\b|\bdoubtful\b|\bunavailable\b|\bmissing\b|\bsidelined\b/i;
 
         if (
-            !injuryTerms.test(
-                sentence
-            )
+            aAway &&
+            !aHome
         ) {
-            continue;
+
+            results.push({
+
+                team: "away",
+
+                opponent:
+                    teamB,
+
+                goalsFor:
+                    scoreA,
+
+                goalsAgainst:
+                    scoreB,
+
+                result:
+                    scoreA > scoreB
+                        ? "W"
+                        : scoreA < scoreB
+                            ? "L"
+                            : "D",
+
+                eventDate:
+                    item.eventDate,
+
+                source:
+                    item.source,
+
+                url:
+                    item.url
+            });
         }
 
-        const evidence = {
-            source:
-                raw.source,
-
-            url:
-                raw.url,
-
-            snippet:
-                sentence,
-
-            relevance:
-                classified.relevance,
-
-            eventDate:
-                classified.eventDate,
-
-            publishedDate:
-                classified.publishedDate
-        };
 
         if (
-            classified.relevance ===
-            "CURRENT_MATCH"
+            bHome &&
+            !bAway
         ) {
-            if (
-                home &&
-                !away
-            ) {
-                normalized.injuries.home.push(
-                    evidence
-                );
 
-                found = true;
-            } else if (
-                away &&
-                !home
-            ) {
-                normalized.injuries.away.push(
-                    evidence
-                );
+            results.push({
 
-                found = true;
-            } else {
-                normalized.injuries.unknown.push(
-                    evidence
-                );
+                team: "home",
 
-                found = true;
-            }
-        } else if (
-            classified.relevance ===
-            "UNDATED_TEAM_SOURCE"
+                opponent:
+                    teamA,
+
+                goalsFor:
+                    scoreB,
+
+                goalsAgainst:
+                    scoreA,
+
+                result:
+                    scoreB > scoreA
+                        ? "W"
+                        : scoreB < scoreA
+                            ? "L"
+                            : "D",
+
+                eventDate:
+                    item.eventDate,
+
+                source:
+                    item.source,
+
+                url:
+                    item.url
+            });
+        }
+
+
+        if (
+            bAway &&
+            !bHome
         ) {
-            /*
-             * Keep ambiguous recent injury information
-             * out of the current injury arrays.
-             *
-             * It is intentionally not promoted.
-             */
+
+            results.push({
+
+                team: "away",
+
+                opponent:
+                    teamA,
+
+                goalsFor:
+                    scoreB,
+
+                goalsAgainst:
+                    scoreA,
+
+                result:
+                    scoreB > scoreA
+                        ? "W"
+                        : scoreB < scoreA
+                            ? "L"
+                            : "D",
+
+                eventDate:
+                    item.eventDate,
+
+                source:
+                    item.source,
+
+                url:
+                    item.url
+            });
         }
     }
 
+
     /*
-     * A source can sometimes say:
-     *
-     * "Universidad de Concepción has no unavailable
-     * players. O'Higgins: Player X injured..."
-     *
-     * The sentence-level extraction above prevents
-     * the O'Higgins injury from being copied to
-     * Concepcion.
-     */
+    Never use the current fixture itself as previous form.
+    */
 
-    return found;
+    return results.filter(
+        item =>
+            !item.eventDate ||
+            item.eventDate < targetDate
+    );
 }
 
 
-function splitSentences(text) {
-    return String(text || "")
-        .split(
-            /(?<=[.!?])\s+/
-        )
-        .map(
-            value =>
-                value.trim()
-        )
-        .filter(Boolean);
-}
+// ---------------------------------------------------------------
+// FORM SUMMARY
+// ---------------------------------------------------------------
 
-
-/* ================================================================
-   LINEUPS
-   ================================================================ */
-
-function processLineupSource(
-    raw,
-    classified,
-    match,
-    normalized
+function buildFormSummary(
+    evidence
 ) {
-    if (
-        classified.relevance ===
-        "IRRELEVANT" ||
-        classified.relevance ===
-        "HISTORICAL" ||
-        classified.relevance ===
-        "FUTURE"
-    ) {
-        return;
-    }
-
-    /*
-     * A current-match lineup source is evidence that
-     * a lineup page exists.
-     *
-     * It does NOT mean actual player names were extracted.
-     */
 
     if (
-        classified.relevance ===
-        "CURRENT_MATCH"
+        !Array.isArray(evidence) ||
+        evidence.length === 0
     ) {
-        const evidence = {
-            source:
-                raw.source,
-
-            url:
-                raw.url,
-
-            snippet:
-                raw.snippet,
-
-            relevance:
-                "CURRENT_MATCH",
-
-            eventDate:
-                classified.eventDate,
-
-            publishedDate:
-                classified.publishedDate,
-
-            playersAvailable:
-                extractPlayerNames(
-                    raw.snippet
-                ).length > 0,
-
-            confirmed:
-                containsConfirmedLineup(
-                    raw.snippet
-                )
-        };
-
-        normalized.lineups.matchEvidence.push(
-            evidence
-        );
-
-        const players =
-            extractPlayerNames(
-                raw.snippet
-            );
-
-        /*
-         * Only assign players when the source
-         * clearly identifies them.
-         *
-         * We do not infer an entire XI from
-         * a generic lineup page.
-         */
-
-        if (
-            players.length > 0
-        ) {
-            const homeMention =
-                containsTeam(
-                    raw.snippet,
-                    match.home
-                );
-
-            const awayMention =
-                containsTeam(
-                    raw.snippet,
-                    match.away
-                );
-
-            if (
-                homeMention &&
-                !awayMention
-            ) {
-                normalized.lineups.home =
-                    players;
-            } else if (
-                awayMention &&
-                !homeMention
-            ) {
-                normalized.lineups.away =
-                    players;
-            }
-        }
-    }
-}
-
-
-function extractPlayerNames(text) {
-    /*
-     * Deliberately conservative.
-     *
-     * A search snippet rarely gives enough structure
-     * to safely reconstruct an XI.
-     */
-
-    if (!text) {
         return [];
     }
 
-    return [];
+
+    return evidence.map(
+        item => ({
+            result:
+                item.result,
+
+            goalsFor:
+                item.goalsFor,
+
+            goalsAgainst:
+                item.goalsAgainst,
+
+            eventDate:
+                item.eventDate
+        })
+    );
 }
 
 
-function containsConfirmedLineup(
+// ---------------------------------------------------------------
+// CURRENT INJURIES
+// ---------------------------------------------------------------
+
+function extractCurrentInjuries(
+    item,
+    homeIdentity,
+    awayIdentity,
+    targetDate
+) {
+
+    const results = [];
+
+
+    if (!item) {
+        return results;
+    }
+
+
+    const combined =
+        [
+            item.source,
+            item.url,
+            item.snippet
+        ]
+        .filter(Boolean)
+        .join(" ");
+
+
+    /*
+    Historical match pages cannot be used for current injuries.
+    */
+
+    if (
+        item.relevance ===
+        "HISTORICAL"
+    ) {
+        return results;
+    }
+
+
+    /*
+    If an explicit event date exists and it is before the
+    requested fixture, don't use it as current injury evidence.
+    */
+
+    if (
+        item.eventDate &&
+        item.eventDate < targetDate
+    ) {
+        return results;
+    }
+
+
+    /*
+    Current injury terms.
+    */
+
+    const injuryTerms = [
+
+        "injured",
+
+        "injury",
+
+        "injuries",
+
+        "unavailable",
+
+        "suspended",
+
+        "suspension",
+
+        "doubtful",
+
+        "ruled out",
+
+        "out",
+
+        "missing"
+    ];
+
+
+    const hasInjuryLanguage =
+        injuryTerms.some(
+            term =>
+                combined
+                    .toLowerCase()
+                    .includes(term)
+        );
+
+
+    if (!hasInjuryLanguage) {
+        return results;
+    }
+
+
+    /*
+    ------------------------------------------------------------
+    HOME-SPECIFIC SENTENCES
+    ------------------------------------------------------------
+    */
+
+    const homeSentences =
+        extractTeamSpecificSentences(
+            combined,
+            homeIdentity
+        );
+
+
+    for (
+        const sentence
+        of homeSentences
+    ) {
+
+        if (
+            injuryTerms.some(
+                term =>
+                    sentence
+                        .toLowerCase()
+                        .includes(term)
+            )
+        ) {
+
+            results.push({
+
+                team: "home",
+
+                text:
+                    sentence,
+
+                source:
+                    item.source,
+
+                url:
+                    item.url,
+
+                eventDate:
+                    item.eventDate,
+
+                publishedDate:
+                    item.publishedDate
+            });
+        }
+    }
+
+
+    /*
+    ------------------------------------------------------------
+    AWAY-SPECIFIC SENTENCES
+    ------------------------------------------------------------
+    */
+
+    const awaySentences =
+        extractTeamSpecificSentences(
+            combined,
+            awayIdentity
+        );
+
+
+    for (
+        const sentence
+        of awaySentences
+    ) {
+
+        if (
+            injuryTerms.some(
+                term =>
+                    sentence
+                        .toLowerCase()
+                        .includes(term)
+            )
+        ) {
+
+            results.push({
+
+                team: "away",
+
+                text:
+                    sentence,
+
+                source:
+                    item.source,
+
+                url:
+                    item.url,
+
+                eventDate:
+                    item.eventDate,
+
+                publishedDate:
+                    item.publishedDate
+            });
+        }
+    }
+
+
+    /*
+    ------------------------------------------------------------
+    If exact attribution cannot be established, don't assign
+    it to either team.
+    ------------------------------------------------------------
+    */
+
+    if (
+        results.length === 0 &&
+        hasInjuryLanguage &&
+        containsBothTeams(
+            combined,
+            homeIdentity,
+            awayIdentity
+        )
+    ) {
+
+        results.push({
+
+            team: "unknown",
+
+            text:
+                item.snippet,
+
+            source:
+                item.source,
+
+            url:
+                item.url,
+
+            eventDate:
+                item.eventDate,
+
+            publishedDate:
+                item.publishedDate
+        });
+    }
+
+
+    return results;
+}
+
+
+// ---------------------------------------------------------------
+// TEAM-SPECIFIC SENTENCES
+// ---------------------------------------------------------------
+
+function extractTeamSpecificSentences(
+    text,
+    identity
+) {
+
+    const sentences =
+        text.split(
+            /(?<=[.!?])\s+/
+        );
+
+
+    return sentences.filter(
+        sentence =>
+            textContainsTeam(
+                sentence,
+                identity
+            )
+    );
+}
+
+
+// ---------------------------------------------------------------
+// CURRENT LINEUP SOURCE
+// ---------------------------------------------------------------
+
+function isStrongCurrentLineupSource(
+    item,
+    homeIdentity,
+    awayIdentity
+) {
+
+    const combined =
+        [
+            item.source,
+            item.url,
+            item.snippet
+        ]
+        .filter(Boolean)
+        .join(" ");
+
+
+    if (
+        item.type !==
+        "lineups"
+    ) {
+        return false;
+    }
+
+
+    if (
+        !containsBothTeams(
+            combined,
+            homeIdentity,
+            awayIdentity
+        )
+    ) {
+        return false;
+    }
+
+
+    if (
+        item.relevance ===
+        "HISTORICAL"
+    ) {
+        return false;
+    }
+
+
+    /*
+    Reject known H2H/archive pages.
+    */
+
+    if (
+        isH2HText(
+            combined
+        ) &&
+        !hasLineupLanguage(
+            combined
+        )
+    ) {
+        return false;
+    }
+
+
+    return hasLineupLanguage(
+        combined
+    );
+}
+
+
+// ---------------------------------------------------------------
+// LINEUP LANGUAGE
+// ---------------------------------------------------------------
+
+function hasLineupLanguage(
     text
 ) {
-    return /\bconfirmed lineups?\b|\bconfirmed starting xi\b|\bstarting xi confirmed\b|\blineups confirmed\b/i
-        .test(
-            String(text || "")
-        );
+
+    const value =
+        text.toLowerCase();
+
+
+    const terms = [
+
+        "predicted lineup",
+
+        "predicted lineups",
+
+        "predicted xi",
+
+        "starting xi",
+
+        "starting 11",
+
+        "starting eleven",
+
+        "lineups",
+
+        "lineup",
+
+        "players",
+
+        "goalkeeper",
+
+        "defenders",
+
+        "midfielders",
+
+        "forwards"
+    ];
+
+
+    return terms.some(
+        term =>
+            value.includes(term)
+    );
 }
 
 
-/* ================================================================
-   ODDS
-   ================================================================ */
+// ---------------------------------------------------------------
+// EXTRACT LINEUPS
+// ---------------------------------------------------------------
 
-function processOddsSource(
-    raw,
-    classified,
-    match,
-    normalized
+function extractLineupEvidence(
+    evidence,
+    homeIdentity,
+    awayIdentity
 ) {
-    if (
-        classified.relevance ===
-        "IRRELEVANT" ||
-        classified.relevance ===
-        "HISTORICAL" ||
-        classified.relevance ===
-        "FUTURE"
-    ) {
-        return;
-    }
 
-    const evidence = {
-        source:
-            raw.source,
+    const result = {
 
-        url:
-            raw.url,
+        home: null,
 
-        snippet:
-            raw.snippet,
+        away: null,
 
-        relevance:
-            classified.relevance,
+        matchEvidence:
+            evidence,
 
-        eventDate:
-            classified.eventDate,
-
-        publishedDate:
-            classified.publishedDate,
-
-        dateBasis:
-            classified.dateBasis,
-
-        structured1X2:
-            false,
-
-        structuredTotals:
-            false,
-
-        structuredBTTS:
-            false
+        unknown: []
     };
 
-    /*
-     * Strictly extract labelled odds.
-     */
 
-    const extracted =
-        extractOdds(
-            raw.snippet,
-            match
-        );
+    for (
+        const item
+        of evidence
+    ) {
+
+        const combined =
+            [
+                item.source,
+                item.snippet,
+                item.url
+            ]
+            .filter(Boolean)
+            .join(" ");
+
+
+        /*
+        If the source only describes both teams without
+        assigning player groups, keep it as match evidence.
+        */
+
+        if (
+            containsBothTeams(
+                combined,
+                homeIdentity,
+                awayIdentity
+            )
+        ) {
+
+            if (
+                result.home === null
+            ) {
+
+                result.home = {
+
+                    source:
+                        item.source,
+
+                    url:
+                        item.url,
+
+                    snippet:
+                        item.snippet,
+
+                    confirmed:
+                        false
+                };
+            }
+
+
+            if (
+                result.away === null
+            ) {
+
+                result.away = {
+
+                    source:
+                        item.source,
+
+                    url:
+                        item.url,
+
+                    snippet:
+                        item.snippet,
+
+                    confirmed:
+                        false
+                };
+            }
+        }
+    }
+
+
+    return result;
+}
+
+
+// ---------------------------------------------------------------
+// CURRENT ODDS SOURCE
+// ---------------------------------------------------------------
+
+function isStrongCurrentOddsSource(
+    item,
+    homeIdentity,
+    awayIdentity
+) {
+
+    const combined =
+        [
+            item.source,
+            item.url,
+            item.snippet
+        ]
+        .filter(Boolean)
+        .join(" ");
+
 
     if (
-        classified.relevance ===
+        item.type !==
+        "odds"
+    ) {
+        return false;
+    }
+
+
+    if (
+        item.relevance !==
         "CURRENT_MATCH"
     ) {
-        if (
-            extracted.home !== null ||
-            extracted.draw !== null ||
-            extracted.away !== null
-        ) {
-            normalized.oddsEvidence.push(
-                {
-                    ...evidence,
-                    structured1X2:
-                        extracted.home !== null &&
-                        extracted.draw !== null &&
-                        extracted.away !== null
-                }
-            );
-
-            if (
-                extracted.home !== null
-            ) {
-                normalized.odds.home =
-                    extracted.home;
-            }
-
-            if (
-                extracted.draw !== null
-            ) {
-                normalized.odds.draw =
-                    extracted.draw;
-            }
-
-            if (
-                extracted.away !== null
-            ) {
-                normalized.odds.away =
-                    extracted.away;
-            }
-        } else {
-            /*
-             * Current odds page exists, but its snippet
-             * does not contain safely structured odds.
-             *
-             * Preserve the source without inventing
-             * numerical odds.
-             */
-
-            normalized.oddsEvidence.push(
-                evidence
-            );
-        }
-
-        if (
-            extracted.over25 !== null
-        ) {
-            normalized.odds.over25 =
-                extracted.over25;
-        }
-
-        if (
-            extracted.under25 !== null
-        ) {
-            normalized.odds.under25 =
-                extracted.under25;
-        }
-
-        if (
-            extracted.bttsYes !== null
-        ) {
-            normalized.odds.bttsYes =
-                extracted.bttsYes;
-        }
-
-        if (
-            extracted.bttsNo !== null
-        ) {
-            normalized.odds.bttsNo =
-                extracted.bttsNo;
-        }
-
-        return;
+        return false;
     }
 
-    /*
-     * Undated odds are preserved but never promoted
-     * into current numerical odds.
-     */
 
     if (
-        classified.relevance ===
-        "UNDATED_TEAM_SOURCE"
+        !containsBothTeams(
+            combined,
+            homeIdentity,
+            awayIdentity
+        )
     ) {
-        normalized.undatedOddsEvidence.push(
-            evidence
-        );
+        return false;
     }
+
+
+    if (
+        isH2HText(
+            combined
+        )
+    ) {
+        return false;
+    }
+
+
+    return hasOddsLanguage(
+        combined
+    );
 }
 
 
-function extractOdds(
-    text,
-    match
+// ---------------------------------------------------------------
+// ODDS LANGUAGE
+// ---------------------------------------------------------------
+
+function hasOddsLanguage(
+    text
 ) {
+
+    const value =
+        text.toLowerCase();
+
+
+    const terms = [
+
+        "odds",
+
+        "1x2",
+
+        "moneyline",
+
+        "home win",
+
+        "draw",
+
+        "away win",
+
+        "over 2.5",
+
+        "under 2.5",
+
+        "btts",
+
+        "both teams to score",
+
+        "bet365",
+
+        "betway",
+
+        "bookmaker"
+    ];
+
+
+    return terms.some(
+        term =>
+            value.includes(term)
+    );
+}
+
+
+// ---------------------------------------------------------------
+// UNDATED ODDS
+// ---------------------------------------------------------------
+
+function isUsefulUndatedOddsSource(
+    item,
+    homeIdentity,
+    awayIdentity
+) {
+
+    const combined =
+        [
+            item.source,
+            item.url,
+            item.snippet
+        ]
+        .filter(Boolean)
+        .join(" ");
+
+
+    return (
+
+        containsBothTeams(
+            combined,
+            homeIdentity,
+            awayIdentity
+        ) &&
+
+        hasOddsLanguage(
+            combined
+        )
+    );
+}
+
+
+// ---------------------------------------------------------------
+// STRUCTURED STATS
+// ---------------------------------------------------------------
+
+function extractStructuredStats(
+    evidence,
+    homeIdentity,
+    awayIdentity
+) {
+
     const output = {
-        home: null,
-        draw: null,
-        away: null,
-        over25: null,
-        under25: null,
-        bttsYes: null,
-        bttsNo: null
+
+        goals: {
+            home: null,
+            away: null
+        },
+
+        xg: {
+            home: null,
+            away: null,
+            total: null
+        },
+
+        btts: {
+            home: null,
+            away: null,
+            h2h: null
+        },
+
+        overUnder: {
+            over15: null,
+            over25: null,
+            over35: null,
+            under25: null,
+            under35: null
+        }
     };
 
-    if (!text) {
-        return output;
-    }
 
     /*
-     * ------------------------------------------------------------
-     * 1X2
-     * ------------------------------------------------------------
-     *
-     * Accepted examples:
-     *
-     * Home 5.00
-     * Draw 3.80
-     * Away 1.60
-     *
-     * 1 5.00
-     * X 3.80
-     * 2 1.60
-     *
-     * We deliberately DO NOT extract arbitrary numbers.
-     */
+    ------------------------------------------------------------
+    IMPORTANT:
 
-    const homePattern =
-        new RegExp(
-            "(?:home|1)\\s*(?:win)?\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)",
-            "i"
-        );
+    We only extract numbers from CURRENT_MATCH evidence.
 
-    const drawPattern =
-        /(?:draw|tie|x)\s*[:=]?\s*(\d+(?:\.\d+)?)/i;
+    We do NOT infer a statistic merely because a page mentions
+    the teams.
+    ------------------------------------------------------------
+    */
 
-    const awayPattern =
-        new RegExp(
-            "(?:away|2)\\s*(?:win)?\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)",
-            "i"
-        );
+    for (
+        const item
+        of evidence
+    ) {
 
-    const homeMatch =
-        text.match(
-            homePattern
-        );
+        const text =
+            item.snippet || "";
 
-    const drawMatch =
-        text.match(
-            drawPattern
-        );
 
-    const awayMatch =
-        text.match(
-            awayPattern
-        );
+        /*
+        XG
+        */
 
-    if (homeMatch) {
-        output.home =
-            safeOdds(
-                homeMatch[1]
+        const xgMatches =
+            text.match(
+                /xg\s*[:=]?\s*(\d+(?:\.\d+)?)/gi
             );
+
+
+        if (
+            xgMatches &&
+            xgMatches.length >= 2
+        ) {
+
+            const values =
+                xgMatches
+                    .map(
+                        value =>
+                            Number(
+                                value.match(
+                                    /(\d+(?:\.\d+)?)/)[1]
+                            )
+                    );
+
+
+            if (
+                output.xg.home === null
+            ) {
+
+                output.xg.home =
+                    values[0];
+            }
+
+
+            if (
+                output.xg.away === null
+            ) {
+
+                output.xg.away =
+                    values[1];
+            }
+
+
+            if (
+                output.xg.home !== null &&
+                output.xg.away !== null
+            ) {
+
+                output.xg.total =
+                    Number(
+                        (
+                            output.xg.home +
+                            output.xg.away
+                        ).toFixed(2)
+                    );
+            }
+        }
+
+
+        /*
+        BTTS percentages
+        */
+
+        const bttsMatch =
+            text.match(
+                /btts[^0-9]*(\d+(?:\.\d+)?)%/i
+            );
+
+
+        if (
+            bttsMatch &&
+            output.btts.h2h === null
+        ) {
+
+            output.btts.h2h =
+                Number(
+                    bttsMatch[1]
+                );
+        }
+
+
+        /*
+        Over 2.5
+        */
+
+        const over25Match =
+            text.match(
+                /over\s*2\.5[^0-9]*(\d+(?:\.\d+)?)%/i
+            );
+
+
+        if (
+            over25Match &&
+            output.overUnder.over25 === null
+        ) {
+
+            output.overUnder.over25 =
+                Number(
+                    over25Match[1]
+                );
+        }
+
+
+        /*
+        Under 2.5
+        */
+
+        const under25Match =
+            text.match(
+                /under\s*2\.5[^0-9]*(\d+(?:\.\d+)?)%/i
+            );
+
+
+        if (
+            under25Match &&
+            output.overUnder.under25 === null
+        ) {
+
+            output.overUnder.under25 =
+                Number(
+                    under25Match[1]
+                );
+        }
     }
 
-    if (drawMatch) {
-        output.draw =
-            safeOdds(
-                drawMatch[1]
-            );
-    }
-
-    if (awayMatch) {
-        output.away =
-            safeOdds(
-                awayMatch[1]
-            );
-    }
-
-    /*
-     * ------------------------------------------------------------
-     * OVER / UNDER 2.5
-     * ------------------------------------------------------------
-     */
-
-    const over25 =
-        text.match(
-            /over\s*2\.5(?:\s*goals?)?\s*[:=]?\s*(\d+(?:\.\d+)?)/i
-        );
-
-    const under25 =
-        text.match(
-            /under\s*2\.5(?:\s*goals?)?\s*[:=]?\s*(\d+(?:\.\d+)?)/i
-        );
-
-    if (over25) {
-        output.over25 =
-            safeOdds(
-                over25[1]
-            );
-    }
-
-    if (under25) {
-        output.under25 =
-            safeOdds(
-                under25[1]
-            );
-    }
-
-    /*
-     * ------------------------------------------------------------
-     * BTTS
-     * ------------------------------------------------------------
-     */
-
-    const bttsYes =
-        text.match(
-            /(?:btts|both teams to score)[^.\n]{0,20}?(?:yes)\s*[:=]?\s*(\d+(?:\.\d+)?)/i
-        );
-
-    const bttsNo =
-        text.match(
-            /(?:btts|both teams to score)[^.\n]{0,20}?(?:no)\s*[:=]?\s*(\d+(?:\.\d+)?)/i
-        );
-
-    if (bttsYes) {
-        output.bttsYes =
-            safeOdds(
-                bttsYes[1]
-            );
-    }
-
-    if (bttsNo) {
-        output.bttsNo =
-            safeOdds(
-                bttsNo[1]
-            );
-    }
 
     return output;
 }
 
 
-function safeOdds(value) {
-    const number =
-        Number(value);
+// ---------------------------------------------------------------
+// STRUCTURED ODDS
+// ---------------------------------------------------------------
 
-    /*
-     * Decimal football odds should normally be
-     * greater than 1.
-     *
-     * Extremely large values are rejected because
-     * they are usually percentages, IDs, dates,
-     * rankings or unrelated numbers.
-     */
-
-    if (
-        !Number.isFinite(number) ||
-        number < 1.01 ||
-        number > 100
-    ) {
-        return null;
-    }
-
-    return number;
-}
-
-
-/* ================================================================
-   ODDS VALIDATION
-   ================================================================ */
-
-function validateOdds(normalized) {
-    const odds =
-        normalized.odds;
-
-    for (const key of Object.keys(odds)) {
-        const value =
-            odds[key];
-
-        if (
-            value === null ||
-            value === undefined
-        ) {
-            continue;
-        }
-
-        if (
-            !Number.isFinite(
-                Number(value)
-            ) ||
-            Number(value) < 1.01 ||
-            Number(value) > 100
-        ) {
-            odds[key] = null;
-        }
-    }
-
-    /*
-     * Do not allow an incomplete 1X2 set to be treated
-     * as structured 1X2 odds.
-     *
-     * We keep individual labelled values if present,
-     * but the dataAvailability flag will remain false
-     * unless all three exist.
-     */
-}
-
-
-/* ================================================================
-   DATA AVAILABILITY
-   ================================================================ */
-
-function buildDataAvailability(
-    normalized,
-    quality
+function extractStructuredOdds(
+    evidence,
+    homeIdentity,
+    awayIdentity
 ) {
-    const structured1X2 =
-        normalized.odds.home !== null &&
-        normalized.odds.draw !== null &&
-        normalized.odds.away !== null;
 
-    const actualLineups =
-        Array.isArray(
-            normalized.lineups.home
-        ) &&
-        normalized.lineups.home.length > 0
-        ||
-        Array.isArray(
-            normalized.lineups.away
-        ) &&
-        normalized.lineups.away.length > 0;
+    const output = {
 
-    const currentLineupSource =
-        normalized.lineups.matchEvidence
-            .some(
-                item =>
-                    item.relevance ===
-                    "CURRENT_MATCH"
+        home: null,
+
+        draw: null,
+
+        away: null,
+
+        over25: null,
+
+        under25: null,
+
+        bttsYes: null,
+
+        bttsNo: null
+    };
+
+
+    for (
+        const item
+        of evidence
+    ) {
+
+        const text =
+            item.snippet || "";
+
+
+        /*
+        --------------------------------------------------------
+        Home / Draw / Away decimal odds
+        --------------------------------------------------------
+        */
+
+        const homeMatch =
+            text.match(
+                /(?:home win|home)\D{0,20}(\d+(?:\.\d{1,2})?)/i
             );
 
-    const currentInjuries =
-        normalized.injuries.home.length > 0 ||
-        normalized.injuries.away.length > 0;
 
-    const currentStats =
-        normalized.statsEvidence.length > 0;
+        const drawMatch =
+            text.match(
+                /(?:draw)\D{0,20}(\d+(?:\.\d{1,2})?)/i
+            );
 
-    const currentOddsSource =
-        normalized.oddsEvidence.length > 0;
 
-    return {
-        fixture: {
-            available:
-                quality.currentMatchSources > 0,
+        const awayMatch =
+            text.match(
+                /(?:away win|away)\D{0,20}(\d+(?:\.\d{1,2})?)/i
+            );
 
-            confidence:
-                quality.currentMatchSources > 0
-                    ? "HIGH"
-                    : "NONE"
-        },
 
-        form: {
-            available:
-                quality.formEvidence > 0,
+        if (
+            homeMatch &&
+            output.home === null
+        ) {
 
-            confidence:
-                quality.formEvidence > 0
-                    ? "MEDIUM"
-                    : "NONE",
-
-            reason:
-                quality.formEvidence > 0
-                    ? null
-                    : "No date-qualified recent results extracted"
-        },
-
-        h2h: {
-            available:
-                quality.h2hSources > 0,
-
-            confidence:
-                quality.h2hSources > 0
-                    ? "MEDIUM"
-                    : "NONE"
-        },
-
-        injuries: {
-            available:
-                currentInjuries,
-
-            confidence:
-                currentInjuries
-                    ? "MEDIUM"
-                    : "NONE",
-
-            sourceAvailable:
-                quality.injurySources > 0,
-
-            currentEvidence:
-                currentInjuries
-        },
-
-        lineups: {
-            sourceAvailable:
-                currentLineupSource,
-
-            playersAvailable:
-                actualLineups,
-
-            confirmed:
-                normalized.lineups.matchEvidence
-                    .some(
-                        item =>
-                            item.confirmed === true
-                    )
-        },
-
-        stats: {
-            available:
-                currentStats,
-
-            confidence:
-                currentStats
-                    ? "MEDIUM"
-                    : "NONE",
-
-            undatedAvailable:
-                normalized.undatedStatsEvidence.length > 0
-        },
-
-        xg: {
-            available:
-                normalized.xg.home !== null &&
-                normalized.xg.away !== null,
-
-            confidence:
-                normalized.xg.home !== null &&
-                normalized.xg.away !== null
-                    ? "MEDIUM"
-                    : "NONE"
-        },
-
-        odds: {
-            sourceAvailable:
-                currentOddsSource,
-
-            structured1X2,
-
-            confidence:
-                structured1X2
-                    ? "MEDIUM"
-                    : currentOddsSource
-                        ? "LOW"
-                        : "NONE",
-
-            undatedAvailable:
-                normalized.undatedOddsEvidence.length > 0
+            output.home =
+                Number(
+                    homeMatch[1]
+                );
         }
-    };
+
+
+        if (
+            drawMatch &&
+            output.draw === null
+        ) {
+
+            output.draw =
+                Number(
+                    drawMatch[1]
+                );
+        }
+
+
+        if (
+            awayMatch &&
+            output.away === null
+        ) {
+
+            output.away =
+                Number(
+                    awayMatch[1]
+                );
+        }
+
+
+        /*
+        --------------------------------------------------------
+        Over / Under 2.5
+        --------------------------------------------------------
+        */
+
+        const overMatch =
+            text.match(
+                /over\s*2\.5\D{0,20}(\d+(?:\.\d{1,2})?)/i
+            );
+
+
+        const underMatch =
+            text.match(
+                /under\s*2\.5\D{0,20}(\d+(?:\.\d{1,2})?)/i
+            );
+
+
+        if (
+            overMatch &&
+            output.over25 === null
+        ) {
+
+            output.over25 =
+                Number(
+                    overMatch[1]
+                );
+        }
+
+
+        if (
+            underMatch &&
+            output.under25 === null
+        ) {
+
+            output.under25 =
+                Number(
+                    underMatch[1]
+                );
+        }
+
+
+        /*
+        --------------------------------------------------------
+        BTTS
+        --------------------------------------------------------
+        */
+
+        const bttsYesMatch =
+            text.match(
+                /btts(?:\s+yes)?\D{0,20}(\d+(?:\.\d{1,2})?)/i
+            );
+
+
+        const bttsNoMatch =
+            text.match(
+                /btts\s+no\D{0,20}(\d+(?:\.\d{1,2})?)/i
+            );
+
+
+        if (
+            bttsYesMatch &&
+            output.bttsYes === null
+        ) {
+
+            output.bttsYes =
+                Number(
+                    bttsYesMatch[1]
+                );
+        }
+
+
+        if (
+            bttsNoMatch &&
+            output.bttsNo === null
+        ) {
+
+            output.bttsNo =
+                Number(
+                    bttsNoMatch[1]
+                );
+        }
+    }
+
+
+    /*
+    ------------------------------------------------------------
+    Sanity-check decimal odds.
+
+    Ignore percentages and obviously invalid values.
+    ------------------------------------------------------------
+    */
+
+    for (
+        const key
+        of [
+            "home",
+            "draw",
+            "away",
+            "over25",
+            "under25",
+            "bttsYes",
+            "bttsNo"
+        ]
+    ) {
+
+        if (
+            output[key] !== null &&
+            (
+                output[key] < 1.01 ||
+                output[key] > 100
+            )
+        ) {
+
+            output[key] = null;
+        }
+    }
+
+
+    return output;
 }
 
 
-/* ================================================================
-   QUALITY
-   ================================================================ */
-
-function buildQuality(
-    normalized
-) {
-    const sources =
-        normalized.sources;
-
-    return {
-        totalSources:
-            sources.length,
-
-        currentMatchSources:
-            sources.filter(
-                item =>
-                    item.relevance ===
-                    "CURRENT_MATCH"
-            ).length,
-
-        recentSources:
-            sources.filter(
-                item =>
-                    item.relevance ===
-                    "RECENT"
-            ).length,
-
-        historicalSources:
-            sources.filter(
-                item =>
-                    item.relevance ===
-                    "HISTORICAL"
-            ).length,
-
-        futureSources:
-            sources.filter(
-                item =>
-                    item.relevance ===
-                    "FUTURE"
-            ).length,
-
-        undatedTeamSources:
-            sources.filter(
-                item =>
-                    item.relevance ===
-                    "UNDATED_TEAM_SOURCE"
-            ).length,
-
-        irrelevantSources:
-            sources.filter(
-                item =>
-                    item.relevance ===
-                    "IRRELEVANT"
-            ).length,
-
-        h2hSources:
-            normalized.h2h.length,
-
-        formEvidence:
-            normalized.formEvidence.home.length +
-            normalized.formEvidence.away.length,
-
-        statsEvidence:
-            normalized.statsEvidence.length,
-
-        undatedStatsEvidence:
-            normalized.undatedStatsEvidence.length,
-
-        injuryEvidence:
-            normalized.injuries.home.length +
-            normalized.injuries.away.length,
-
-        injurySources:
-            sources.filter(
-                item =>
-                    item.type ===
-                    "injuries"
-            ).length,
-
-        lineupEvidence:
-            normalized.lineups.matchEvidence.length,
-
-        oddsEvidence:
-            normalized.oddsEvidence.length,
-
-        undatedOddsEvidence:
-            normalized.undatedOddsEvidence.length
-    };
-}
-
-
-/* ================================================================
-   WARNINGS
-   ================================================================ */
-
-function addWarnings(
-    normalized,
-    match
-) {
-    const sources =
-        normalized.sources;
-
-    if (
-        sources.some(
-            item =>
-                item.relevance ===
-                "HISTORICAL"
-        )
-    ) {
-        normalized.warnings.push(
-            "Historical evidence was detected and must not be treated as current-match information."
-        );
-    }
-
-    if (
-        sources.some(
-            item =>
-                item.relevance ===
-                "FUTURE"
-        )
-    ) {
-        normalized.warnings.push(
-            "Future fixture or future-dated information was detected and excluded from current-match evidence."
-        );
-    }
-
-    if (
-        sources.some(
-            item =>
-                item.relevance ===
-                "UNDATED_TEAM_SOURCE"
-        )
-    ) {
-        normalized.warnings.push(
-            "Some team-related sources had no reliable event date and were kept separately instead of being treated as recent."
-        );
-    }
-
-    if (
-        normalized.statsEvidence.length === 0
-    ) {
-        normalized.warnings.push(
-            "No date-qualified statistical evidence was found."
-        );
-    }
-
-    if (
-        normalized.injuries.home.length === 0 &&
-        normalized.injuries.away.length === 0
-    ) {
-        normalized.warnings.push(
-            "No current-match injury evidence was confidently attributed."
-        );
-    }
-
-    if (
-        normalized.lineups.matchEvidence.length > 0 &&
-        !(
-            Array.isArray(
-                normalized.lineups.home
-            ) &&
-            normalized.lineups.home.length > 0
-        ) &&
-        !(
-            Array.isArray(
-                normalized.lineups.away
-            ) &&
-            normalized.lineups.away.length > 0
-        )
-    ) {
-        normalized.warnings.push(
-            "A current-match lineup source was found, but actual player names were not safely extracted."
-        );
-    }
-
-    if (
-        normalized.oddsEvidence.length > 0 &&
-        !(
-            normalized.odds.home !== null &&
-            normalized.odds.draw !== null &&
-            normalized.odds.away !== null
-        )
-    ) {
-        normalized.warnings.push(
-            "A current-match odds source was found, but complete structured 1X2 odds were not safely extracted."
-        );
-    }
-
-    if (
-        normalized.undatedStatsEvidence.length > 0
-    ) {
-        normalized.warnings.push(
-            "Undated statistical sources were retained separately and must not be treated as current-match statistics."
-        );
-    }
-
-    if (
-        normalized.undatedOddsEvidence.length > 0
-    ) {
-        normalized.warnings.push(
-            "Undated odds sources were retained separately and must not be treated as current-match odds."
-        );
-    }
-}
-
-
-/* ================================================================
-   DUPLICATES
-   ================================================================ */
+// ---------------------------------------------------------------
+// REMOVE DUPLICATES
+// ---------------------------------------------------------------
 
 function removeDuplicateEvidence(
     items
 ) {
+
     const seen =
         new Set();
 
-    const output = [];
 
-    for (const item of items || []) {
-        const key =
-            [
-                item.source || "",
-                item.url || "",
-                item.eventDate || "",
-                item.relevance || "",
-                item.snippet || ""
-            ].join("|");
+    return items.filter(
+        item => {
 
-        if (
-            seen.has(key)
-        ) {
-            continue;
+            const key =
+                [
+                    item.type || "",
+                    item.source || "",
+                    item.url || "",
+                    item.snippet || "",
+                    item.eventDate || "",
+                    item.publishedDate || ""
+                ]
+                .join("|")
+                .toLowerCase();
+
+
+            if (
+                seen.has(key)
+            ) {
+                return false;
+            }
+
+
+            seen.add(
+                key
+            );
+
+
+            return true;
         }
-
-        seen.add(key);
-
-        output.push(item);
-    }
-
-    return output;
+    );
 }
 
 
-/* ================================================================
-   DATE DISTANCE
-   ================================================================ */
+// ---------------------------------------------------------------
+// COUNT RELEVANCE
+// ---------------------------------------------------------------
 
-function daysBetween(
-    first,
-    second
+function countRelevance(
+    sources,
+    relevance
 ) {
-    if (
-        !first ||
-        !second
-    ) {
-        return Infinity;
-    }
 
-    const milliseconds =
-        Math.abs(
-            first.getTime() -
-            second.getTime()
-        );
-
-    return (
-        milliseconds /
-        86400000
-    );
+    return sources.filter(
+        item =>
+            item.relevance ===
+            relevance
+    ).length;
 }
