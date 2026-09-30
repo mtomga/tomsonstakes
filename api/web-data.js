@@ -1,8 +1,11 @@
 export default async function handler(req, res) {
+
     try {
+
         if (req.method !== "GET") {
             return res.status(405).json({
-                error: "Method not allowed. Use GET."
+                success: false,
+                error: "GET method required."
             });
         }
 
@@ -14,53 +17,50 @@ export default async function handler(req, res) {
             date
         } = req.query;
 
-        if (!home || !homeIdentity || !away || !awayIdentity || !date) {
+        if (
+            !home ||
+            !homeIdentity ||
+            !away ||
+            !awayIdentity ||
+            !date
+        ) {
             return res.status(400).json({
-                error: "home, homeIdentity, away, awayIdentity and date are required."
+                success: false,
+                error:
+                    "home, homeIdentity, away, awayIdentity and date are required."
             });
         }
 
-        const allowedIdentities = [
+        // =====================================================
+        // VALID IDENTITIES
+        // =====================================================
+
+        const validIdentities = [
             "DEPORTES_CONCEPCION",
             "UNIVERSIDAD_DE_CONCEPCION",
             "OHIGGINS"
         ];
 
-        if (!allowedIdentities.includes(homeIdentity)) {
+        if (
+            !validIdentities.includes(homeIdentity) ||
+            !validIdentities.includes(awayIdentity)
+        ) {
             return res.status(400).json({
-                error: `Invalid homeIdentity: ${homeIdentity}`
-            });
-        }
-
-        if (!allowedIdentities.includes(awayIdentity)) {
-            return res.status(400).json({
-                error: `Invalid awayIdentity: ${awayIdentity}`
+                success: false,
+                error: "Invalid team identity."
             });
         }
 
         if (homeIdentity === awayIdentity) {
             return res.status(400).json({
+                success: false,
                 error: "Home and away teams cannot have the same identity."
             });
         }
 
-        const apiKey = process.env.SERPER_API_KEY;
-
-        if (!apiKey) {
-            return res.status(500).json({
-                error: "SERPER_API_KEY is not configured."
-            });
-        }
-
-        const matchDate = new Date(`${date}T00:00:00Z`);
-
-        if (Number.isNaN(matchDate.getTime())) {
-            return res.status(400).json({
-                error: "Invalid match date."
-            });
-        }
-
-        const matchYear = matchDate.getUTCFullYear();
+        // =====================================================
+        // CANONICAL NAMES
+        // =====================================================
 
         const canonicalNames = {
             DEPORTES_CONCEPCION: "Deportes Concepcion",
@@ -68,270 +68,493 @@ export default async function handler(req, res) {
             OHIGGINS: "O'Higgins"
         };
 
-        const canonicalHome = canonicalNames[homeIdentity];
-        const canonicalAway = canonicalNames[awayIdentity];
+        const canonicalHome =
+            canonicalNames[homeIdentity];
 
-        /*
-         * IMPORTANT:
-         * The form search is now split by team.
-         *
-         * The previous version searched:
-         *
-         * "Home" "Away" recent form...
-         *
-         * That caused Google/Serper to return mostly fixture pages.
-         *
-         * V3.12 searches each team's recent results independently.
-         */
+        const canonicalAway =
+            canonicalNames[awayIdentity];
+
+        if (!canonicalHome || !canonicalAway) {
+            return res.status(400).json({
+                success: false,
+                error: "Could not resolve canonical team names."
+            });
+        }
+
+        // =====================================================
+        // API KEY
+        // =====================================================
+
+        const apiKey =
+            process.env.SERPER_API_KEY;
+
+        if (!apiKey) {
+            return res.status(500).json({
+                success: false,
+                error:
+                    "SERPER_API_KEY is not configured."
+            });
+        }
+
+        const matchYear =
+            new Date(date).getUTCFullYear();
+
+        // =====================================================
+        // SEARCH DEFINITIONS
+        // =====================================================
 
         const searches = [
+
+            // -------------------------------------------------
+            // HOME FORM
+            // -------------------------------------------------
+
             {
                 type: "form_home",
                 team: canonicalHome,
                 teamIdentity: homeIdentity,
-                query: `"${canonicalHome}" last 5 matches results ${matchYear} football`
+                query:
+                    `"${canonicalHome}" results 2026 fixtures recent results football`
             },
+
             {
                 type: "form_home_recent",
                 team: canonicalHome,
                 teamIdentity: homeIdentity,
-                query: `"${canonicalHome}" recent results ${matchYear} football`
+                query:
+                    `"${canonicalHome}" "Aug" "Sep" 2026 results football`
             },
+
+            {
+                type: "form_home_fixtures",
+                team: canonicalHome,
+                teamIdentity: homeIdentity,
+                query:
+                    `"${canonicalHome}" fixtures results 2026 FotMob`
+            },
+
+            {
+                type: "form_home_soccerway",
+                team: canonicalHome,
+                teamIdentity: homeIdentity,
+                query:
+                    `"${canonicalHome}" Soccerway results 2026`
+            },
+
+            // -------------------------------------------------
+            // AWAY FORM
+            // -------------------------------------------------
+
             {
                 type: "form_away",
                 team: canonicalAway,
                 teamIdentity: awayIdentity,
-                query: `"${canonicalAway}" last 5 matches results ${matchYear} football`
+                query:
+                    `"${canonicalAway}" results 2026 fixtures recent results football`
             },
+
             {
                 type: "form_away_recent",
                 team: canonicalAway,
                 teamIdentity: awayIdentity,
-                query: `"${canonicalAway}" recent results ${matchYear} football`
+                query:
+                    `"${canonicalAway}" "Aug" "Sep" 2026 results football`
             },
+
+            {
+                type: "form_away_fixtures",
+                team: canonicalAway,
+                teamIdentity: awayIdentity,
+                query:
+                    `"${canonicalAway}" fixtures results 2026 FotMob`
+            },
+
+            {
+                type: "form_away_soccerway",
+                team: canonicalAway,
+                teamIdentity: awayIdentity,
+                query:
+                    `"${canonicalAway}" Soccerway results 2026`
+            },
+
+            // -------------------------------------------------
+            // H2H
+            // -------------------------------------------------
 
             {
                 type: "h2h",
-                query: `"${canonicalHome}" "${canonicalAway}" head to head H2H results football`
+                query:
+                    `"${canonicalHome}" "${canonicalAway}" head to head H2H results football`
             },
+
+            // -------------------------------------------------
+            // CURRENT STATS
+            // -------------------------------------------------
 
             {
                 type: "stats",
-                query: `"${canonicalHome}" "${canonicalAway}" statistics goals xG BTTS over under ${matchYear} football`
+                query:
+                    `"${canonicalHome}" "${canonicalAway}" statistics goals xG BTTS over under ${matchYear} football`
             },
+
+            // -------------------------------------------------
+            // INJURIES
+            // -------------------------------------------------
 
             {
                 type: "injuries",
-                query: `"${canonicalHome}" "${canonicalAway}" injuries suspended players team news ${matchYear} football`
+                query:
+                    `"${canonicalHome}" "${canonicalAway}" injuries suspended players team news ${matchYear} football`
             },
+
+            // -------------------------------------------------
+            // LINEUPS
+            // -------------------------------------------------
 
             {
                 type: "lineups",
-                query: `"${canonicalHome}" "${canonicalAway}" predicted lineup starting XI ${matchYear} football`
+                query:
+                    `"${canonicalHome}" "${canonicalAway}" predicted lineup starting XI ${matchYear} football`
             },
+
+            // -------------------------------------------------
+            // ODDS
+            // -------------------------------------------------
 
             {
                 type: "odds",
-                query: `"${canonicalHome}" "${canonicalAway}" odds 1X2 over under BTTS ${matchYear} football`
+                query:
+                    `"${canonicalHome}" "${canonicalAway}" odds 1X2 over under BTTS football ${matchYear}`
             }
         ];
+
+        // =====================================================
+        // SERPER SEARCH
+        // =====================================================
 
         const results = [];
 
         for (const search of searches) {
-            try {
-                const response = await fetch(
-                    "https://google.serper.dev/search",
-                    {
-                        method: "POST",
-                        headers: {
-                            "X-API-KEY": apiKey,
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            q: search.query,
-                            num: 8
-                        })
-                    }
-                );
 
-                const data = await response.json();
+            try {
+
+                const response =
+                    await fetch(
+                        "https://google.serper.dev/search",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "X-API-KEY": apiKey,
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body: JSON.stringify({
+                                q: search.query,
+                                num: 8
+                            })
+                        }
+                    );
+
+                const data =
+                    await response.json();
 
                 results.push({
-                    type: search.type,
-                    team: search.team || null,
-                    teamIdentity: search.teamIdentity || null,
-                    query: search.query,
-                    status: response.status,
-                    success: response.ok,
 
-                    results: (data.organic || []).map(item => ({
-                        title: item.title || null,
-                        link: item.link || null,
-                        snippet: item.snippet || null,
-                        date: item.date || null,
-                        position: item.position || null
-                    })),
+                    type:
+                        search.type,
 
-                    knowledgeGraph: data.knowledgeGraph || null
+                    team:
+                        search.team || null,
+
+                    teamIdentity:
+                        search.teamIdentity || null,
+
+                    query:
+                        search.query,
+
+                    status:
+                        response.status,
+
+                    success:
+                        response.ok,
+
+                    results:
+                        (data.organic || []).map(item => ({
+
+                            title:
+                                item.title || null,
+
+                            link:
+                                item.link || null,
+
+                            snippet:
+                                item.snippet || null,
+
+                            date:
+                                item.date || null,
+
+                            position:
+                                item.position || null
+
+                        })),
+
+                    knowledgeGraph:
+                        data.knowledgeGraph || null
                 });
 
             } catch (searchError) {
 
                 results.push({
-                    type: search.type,
-                    team: search.team || null,
-                    teamIdentity: search.teamIdentity || null,
-                    query: search.query,
+
+                    type:
+                        search.type,
+
+                    team:
+                        search.team || null,
+
+                    teamIdentity:
+                        search.teamIdentity || null,
+
+                    query:
+                        search.query,
+
                     status: 500,
+
                     success: false,
-                    error: searchError.message,
+
+                    error:
+                        searchError.message,
+
                     results: []
                 });
             }
         }
 
-        /*
-         * Flatten results while retaining:
-         * - search category
-         * - team requested for form searches
-         * - team identity
-         */
+        // =====================================================
+        // FLATTEN RESULTS
+        // =====================================================
 
         const allResults = [];
 
         for (const search of results) {
+
             for (const item of search.results) {
 
                 allResults.push({
-                    type: search.type,
-                    team: search.team || null,
-                    teamIdentity: search.teamIdentity || null,
 
-                    title: item.title,
-                    link: item.link,
-                    snippet: item.snippet,
-                    date: item.date,
-                    position: item.position
+                    type:
+                        search.type,
+
+                    team:
+                        search.team || null,
+
+                    teamIdentity:
+                        search.teamIdentity || null,
+
+                    title:
+                        item.title,
+
+                    link:
+                        item.link,
+
+                    snippet:
+                        item.snippet,
+
+                    date:
+                        item.date,
+
+                    position:
+                        item.position
                 });
             }
         }
 
-        /*
-         * Count searches.
-         */
+        // =====================================================
+        // FORM SEARCH SUMMARY
+        // =====================================================
 
-        const successfulSearches = results.filter(
-            item => item.success
-        ).length;
+        const homeFormResults =
+            allResults.filter(item =>
+                (
+                    item.type === "form_home" ||
+                    item.type === "form_home_recent" ||
+                    item.type === "form_home_fixtures" ||
+                    item.type === "form_home_soccerway"
+                ) &&
+                item.teamIdentity === homeIdentity
+            );
 
-        const failedSearches = results.filter(
-            item => !item.success
-        ).length;
+        const awayFormResults =
+            allResults.filter(item =>
+                (
+                    item.type === "form_away" ||
+                    item.type === "form_away_recent" ||
+                    item.type === "form_away_fixtures" ||
+                    item.type === "form_away_soccerway"
+                ) &&
+                item.teamIdentity === awayIdentity
+            );
 
-        /*
-         * Form search summary.
-         */
-
-        const formHomeResults = allResults.filter(
-            item =>
-                item.type === "form_home" ||
-                item.type === "form_home_recent"
-        );
-
-        const formAwayResults = allResults.filter(
-            item =>
-                item.type === "form_away" ||
-                item.type === "form_away_recent"
-        );
+        // =====================================================
+        // RESPONSE
+        // =====================================================
 
         return res.status(200).json({
 
             success: true,
 
-            version: "V3.12",
+            version:
+                "V3.13",
 
             match: {
-                home: canonicalHome,
-                away: canonicalAway,
-                date,
-                year: matchYear,
 
-                homeInput: home,
-                awayInput: away,
+                home:
+                    canonicalHome,
+
+                homeInput:
+                    home,
 
                 homeIdentity,
-                awayIdentity
-            },
 
-            searchedAt: new Date().toISOString(),
+                away:
+                    canonicalAway,
+
+                awayInput:
+                    away,
+
+                awayIdentity,
+
+                date,
+
+                year:
+                    matchYear
+            },
 
             identityResolution: {
-                requested: {
-                    home,
-                    homeIdentity,
-                    away,
-                    awayIdentity
+
+                home: {
+                    input:
+                        home,
+
+                    identity:
+                        homeIdentity,
+
+                    canonical:
+                        canonicalHome
                 },
 
-                resolved: {
-                    home: homeIdentity,
-                    away: awayIdentity
-                },
+                away: {
+                    input:
+                        away,
 
-                canonicalNames: {
-                    home: canonicalHome,
-                    away: canonicalAway
-                },
+                    identity:
+                        awayIdentity,
 
-                identitySafe: true,
-
-                importantRule:
-                    "Deportes Concepcion and Universidad de Concepcion are separate clubs."
+                    canonical:
+                        canonicalAway
+                }
             },
 
-            searches: results,
+            searchedAt:
+                new Date().toISOString(),
+
+            searches:
+                results,
 
             allResults,
 
             formSearchSummary: {
+
                 home: {
-                    identity: homeIdentity,
-                    searchCount: 2,
-                    resultCount: formHomeResults.length
+
+                    identity:
+                        homeIdentity,
+
+                    searchResultCount:
+                        homeFormResults.length
                 },
 
                 away: {
-                    identity: awayIdentity,
-                    searchCount: 2,
-                    resultCount: formAwayResults.length
+
+                    identity:
+                        awayIdentity,
+
+                    searchResultCount:
+                        awayFormResults.length
                 }
             },
 
             summary: {
-                totalSearches: searches.length,
-                successfulSearches,
-                failedSearches,
-                totalResults: allResults.length
+
+                totalSearches:
+                    searches.length,
+
+                successfulSearches:
+                    results.filter(
+                        item => item.success
+                    ).length,
+
+                failedSearches:
+                    results.filter(
+                        item => !item.success
+                    ).length,
+
+                totalResults:
+                    allResults.length
             },
 
             analysisReady: {
-                identity: true,
-                form: true,
-                h2h: true,
-                stats: true,
-                injuries: true,
-                lineups: true,
-                odds: true
+
+                form:
+                    homeFormResults.length > 0 &&
+                    awayFormResults.length > 0,
+
+                h2h:
+                    allResults.some(
+                        item =>
+                            item.type === "h2h"
+                    ),
+
+                stats:
+                    allResults.some(
+                        item =>
+                            item.type === "stats"
+                    ),
+
+                injuries:
+                    allResults.some(
+                        item =>
+                            item.type === "injuries"
+                    ),
+
+                lineups:
+                    allResults.some(
+                        item =>
+                            item.type === "lineups"
+                    ),
+
+                odds:
+                    allResults.some(
+                        item =>
+                            item.type === "odds"
+                    )
             },
 
             warnings: [
+
                 "Web results are raw source information.",
-                "Form searches are separated by home and away team.",
-                "No prediction has been generated from web results.",
+
+                "Recent-form searches are separated by team identity.",
+
+                "Deportes Concepcion and Universidad de Concepcion are separate clubs.",
+
+                "Form must be extracted only from results belonging to the requested team.",
+
                 "Missing statistics must not be guessed.",
-                "Source URLs should be retained for verification.",
-                "Deportes Concepcion and Universidad de Concepcion must never be conflated."
+
+                "Source URLs should be retained for verification."
             ]
         });
 
@@ -340,9 +563,14 @@ export default async function handler(req, res) {
         console.error(error);
 
         return res.status(500).json({
+
             success: false,
-            error: "Web data search failed.",
-            details: error.message
+
+            error:
+                "Web data search failed.",
+
+            details:
+                error.message
         });
     }
 }
