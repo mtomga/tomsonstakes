@@ -9,11 +9,21 @@ export default async function handler(req, res) {
 
         const body = req.body || {};
 
-        const {
-            match,
-            searches = [],
-            allResults = []
-        } = body;
+const match =
+    body.match ||
+    body.data?.match ||
+    body.normalized?.match ||
+    null;
+
+const searches =
+    body.searches ||
+    body.data?.searches ||
+    [];
+
+const allResults =
+    body.allResults ||
+    body.data?.allResults ||
+    [];
 
         if (!match || !match.home || !match.away || !match.date) {
             return res.status(400).json({
