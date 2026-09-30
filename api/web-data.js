@@ -16,71 +16,161 @@ export default async function handler(req, res) {
             });
         }
 
+        // Get the year directly from the requested match date
+        const matchYear = new Date(date).getUTCFullYear();
+
+        // Targeted searches
         const searches = [
             {
                 type: "form",
-                query: `"${home}" "${away}" recent form results 2026 football`
+                query:
+                    `"${home}" "${away}" recent form last 5 matches ${matchYear} football`
             },
+
             {
                 type: "h2h",
-                query: `"${home}" "${away}" head to head H2H football`
+                query:
+                    `"${home}" "${away}" head to head H2H results football`
             },
+
             {
                 type: "stats",
-                query: `"${home}" "${away}" statistics goals xG BTTS over under 2026`
+                query:
+                    `"${home}" "${away}" statistics goals xG BTTS over under ${matchYear} football`
+            },
+
+            {
+                type: "injuries",
+                query:
+                    `"${home}" "${away}" injuries suspended players team news ${matchYear} football`
+            },
+
+            {
+                type: "lineups",
+                query:
+                    `"${home}" "${away}" predicted lineup starting XI ${matchYear} football`
+            },
+
+            {
+                type: "odds",
+                query:
+                    `"${home}" "${away}" odds 1X2 over under BTTS ${matchYear} football`
             }
         ];
 
         const results = [];
 
         for (const search of searches) {
+            try {
+                const response = await fetch(
+                    "https://google.serper.dev/search",
+                    {
+                        method: "POST",
 
-            const response = await fetch(
-                "https://google.serper.dev/search",
-                {
-                    method: "POST",
+                        headers: {
+                            "X-API-KEY": apiKey,
+                            "Content-Type": "application/json"
+                        },
 
-                    headers: {
-                        "X-API-KEY": apiKey,
-                        "Content-Type": "application/json"
-                    },
+                        body: JSON.stringify({
+                            q: search.query,
+                            num: 8
+                        })
+                    }
+                );
 
-                    body: JSON.stringify({
-                        q: search.query,
-                        num: 8
-                    })
-                }
-            );
+                const data = await response.json();
 
-            const data = await response.json();
+                results.push({
+                    type: search.type,
+                    query: search.query,
+                    status: response.status,
+                    success: response.ok,
 
-            results.push({
-                type: search.type,
-                query: search.query,
-                status: response.status,
-                organic: data.organic || [],
-                knowledgeGraph: data.knowledgeGraph || null
-            });
+                    results: (data.organic || []).map(item => ({
+                        title: item.title || null,
+                        link: item.link || null,
+                        snippet: item.snippet || null,
+                        date: item.date || null,
+                        position: item.position || null
+                    })),
+
+                    knowledgeGraph:
+                        data.knowledgeGraph || null
+                });
+
+            } catch (searchError) {
+
+                results.push({
+                    type: search.type,
+                    query: search.query,
+                    status: 500,
+                    success: false,
+                    error: searchError.message,
+                    results: []
+                });
+            }
+        }
+
+        // Flatten all results for easier processing later
+        const allResults = [];
+
+        for (const search of results) {
+            for (const item of search.results) {
+                allResults.push({
+                    type: search.type,
+                    title: item.title,
+                    link: item.link,
+                    snippet: item.snippet,
+                    date: item.date,
+                    position: item.position
+                });
+            }
         }
 
         return res.status(200).json({
+
             match: {
                 home,
                 away,
-                date
+                date,
+                year: matchYear
             },
 
             searchedAt: new Date().toISOString(),
 
             searches: results,
 
+            allResults: allResults,
+
             summary: {
                 totalSearches: searches.length,
-                totalResults: results.reduce(
-                    (total, item) => total + item.organic.length,
-                    0
-                )
-            }
+
+                successfulSearches:
+                    results.filter(item => item.success).length,
+
+                failedSearches:
+                    results.filter(item => !item.success).length,
+
+                totalResults:
+                    allResults.length
+            },
+
+            analysisReady: {
+                form: true,
+                h2h: true,
+                stats: true,
+                injuries: true,
+                lineups: true,
+                odds: true
+            },
+
+            warnings: [
+                "Web results are raw source information.",
+                "No prediction has been generated from web results.",
+                "Missing statistics must not be guessed.",
+                "Source URLs should be retained for verification."
+            ]
         });
 
     } catch (error) {
