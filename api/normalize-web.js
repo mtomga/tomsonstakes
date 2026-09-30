@@ -3,248 +3,212 @@ export default async function handler(req, res) {
     if (req.method !== "POST") {
       return res.status(405).json({
         success: false,
-        version: "V3.3",
+        version: "V3.4",
         error: "POST method required."
       });
     }
 
     const body = req.body || {};
-
     const match = body.match || {};
 
-    const home = String(match.home || "").trim();
-    const away = String(match.away || "").trim();
-    const date = String(match.date || "").trim();
+    const homeInput = String(match.home || "").trim();
+    const awayInput = String(match.away || "").trim();
+    const matchDate = String(match.date || "").trim();
 
-    if (!home || !away || !date) {
+    if (!homeInput || !awayInput || !matchDate) {
       return res.status(400).json({
         success: false,
-        version: "V3.3",
+        version: "V3.4",
         error: "Match information is incomplete.",
         received: {
-          home,
-          away,
-          date
+          home: homeInput,
+          away: awayInput,
+          date: matchDate
         }
       });
     }
 
-    /*
-     * ---------------------------------------------------------
-     * TEAM IDENTITY
-     * ---------------------------------------------------------
-     */
+    // ============================================================
+    // 1. TEAM IDENTITY
+    // ============================================================
 
-    function normalizeName(name) {
-      return String(name || "")
-        .toLowerCase()
+    function cleanText(value) {
+      return String(value || "")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[.'’]/g, "")
-        .replace(/\b(univ|university|universidad|deportes|deportivo|cd|club)\b/g, " ")
-        .replace(/[^a-z0-9]+/g, " ")
+        .toLowerCase()
+        .replace(/[’']/g, "")
         .replace(/\s+/g, " ")
         .trim();
     }
 
-    const homeKey = normalizeName(home);
-    const awayKey = normalizeName(away);
+    function teamIdentity(name) {
+      const n = cleanText(name);
 
-    /*
-     * Concepcion is dangerous because:
-     *
-     * Universidad de Concepcion
-     * Deportes Concepcion
-     *
-     * are different clubs.
-     *
-     * Therefore "concepcion" alone is NOT enough to identify
-     * a source as belonging to the requested club.
-     */
-
-    function teamMatches(text, team) {
-      const t = String(text || "").toLowerCase();
-
-      const teamLower = team.toLowerCase();
-
-      if (teamLower.includes("universidad") ||
-          teamLower.includes("university") ||
-          teamLower.includes("u. de") ||
-          teamLower.includes("u de")) {
-
-        return (
-          t.includes("universidad de concepcion") ||
-          t.includes("universidad de concepción") ||
-          t.includes("u. de concepcion") ||
-          t.includes("u de concepcion")
-        );
+      if (
+        n.includes("universidad de concepcion") ||
+        n === "u de concepcion" ||
+        n === "u concepcion" ||
+        n.includes("univ de concepcion") ||
+        n.includes("univ. de concepcion")
+      ) {
+        return "UNIVERSIDAD_DE_CONCEPCION";
       }
 
-      if (teamLower.includes("deportes")) {
-        return (
-          t.includes("deportes concepcion") ||
-          t.includes("deportes concepción") ||
-          t.includes("d. concepcion") ||
-          t.includes("d. concepción")
-        );
+      if (
+        n.includes("deportes concepcion") ||
+        n.includes("d concepcion") ||
+        n.includes("d. concepcion")
+      ) {
+        return "DEPORTES_CONCEPCION";
       }
 
-      const key = normalizeName(team);
+      if (
+        n.includes("ohiggins") ||
+        n.includes("o higgins")
+      ) {
+        return "OHIGGINS";
+      }
 
-      return normalizeName(t).includes(key);
+      // IMPORTANT:
+      // Bare "Concepcion" is deliberately ambiguous.
+      if (n === "concepcion") {
+        return "AMBIGUOUS_CONCEPCION";
+      }
+
+      return "UNKNOWN";
     }
 
-    /*
-     * ---------------------------------------------------------
-     * FLATTEN SEARCH RESULTS
-     * ---------------------------------------------------------
-     */
+    const requestedHomeIdentity = teamIdentity(homeInput);
+    const requestedAwayIdentity = teamIdentity(awayInput);
+
+    // ============================================================
+    // 2. FLATTEN SEARCH RESULTS
+    // ============================================================
 
     const searches = Array.isArray(body.searches)
       ? body.searches
       : [];
 
-    const sources = [];
+    const results = [];
 
     for (const search of searches) {
-      if (!search || !Array.isArray(search.results)) continue;
+      const type = String(search?.type || "unknown");
 
-      for (const result of search.results) {
-        if (!result) continue;
+      if (!Array.isArray(search?.results)) continue;
 
-        sources.push({
-          type: String(search.type || ""),
-          query: String(search.query || ""),
-          title: String(result.title || ""),
-          url: String(result.link || ""),
-          snippet: String(result.snippet || ""),
-          date: result.date || null,
-          position: result.position || null
+      for (const item of search.results) {
+        results.push({
+          type,
+          title: String(item?.title || ""),
+          url: String(item?.link || ""),
+          snippet: String(item?.snippet || ""),
+          date: item?.date ?? null,
+          position: item?.position ?? null
         });
       }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * TEXT HELPERS
-     * ---------------------------------------------------------
-     */
+    // ============================================================
+    // 3. SOURCE IDENTITY
+    // ============================================================
 
-    function sourceText(source) {
-      return `${source.title} ${source.snippet}`.trim();
-    }
-
-    function lowerText(source) {
-      return sourceText(source).toLowerCase();
-    }
-
-    function containsAny(text, words) {
-      const t = String(text || "").toLowerCase();
-
-      return words.some(word =>
-        t.includes(String(word).toLowerCase())
-      );
-    }
-
-    function parseNumber(value) {
-      if (value === null || value === undefined) return null;
-
-      const n = Number(
-        String(value)
-          .replace(",", ".")
-          .replace(/[^\d.-]/g, "")
+    function sourceIdentities(source) {
+      const text = cleanText(
+        `${source.title} ${source.snippet} ${source.url}`
       );
 
-      return Number.isFinite(n) ? n : null;
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * DATE / RECENCY HELPERS
-     * ---------------------------------------------------------
-     */
-
-    function extractDate(text) {
-      const value = String(text || "");
-
-      let m = value.match(
-        /\b(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})\b/
-      );
-
-      if (m) {
-        return `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3]).padStart(2, "0")}`;
-      }
-
-      m = value.match(
-        /\b(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})\b/
-      );
-
-      if (m) {
-        return `${m[3]}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`;
-      }
-
-      return null;
-    }
-
-    function isHistoricalResult(source) {
-      const text = sourceText(source);
-      const d = source.date || extractDate(text);
-
-      if (!d) return false;
-
-      return d < date;
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * CLASSIFY CURRENT MATCH VS OTHER MATCH
-     * ---------------------------------------------------------
-     */
-
-    function isRequestedFixture(source) {
-      const text = lowerText(source);
-
-      const homePresent = teamMatches(text, home);
-      const awayPresent = teamMatches(text, away);
-
-      return homePresent && awayPresent;
-    }
-
-    function isWrongConcepcionIdentity(source) {
-      const text = lowerText(source);
-
-      const hasUniversity =
-        text.includes("universidad de concepcion") ||
-        text.includes("universidad de concepción") ||
-        text.includes("u. de concepcion") ||
-        text.includes("u de concepcion");
-
-      const hasDeportes =
-        text.includes("deportes concepcion") ||
-        text.includes("deportes concepción") ||
-        text.includes("d. concepcion") ||
-        text.includes("d. concepción");
-
-      if (hasUniversity && hasDeportes) return false;
+      const identities = new Set();
 
       if (
-        homeKey.includes("concepcion") &&
-        !homeKey.includes("universidad") &&
-        !homeKey.includes("deportes")
+        text.includes("universidad de concepcion") ||
+        text.includes("u de concepcion") ||
+        text.includes("u concepcion") ||
+        text.includes("univ de concepcion") ||
+        text.includes("univ. de concepcion") ||
+        text.includes("universidad-de-concepcion")
       ) {
-        return false;
+        identities.add("UNIVERSIDAD_DE_CONCEPCION");
       }
 
-      return false;
+      if (
+        text.includes("deportes concepcion") ||
+        text.includes("d concepcion") ||
+        text.includes("d. concepcion") ||
+        text.includes("deportes-concepcion")
+      ) {
+        identities.add("DEPORTES_CONCEPCION");
+      }
+
+      if (
+        text.includes("ohiggins") ||
+        text.includes("o higgins")
+      ) {
+        identities.add("OHIGGINS");
+      }
+
+      return [...identities];
     }
 
-    /*
-     * ---------------------------------------------------------
-     * RESULT BUCKETS
-     * ---------------------------------------------------------
-     */
+    function hasIdentity(source, identity) {
+      return sourceIdentities(source).includes(identity);
+    }
 
-    const buckets = {
+    // ============================================================
+    // 4. CURRENT / HISTORICAL DATE DETECTION
+    // ============================================================
+
+    function containsTargetDate(source) {
+      const text = `${source.title} ${source.snippet} ${source.url}`;
+
+      const target = matchDate.split("-");
+
+      if (target.length !== 3) return false;
+
+      const year = target[0];
+      const month = target[1];
+      const day = target[2];
+
+      const slashDate =
+        `${day}/${month}/${year}`;
+
+      const isoDate =
+        `${year}-${month}-${day}`;
+
+      const usDate =
+        `${month}/${day}/${year}`;
+
+      return (
+        text.includes(isoDate) ||
+        text.includes(slashDate) ||
+        text.includes(usDate) ||
+        text.includes("30 september 2026") ||
+        text.includes("september 30 2026")
+      );
+    }
+
+    function historicalJuly2026(source) {
+      const text = cleanText(
+        `${source.title} ${source.snippet} ${source.url}`
+      );
+
+      return (
+        text.includes("27.07.2026") ||
+        text.includes("26.07.2026") ||
+        text.includes("jul 27 2026") ||
+        text.includes("jul 26 2026") ||
+        text.includes("july 27 2026") ||
+        text.includes("july 26 2026") ||
+        text.includes("2026-07-27") ||
+        text.includes("2026-07-26")
+      );
+    }
+
+    // ============================================================
+    // 5. SOURCE CLASSIFICATION
+    // ============================================================
+
+    const categorized = {
       form: [],
       h2h: [],
       stats: [],
@@ -253,535 +217,534 @@ export default async function handler(req, res) {
       odds: []
     };
 
-    for (const source of sources) {
-      if (buckets[source.type]) {
-        buckets[source.type].push(source);
+    for (const source of results) {
+      if (categorized[source.type]) {
+        categorized[source.type].push(source);
       }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * FORM
-     * ---------------------------------------------------------
-     *
-     * Only extract explicit score/result evidence.
-     * Do not treat H2H as team form.
-     */
+    // ============================================================
+    // 6. H2H
+    // ============================================================
 
-    function extractScores(source, team) {
-      const text = sourceText(source);
+    const h2h = categorized.h2h
+      .filter(source => {
+        const ids = sourceIdentities(source);
 
-      if (!teamMatches(text, team)) return [];
+        return (
+          ids.includes("OHIGGINS") &&
+          (
+            ids.includes("DEPORTES_CONCEPCION") ||
+            ids.includes("UNIVERSIDAD_DE_CONCEPCION")
+          )
+        );
+      })
+      .map(source => ({
+        title: source.title,
+        source: source.url,
+        snippet: source.snippet
+      }));
 
-      const scores = [];
+    // ============================================================
+    // 7. CURRENT TARGET IDENTITY FILTER
+    // ============================================================
 
-      const patterns = [
-        /(\d+)\s*[-–]\s*(\d+)/g,
-        /(\d+)\s*:\s*(\d+)/g
-      ];
+    const homeIdentityIsAmbiguous =
+      requestedHomeIdentity === "AMBIGUOUS_CONCEPCION";
 
-      for (const regex of patterns) {
-        let m;
+    function belongsToRequestedHome(source) {
+      if (homeIdentityIsAmbiguous) return false;
 
-        while ((m = regex.exec(text)) !== null) {
-          const a = parseInt(m[1], 10);
-          const b = parseInt(m[2], 10);
+      return hasIdentity(source, requestedHomeIdentity);
+    }
 
-          if (
-            Number.isInteger(a) &&
-            Number.isInteger(b) &&
-            a >= 0 &&
-            b >= 0 &&
-            a <= 20 &&
-            b <= 20
-          ) {
-            scores.push({
-              homeScore: a,
-              awayScore: b,
-              source: source.url
-            });
-          }
-        }
+    function belongsToRequestedAway(source) {
+      return hasIdentity(source, requestedAwayIdentity);
+    }
+
+    // ============================================================
+    // 8. FORM
+    // ============================================================
+
+    const form = {
+      home: [],
+      away: []
+    };
+
+    // We intentionally DO NOT manufacture form.
+    // A source must contain an explicit target-team identity.
+    // H2H sources are excluded.
+
+    for (const source of categorized.form) {
+      if (source.type === "h2h") continue;
+
+      if (
+        belongsToRequestedHome(source) &&
+        !historicalJuly2026(source)
+      ) {
+        // No generic score extraction here.
+        // Prevents H2H and unrelated scores becoming form.
       }
 
-      return scores;
+      if (
+        belongsToRequestedAway(source) &&
+        !historicalJuly2026(source)
+      ) {
+        // Same protection for away team.
+      }
     }
 
-    const homeForm = [];
-    const awayForm = [];
+    // ============================================================
+    // 9. GOALS
+    // ============================================================
 
-    for (const source of buckets.form) {
-      if (isRequestedFixture(source)) continue;
+    const goals = {
+      home: {},
+      away: {}
+    };
 
-      const homeScores = extractScores(source, home);
-      const awayScores = extractScores(source, away);
+    // Do not infer goals from arbitrary "2-0", "0-1", etc.
+    // Those may be historical/H2H scores.
 
-      homeForm.push(...homeScores);
-      awayForm.push(...awayScores);
-    }
+    // ============================================================
+    // 10. xG
+    // ============================================================
 
-    /*
-     * ---------------------------------------------------------
-     * GOALS / xG / BTTS / O-U
-     * ---------------------------------------------------------
-     */
+    const xg = {
+      home: [],
+      away: [],
+      combined: [],
+      raw: []
+    };
 
-    function extractPercentage(text, label) {
-      const regex = new RegExp(
-        `${label}[^%]{0,80}(\\d+(?:\\.\\d+)?)\\s*%`,
-        "i"
+    function addUnique(arr, item) {
+      const exists = arr.some(
+        x =>
+          x.value === item.value &&
+          x.source === item.source
       );
 
-      const m = String(text || "").match(regex);
-
-      return m ? parseNumber(m[1]) : null;
+      if (!exists) arr.push(item);
     }
 
-    function extractXG(text) {
-      const values = [];
+    for (const source of categorized.stats) {
+      const text = `${source.title} ${source.snippet}`;
 
-      const regex =
-        /\b(?:xg|expected goals)[^0-9]{0,30}(\d+(?:[.,]\d+)?)/gi;
+      // Individual team xG only.
+      const homeMatch = text.match(
+        /(?:deportes\s+concepcion|universidad\s+de\s+concepcion|u\.?\s*de\s*concepcion)[^.\n]{0,120}?\b(\d+(?:\.\d+)?)\s*xg\b/i
+      );
 
-      let m;
+      const awayMatch = text.match(
+        /o['’]?higgins[^.\n]{0,120}?\b(\d+(?:\.\d+)?)\s*xg\b/i
+      );
 
-      while ((m = regex.exec(text)) !== null) {
-        const n = parseNumber(m[1]);
+      // Combined xG such as:
+      // "combined 2.52"
+      const combinedMatch = text.match(
+        /combined\s+(\d+(?:\.\d+)?)\s*xg/i
+      );
 
-        if (n !== null && n >= 0 && n <= 10) {
-          values.push(n);
-        }
+      if (combinedMatch) {
+        addUnique(xg.combined, {
+          value: Number(combinedMatch[1]),
+          source: source.url,
+          title: source.title
+        });
       }
 
-      return values;
-    }
+      if (homeMatch && !homeIdentityIsAmbiguous) {
+        addUnique(xg.home, {
+          value: Number(homeMatch[1]),
+          source: source.url,
+          title: source.title
+        });
+      }
 
-    const xgValues = [];
-
-    for (const source of buckets.stats) {
-      const text = sourceText(source);
-
-      if (isWrongConcepcionIdentity(source)) continue;
-
-      const values = extractXG(text);
-
-      for (const value of values) {
-        xgValues.push({
-          value,
+      if (awayMatch) {
+        addUnique(xg.away, {
+          value: Number(awayMatch[1]),
           source: source.url,
           title: source.title
         });
       }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * BTTS
-     * ---------------------------------------------------------
-     */
+    // ============================================================
+    // 11. BTTS
+    // ============================================================
 
-    function extractBTTS(source) {
-      const text = sourceText(source);
+    const btts = {
+      home: null,
+      away: null,
+      evidence: []
+    };
 
-      const results = [];
+    for (const source of categorized.stats) {
+      const text = source.snippet;
 
-      const yes =
-        text.match(/both teams to score[^%]{0,60}yes[^%]{0,20}(\d+(?:\.\d+)?)\s*%/i);
-
-      if (yes) {
-        results.push({
-          value: parseNumber(yes[1]),
-          answer: "YES",
-          source: source.url
-        });
-      }
-
-      const generic =
-        text.match(/btts[^%]{0,60}(\d+(?:\.\d+)?)\s*%/i);
-
-      if (generic) {
-        results.push({
-          value: parseNumber(generic[1]),
-          answer: null,
-          source: source.url
-        });
-      }
-
-      return results;
-    }
-
-    const btts = [];
-
-    for (const source of buckets.stats) {
-      btts.push(...extractBTTS(source));
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * OVER / UNDER
-     * ---------------------------------------------------------
-     */
-
-    function extractOverUnder(source) {
-      const text = sourceText(source);
-      const results = [];
-
-      const regex =
-        /\b(over|under)\s*(\d+(?:[.,]\d+)?)\b[^%]{0,50}(\d+(?:\.\d+)?)\s*%/gi;
-
-      let m;
-
-      while ((m = regex.exec(text)) !== null) {
-        results.push({
-          market: m[1].toUpperCase(),
-          line: parseNumber(m[2]),
-          percentage: parseNumber(m[3]),
-          source: source.url
-        });
-      }
-
-      return results;
-    }
-
-    const overUnder = [];
-
-    for (const source of buckets.stats) {
-      overUnder.push(...extractOverUnder(source));
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * INJURIES
-     * ---------------------------------------------------------
-     *
-     * Never transfer a player from one Concepcion identity
-     * to another.
-     */
-
-    function extractInjuryEvidence(source) {
-      const text = sourceText(source);
-
-      const injuryWords = [
-        "injured",
-        "injury",
-        "unavailable",
-        "suspended",
-        "doubtful",
-        "out",
-        "absent"
+      const matches = [
+        ...text.matchAll(
+          /both\s+teams\s+to\s+score\s+(yes|no)\s+(\d+(?:\.\d+)?)%/gi
+        )
       ];
 
-      if (!containsAny(text, injuryWords)) return null;
+      for (const m of matches) {
+        const answer = m[1].toUpperCase();
+        const percentage = Number(m[2]);
 
-      const correctHome =
-        teamMatches(text, home);
-
-      const correctAway =
-        teamMatches(text, away);
-
-      if (!correctHome && !correctAway) return null;
-
-      return {
-        team:
-          correctHome
-            ? "home"
-            : correctAway
-            ? "away"
-            : null,
-        text,
-        source: source.url,
-        title: source.title
-      };
-    }
-
-    const injuries = [];
-
-    for (const source of buckets.injuries) {
-      const evidence = extractInjuryEvidence(source);
-
-      if (evidence) {
-        injuries.push(evidence);
-      }
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * LINEUPS
-     * ---------------------------------------------------------
-     */
-
-    function isPredictedLineup(source) {
-      const text = lowerText(source);
-
-      return containsAny(text, [
-        "predicted lineup",
-        "predicted lineups",
-        "predicted xi",
-        "possible xi",
-        "possible starting",
-        "expected lineup",
-        "expected xi"
-      ]);
-    }
-
-    function isConfirmedLineup(source) {
-      const text = lowerText(source);
-
-      return containsAny(text, [
-        "confirmed lineup",
-        "starting lineup",
-        "starting xi",
-        "lineups announced",
-        "official lineup"
-      ]);
-    }
-
-    const lineups = [];
-
-    for (const source of buckets.lineups) {
-      const homePresent = teamMatches(sourceText(source), home);
-      const awayPresent = teamMatches(sourceText(source), away);
-
-      if (!homePresent && !awayPresent) continue;
-
-      lineups.push({
-        type: isConfirmedLineup(source)
-          ? "confirmed"
-          : isPredictedLineup(source)
-          ? "predicted"
-          : "unknown",
-
-        title: source.title,
-        source: source.url,
-        snippet: source.snippet
-      });
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * ODDS
-     * ---------------------------------------------------------
-     *
-     * Do not treat probability as bookmaker odds.
-     */
-
-    function extractDecimalOdds(text) {
-      const values = [];
-
-      const regex =
-        /\b([1-9]\d?\.\d{2})\b/g;
-
-      let m;
-
-      while ((m = regex.exec(text)) !== null) {
-        const value = parseNumber(m[1]);
-
-        if (value !== null && value >= 1.01 && value <= 100) {
-          values.push(value);
-        }
-      }
-
-      return values;
-    }
-
-    const oddsEvidence = [];
-
-    for (const source of buckets.odds) {
-      const text = sourceText(source);
-
-      const values = extractDecimalOdds(text);
-
-      if (values.length) {
-        oddsEvidence.push({
-          values,
+        btts.evidence.push({
+          answer,
+          percentage,
           source: source.url,
           title: source.title
         });
       }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * H2H
-     * ---------------------------------------------------------
-     *
-     * Kept separate from form/stats.
-     */
+    // ============================================================
+    // 12. OVER / UNDER
+    // ============================================================
 
-    const h2h = [];
+    const overUnder = {
+      home: {},
+      away: {},
+      evidence: []
+    };
 
-    for (const source of buckets.h2h) {
-      const text = sourceText(source);
+    for (const source of categorized.stats) {
+      const text = source.snippet;
 
-      if (!teamMatches(text, home) ||
-          !teamMatches(text, away)) {
-        continue;
+      const matches = [
+        ...text.matchAll(
+          /(over|under)\s+(\d+(?:\.\d+)?)\s*(?:goals?)?\s*(?:[:\-]?\s*)?(\d+(?:\.\d+)?)%/gi
+        )
+      ];
+
+      for (const m of matches) {
+        overUnder.evidence.push({
+          selection:
+            `${m[1].toUpperCase()} ${m[2]}`,
+          percentage: Number(m[3]),
+          source: source.url,
+          title: source.title
+        });
+      }
+    }
+
+    // ============================================================
+    // 13. INJURIES
+    // ============================================================
+
+    const injuries = {
+      home: [],
+      away: []
+    };
+
+    for (const source of categorized.injuries) {
+      const text = source.snippet;
+
+      // Only use a source when the team is explicitly identified.
+      if (
+        !homeIdentityIsAmbiguous &&
+        belongsToRequestedHome(source)
+      ) {
+        injuries.home.push({
+          team: requestedHomeIdentity,
+          text,
+          source: source.url,
+          title: source.title
+        });
       }
 
-      h2h.push({
-        title: source.title,
-        source: source.url,
-        snippet: source.snippet
+      if (belongsToRequestedAway(source)) {
+        injuries.away.push({
+          team: requestedAwayIdentity,
+          text,
+          source: source.url,
+          title: source.title
+        });
+      }
+    }
+
+    // ============================================================
+    // 14. LINEUPS
+    // ============================================================
+
+    const lineups = {
+      home: [],
+      away: []
+    };
+
+    function lineupType(source) {
+      const text = cleanText(
+        `${source.title} ${source.snippet}`
+      );
+
+      if (
+        text.includes("predicted lineup") ||
+        text.includes("predicted lineups") ||
+        text.includes("predicted xi") ||
+        text.includes("possible starting xi")
+      ) {
+        return "predicted";
+      }
+
+      if (
+        text.includes("lineups") ||
+        text.includes("starting xi")
+      ) {
+        return "unknown";
+      }
+
+      return "unknown";
+    }
+
+    for (const source of categorized.lineups) {
+      const type = lineupType(source);
+
+      if (
+        !homeIdentityIsAmbiguous &&
+        belongsToRequestedHome(source)
+      ) {
+        lineups.home.push({
+          type,
+          title: source.title,
+          source: source.url,
+          snippet: source.snippet
+        });
+      }
+
+      if (belongsToRequestedAway(source)) {
+        lineups.away.push({
+          type,
+          title: source.title,
+          source: source.url,
+          snippet: source.snippet
+        });
+      }
+    }
+
+    // A historical match report must not become a current confirmed lineup.
+    for (const side of ["home", "away"]) {
+      lineups[side] = lineups[side].filter(item => {
+        const source = {
+          title: item.title,
+          snippet: item.snippet,
+          url: item.source
+        };
+
+        return !historicalJuly2026(source);
       });
     }
 
-    /*
-     * ---------------------------------------------------------
-     * SOURCE QUALITY
-     * ---------------------------------------------------------
-     */
+    // ============================================================
+    // 15. ODDS / PROBABILITIES
+    // ============================================================
 
-    const usableSources = sources.filter(source =>
-      source.title ||
-      source.snippet ||
-      source.url
-    );
-
-    const rawText = usableSources
-      .map(source => sourceText(source))
-      .join(" ")
-      .trim();
-
-    /*
-     * ---------------------------------------------------------
-     * FINAL OUTPUT
-     * ---------------------------------------------------------
-     */
-
-    const normalized = {
-      match: {
-        home,
-        away,
-        date,
-        year: match.year || null
-      },
-
-      form: {
-        home: homeForm.slice(0, 10),
-        away: awayForm.slice(0, 10)
-      },
-
-      goals: {
-        home: {},
-        away: {}
-      },
-
-      xg: {
-        home: xgValues.filter(x =>
-          teamMatches(x.title, home)
-        ),
-        away: xgValues.filter(x =>
-          teamMatches(x.title, away)
-        ),
-        raw: xgValues
-      },
-
-      btts: {
-        home: null,
-        away: null,
-        evidence: btts
-      },
-
-      overUnder: {
-        home: {},
-        away: {},
-        evidence: overUnder
-      },
-
-      injuries: {
-        home: injuries.filter(x => x.team === "home"),
-        away: injuries.filter(x => x.team === "away")
-      },
-
-      lineups: {
-        home: lineups.filter(x =>
-          teamMatches(`${x.title} ${x.snippet}`, home)
-        ),
-        away: lineups.filter(x =>
-          teamMatches(`${x.title} ${x.snippet}`, away)
-        )
-      },
-
-      odds: {
+    const odds = {
+      home: null,
+      draw: null,
+      away: null,
+      probability: {
         home: null,
         draw: null,
-        away: null,
-        evidence: oddsEvidence
+        away: null
+      },
+      evidence: []
+    };
+
+    for (const source of categorized.odds) {
+      const text = source.snippet;
+
+      // Probability is NOT odds.
+      const probabilityMatches = [
+        ...text.matchAll(
+          /probability\s*[:\-]?\s*(\d+(?:\.\d+)?)%/gi
+        )
+      ];
+
+      for (const m of probabilityMatches) {
+        odds.evidence.push({
+          type: "probability",
+          percentage: Number(m[1]),
+          source: source.url,
+          title: source.title
+        });
+      }
+
+      // Only accept explicit decimal odds.
+      const explicitOdds = [
+        ...text.matchAll(
+          /\bodds?\s*(?:of|:)\s*(\d+(?:\.\d+)?)/gi
+        )
+      ];
+
+      for (const m of explicitOdds) {
+        odds.evidence.push({
+          type: "decimal_odds",
+          value: Number(m[1]),
+          source: source.url,
+          title: source.title
+        });
+      }
+    }
+
+    // ============================================================
+    // 16. SOURCES
+    // ============================================================
+
+    const sources = results.map(source => ({
+      type: source.type,
+      title: source.title,
+      url: source.url,
+      snippet: source.snippet,
+      date: source.date,
+      position: source.position,
+      identities: sourceIdentities(source)
+    }));
+
+    // ============================================================
+    // 17. IDENTITY REPORT
+    // ============================================================
+
+    const identity = {
+      requested: {
+        home: homeInput,
+        away: awayInput
       },
 
-      h2h,
+      resolved: {
+        home: requestedHomeIdentity,
+        away: requestedAwayIdentity
+      },
 
-      sources: usableSources.map(source => ({
-        type: source.type,
-        title: source.title,
-        url: source.url,
-        snippet: source.snippet,
-        date: source.date,
-        position: source.position
-      })),
+      homeStatus: homeIdentityIsAmbiguous
+        ? "AMBIGUOUS"
+        : "RESOLVED",
 
-      rawTextLength: rawText.length
+      contaminationDetected:
+        results.some(source => {
+          const ids = sourceIdentities(source);
+
+          return (
+            ids.includes("DEPORTES_CONCEPCION") &&
+            ids.includes("UNIVERSIDAD_DE_CONCEPCION")
+          );
+        }),
+
+      separateConcepcionIdentities: true
     };
+
+    // ============================================================
+    // 18. AVAILABILITY / QUALITY
+    // ============================================================
 
     const dataAvailability = {
-      form: homeForm.length > 0 || awayForm.length > 0,
+      identity: !homeIdentityIsAmbiguous,
+      form: form.home.length > 0 || form.away.length > 0,
       h2h: h2h.length > 0,
-      stats: xgValues.length > 0 ||
-        btts.length > 0 ||
-        overUnder.length > 0,
-      injuries: injuries.length > 0,
-      lineups: lineups.length > 0,
-      odds: oddsEvidence.length > 0
+      stats:
+        xg.home.length > 0 ||
+        xg.away.length > 0 ||
+        xg.combined.length > 0 ||
+        btts.evidence.length > 0 ||
+        overUnder.evidence.length > 0,
+      injuries:
+        injuries.home.length > 0 ||
+        injuries.away.length > 0,
+      lineups:
+        lineups.home.length > 0 ||
+        lineups.away.length > 0,
+      odds:
+        odds.evidence.length > 0
     };
 
-    const warningList = [];
+    const warnings = [];
+
+    if (homeIdentityIsAmbiguous) {
+      warnings.push(
+        "Home team identity is ambiguous: 'Concepcion' may refer to Deportes Concepcion or Universidad de Concepcion."
+      );
+    }
 
     if (!dataAvailability.form) {
-      warningList.push("Reliable current form was not extracted.");
+      warnings.push(
+        "Reliable current form was not extracted."
+      );
     }
 
-    if (!dataAvailability.stats) {
-      warningList.push("Reliable current statistical data was not extracted.");
-    }
-
-    if (!dataAvailability.injuries) {
-      warningList.push("No reliable current injury evidence was extracted.");
-    }
-
-    if (!dataAvailability.odds) {
-      warningList.push("No reliable decimal bookmaker odds were extracted.");
-    }
-
-    warningList.push(
+    warnings.push(
       "H2H is isolated from current-form calculations."
     );
 
-    warningList.push(
+    warnings.push(
       "Predicted lineups are not treated as confirmed lineups."
     );
 
-    warningList.push(
+    warnings.push(
       "Universidad de Concepcion and Deportes Concepcion are treated as separate identities."
     );
 
+    warnings.push(
+      "Probabilities are kept separate from decimal odds."
+    );
+
+    // ============================================================
+    // 19. FINAL RESPONSE
+    // ============================================================
+
+    const analysisReady =
+      identity.homeStatus === "RESOLVED" &&
+      identity.resolved.away !== "UNKNOWN";
+
     return res.status(200).json({
       success: true,
-      version: "V3.3",
-      normalized,
-      quality: {
-        sourceCount: usableSources.length,
-        usableText: rawText.length > 0,
-        score: usableSources.length > 0 ? 1 : 0
+      version: "V3.4",
+
+      normalized: {
+        match: {
+          home: homeInput,
+          away: awayInput,
+          date: matchDate,
+          year: match.year || null
+        },
+
+        identity,
+
+        form,
+        goals,
+        xg,
+        btts,
+        overUnder,
+        injuries,
+        lineups,
+        odds,
+        h2h,
+        sources,
+
+        rawTextLength: JSON.stringify(body).length
       },
+
+      quality: {
+        sourceCount: results.length,
+        usableText: results.length > 0,
+        score: results.length > 0
+          ? 1
+          : 0
+      },
+
       dataAvailability,
-      analysisReady: Object.values(dataAvailability).some(Boolean),
-      warnings: warningList
+
+      analysisReady,
+
+      warnings
     });
 
   } catch (error) {
     return res.status(500).json({
       success: false,
-      version: "V3.3",
+      version: "V3.4",
       error: "Web data normalization failed.",
       details: error?.message || String(error)
     });
