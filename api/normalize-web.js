@@ -1,38 +1,31 @@
 export default async function handler(req, res) {
     try {
+
         if (req.method !== "POST") {
             return res.status(405).json({
-                success: false,
-                error: "Method not allowed. Use POST."
+                error: "POST method required."
             });
         }
 
         const body = req.body || {};
 
-        if (!body.match) {
-            return res.status(400).json({
-                success: false,
-                error: "Missing match object."
-            });
-        }
+        const match = body.match || {};
 
-        const match = body.match;
-
-        const requestedHome =
-            match.homeInput ||
+        const home =
             match.home ||
+            match.homeInput ||
             "";
 
-        const requestedAway =
-            match.awayInput ||
+        const away =
             match.away ||
+            match.awayInput ||
             "";
 
-        const requestedHomeIdentity =
+        const homeIdentity =
             match.homeIdentity ||
             "";
 
-        const requestedAwayIdentity =
+        const awayIdentity =
             match.awayIdentity ||
             "";
 
@@ -40,131 +33,57 @@ export default async function handler(req, res) {
             match.date ||
             "";
 
-        if (!requestedHome || !requestedAway || !matchDate) {
+        if (!home || !away || !matchDate) {
             return res.status(400).json({
-                success: false,
-                error: "Match home, away and date are required."
+                error: "match.home, match.away and match.date are required."
             });
         }
 
-        const allowedIdentities = [
+        const VALID_IDENTITIES = [
             "DEPORTES_CONCEPCION",
             "UNIVERSIDAD_DE_CONCEPCION",
             "OHIGGINS"
         ];
 
-        function clean(value) {
-            return String(value || "")
-                .toLowerCase()
-                .replace(/[’']/g, "")
-                .replace(/&/g, " and ")
-                .replace(/[^a-z0-9]+/g, " ")
-                .replace(/\s+/g, " ")
-                .trim();
-        }
-
-        function canonicalIdentity(name) {
-            const n = clean(name);
-
-            if (
-                n.includes("universidad de concepcion") ||
-                n.includes("universidad concepcion") ||
-                n.includes("u de concepcion") ||
-                n.includes("u concepcion")
-            ) {
-                return "UNIVERSIDAD_DE_CONCEPCION";
-            }
-
-            if (
-                n.includes("deportes concepcion") ||
-                n.includes("deportes de concepcion") ||
-                n === "d concepcion" ||
-                n === "d concepcion"
-            ) {
-                return "DEPORTES_CONCEPCION";
-            }
-
-            if (
-                n === "ohiggins" ||
-                n.includes("o higgins") ||
-                n.includes("cd ohiggins") ||
-                n.includes("club deportivo ohiggins")
-            ) {
-                return "OHIGGINS";
-            }
-
-            if (
-                n === "concepcion" ||
-                n === "d concepcion"
-            ) {
-                return "AMBIGUOUS_CONCEPCION";
-            }
-
-            return "UNKNOWN";
-        }
-
-        function identityAliases(identity) {
-            const map = {
-                DEPORTES_CONCEPCION: [
-                    "deportes concepcion",
-                    "deportes de concepcion",
-                    "d concepcion"
-                ],
-
-                UNIVERSIDAD_DE_CONCEPCION: [
-                    "universidad de concepcion",
-                    "universidad concepcion",
-                    "u de concepcion",
-                    "u concepcion"
-                ],
-
-                OHIGGINS: [
-                    "ohiggins",
-                    "o higgins",
-                    "o'higgins",
-                    "cd ohiggins",
-                    "club deportivo ohiggins"
-                ]
-            };
-
-            return map[identity] || [];
-        }
-
-        function containsIdentity(text, identity) {
-            const t = clean(text);
-
-            return identityAliases(identity).some(alias => {
-                const a = clean(alias);
-
-                if (!a) return false;
-
-                return t.includes(a);
+        if (!VALID_IDENTITIES.includes(homeIdentity)) {
+            return res.status(400).json({
+                error: "Invalid homeIdentity."
             });
         }
 
-        const resolvedHome =
-            allowedIdentities.includes(requestedHomeIdentity)
-                ? requestedHomeIdentity
-                : canonicalIdentity(requestedHome);
+        if (!VALID_IDENTITIES.includes(awayIdentity)) {
+            return res.status(400).json({
+                error: "Invalid awayIdentity."
+            });
+        }
 
-        const resolvedAway =
-            allowedIdentities.includes(requestedAwayIdentity)
-                ? requestedAwayIdentity
-                : canonicalIdentity(requestedAway);
+        if (homeIdentity === awayIdentity) {
+            return res.status(400).json({
+                error: "Home and away identities cannot be the same."
+            });
+        }
 
-        const canonicalNames = {
+        const canonical = {
             DEPORTES_CONCEPCION: "Deportes Concepcion",
             UNIVERSIDAD_DE_CONCEPCION: "Universidad de Concepcion",
             OHIGGINS: "O'Higgins"
         };
 
         const homeCanonical =
-            canonicalNames[resolvedHome] ||
-            requestedHome;
+            canonical[homeIdentity];
 
         const awayCanonical =
-            canonicalNames[resolvedAway] ||
-            requestedAway;
+            canonical[awayIdentity];
+
+        const searches =
+            Array.isArray(body.searches)
+                ? body.searches
+                : [];
+
+        const allResults =
+            Array.isArray(body.allResults)
+                ? body.allResults
+                : [];
 
         /*
          * ---------------------------------------------------------
@@ -172,635 +91,1165 @@ export default async function handler(req, res) {
          * ---------------------------------------------------------
          */
 
-        const targetDate = new Date(`${matchDate}T00:00:00Z`);
+        const targetDate =
+            new Date(`${matchDate}T00:00:00Z`);
 
-        const targetDay =
-            targetDate.getUTCDate();
+        const targetTime =
+            targetDate.getTime();
 
-        const targetMonth =
-            targetDate.getUTCMonth() + 1;
-
-        const targetYear =
+        const matchYear =
             targetDate.getUTCFullYear();
 
-        const previousDay =
-            new Date(targetDate.getTime() - 86400000);
-
-        const nextDay =
-            new Date(targetDate.getTime() + 86400000);
-
-        function pad(n) {
-            return String(n).padStart(2, "0");
+        function cleanText(value) {
+            return String(value || "")
+                .replace(/\s+/g, " ")
+                .trim();
         }
 
-        const targetDDMMYYYY =
-            `${pad(targetDay)}/${pad(targetMonth)}/${targetYear}`;
-
-        const targetMMDDYYYY =
-            `${pad(targetMonth)}/${pad(targetDay)}/${targetYear}`;
-
-        const targetISO =
-            `${targetYear}-${pad(targetMonth)}-${pad(targetDay)}`;
-
-        const targetDMY =
-            `${targetDay}/${targetMonth}/${targetYear}`;
-
-        const targetMonthName =
-            targetDate.toLocaleString("en-US", {
-                month: "long",
-                timeZone: "UTC"
-            });
-
-        const targetMonthShort =
-            targetDate.toLocaleString("en-US", {
-                month: "short",
-                timeZone: "UTC"
-            });
-
-        function dateMatchesTarget(text) {
-            const t = String(text || "").toLowerCase();
-
-            if (!t) return false;
-
-            if (t.includes(targetISO)) return true;
-
-            if (t.includes(targetDDMMYYYY)) return true;
-
-            if (t.includes(targetMMDDYYYY)) return true;
-
-            if (t.includes(`${targetMonthName.toLowerCase()} ${targetDay}, ${targetYear}`)) {
-                return true;
-            }
-
-            if (t.includes(`${targetMonthName.toLowerCase()} ${targetDay} ${targetYear}`)) {
-                return true;
-            }
-
-            if (t.includes(`${targetDay} ${targetMonthName.toLowerCase()} ${targetYear}`)) {
-                return true;
-            }
-
-            if (t.includes(`${targetMonthShort.toLowerCase()} ${targetDay}, ${targetYear}`)) {
-                return true;
-            }
-
-            if (t.includes(`${targetMonthShort.toLowerCase()} ${targetDay} ${targetYear}`)) {
-                return true;
-            }
-
-            if (t.includes(`${targetDay} ${targetMonthShort.toLowerCase()} ${targetYear}`)) {
-                return true;
-            }
-
-            return false;
+        function normalizeText(value) {
+            return cleanText(value)
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[’']/g, "'")
+                .replace(/[–—]/g, "-");
         }
 
-        function utcNextDayMatches(text) {
-            const t = String(text || "").toLowerCase();
+        function dateOnly(value) {
 
-            if (!t) return false;
+            if (!value) {
+                return null;
+            }
 
-            const d = previousDay.getUTCDate();
-            const m = previousDay.getUTCMonth() + 1;
-            const y = previousDay.getUTCFullYear();
+            const text =
+                cleanText(value);
 
-            const iso = `${y}-${pad(m)}-${pad(d)}`;
+            const parsed =
+                new Date(text);
 
-            if (t.includes(iso)) return true;
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed;
+            }
 
-            const monthName =
-                previousDay.toLocaleString("en-US", {
-                    month: "long",
-                    timeZone: "UTC"
-                }).toLowerCase();
-
-            const monthShort =
-                previousDay.toLocaleString("en-US", {
-                    month: "short",
-                    timeZone: "UTC"
-                }).toLowerCase();
-
-            if (t.includes(`${monthName} ${d}, ${y}`)) return true;
-
-            if (t.includes(`${d} ${monthName} ${y}`)) return true;
-
-            if (t.includes(`${monthShort} ${d}, ${y}`)) return true;
-
-            if (t.includes(`${d} ${monthShort} ${y}`)) return true;
-
-            return false;
+            return null;
         }
 
-        function todayContext(text) {
-            const t = String(text || "").toLowerCase();
+        function extractDates(text) {
 
-            if (!t) return false;
+            const dates = [];
 
-            const dayNames = [
-                "sunday",
-                "monday",
-                "tuesday",
-                "wednesday",
-                "thursday",
-                "friday",
-                "saturday"
-            ];
+            const source =
+                cleanText(text);
 
-            const targetDayName =
-                dayNames[targetDate.getUTCDay()];
+            /*
+             * September 27, 2026
+             */
+            const longPattern =
+                /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s*(20\d{2})\b/gi;
 
-            return (
-                t.includes("today") ||
-                t.includes("tonight") ||
-                t.includes("live") ||
-                t.includes(`${targetDay} ${targetMonthShort.toLowerCase()}`) ||
-                t.includes(`${targetMonthShort.toLowerCase()} ${targetDay}`) ||
-                t.includes(targetDayName)
+            let match;
+
+            while ((match = longPattern.exec(source))) {
+
+                const parsed =
+                    new Date(
+                        `${match[1]} ${match[2]}, ${match[3]}`
+                    );
+
+                if (!Number.isNaN(parsed.getTime())) {
+                    dates.push(parsed);
+                }
+            }
+
+            /*
+             * 27 Sep 2026
+             */
+            const shortPattern =
+                /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(20\d{2})\b/gi;
+
+            while ((match = shortPattern.exec(source))) {
+
+                const parsed =
+                    new Date(
+                        `${match[2]} ${match[1]}, ${match[3]}`
+                    );
+
+                if (!Number.isNaN(parsed.getTime())) {
+                    dates.push(parsed);
+                }
+            }
+
+            /*
+             * 27.09.2026
+             */
+            const numericPattern =
+                /\b(\d{1,2})[./-](\d{1,2})[./-](20\d{2})\b/g;
+
+            while ((match = numericPattern.exec(source))) {
+
+                const day =
+                    Number(match[1]);
+
+                const month =
+                    Number(match[2]) - 1;
+
+                const year =
+                    Number(match[3]);
+
+                const parsed =
+                    new Date(
+                        Date.UTC(
+                            year,
+                            month,
+                            day
+                        )
+                    );
+
+                if (!Number.isNaN(parsed.getTime())) {
+                    dates.push(parsed);
+                }
+            }
+
+            return dates;
+        }
+
+        function resultDate(item) {
+
+            const dates = [];
+
+            if (item && item.date) {
+                const d =
+                    dateOnly(item.date);
+
+                if (d) {
+                    dates.push(d);
+                }
+            }
+
+            dates.push(
+                ...extractDates(
+                    [
+                        item?.title,
+                        item?.snippet
+                    ]
+                    .filter(Boolean)
+                    .join(" ")
+                )
             );
+
+            if (!dates.length) {
+                return null;
+            }
+
+            /*
+             * Prefer the latest date mentioned.
+             */
+            dates.sort(
+                (a, b) =>
+                    b.getTime() - a.getTime()
+            );
+
+            return dates[0];
+        }
+
+        function isFutureResult(item) {
+
+            const d =
+                resultDate(item);
+
+            if (!d) {
+                return false;
+            }
+
+            return d.getTime() > targetTime;
         }
 
         /*
          * ---------------------------------------------------------
-         * SOURCE COLLECTION
+         * TEAM IDENTITY HELPERS
          * ---------------------------------------------------------
          */
 
-        function flattenSources() {
-            const output = [];
+        function identityAliases(identity) {
 
-            if (Array.isArray(body.allResults)) {
-                for (const item of body.allResults) {
-                    output.push(item);
+            switch (identity) {
+
+                case "DEPORTES_CONCEPCION":
+                    return [
+                        "deportes concepcion",
+                        "deportes concepción",
+                        "d. concepcion",
+                        "d. concepción",
+                        "d concepcion",
+                        "d concepcion"
+                    ];
+
+                case "UNIVERSIDAD_DE_CONCEPCION":
+                    return [
+                        "universidad de concepcion",
+                        "universidad de concepción",
+                        "u. de concepcion",
+                        "u. de concepción",
+                        "u de concepcion",
+                        "u de concepcion"
+                    ];
+
+                case "OHIGGINS":
+                    return [
+                        "o'higgins",
+                        "o’higgins",
+                        "o higgins",
+                        "o.higgins",
+                        "club o'higgins",
+                        "club o’higgins"
+                    ];
+
+                default:
+                    return [];
+            }
+        }
+
+        function containsTeam(text, identity) {
+
+            const normalized =
+                normalizeText(text);
+
+            const aliases =
+                identityAliases(identity);
+
+            return aliases.some(alias =>
+                normalized.includes(
+                    normalizeText(alias)
+                )
+            );
+        }
+
+        function containsWrongConcepcion(text) {
+
+            const normalized =
+                normalizeText(text);
+
+            if (
+                normalized.includes(
+                    "universidad de concepcion"
+                )
+            ) {
+                return true;
+            }
+
+            if (
+                normalized.includes(
+                    "universidad de concepción"
+                )
+            ) {
+                return true;
+            }
+
+            return false;
+        }
+
+        /*
+         * ---------------------------------------------------------
+         * RESULT CONTAINER
+         * ---------------------------------------------------------
+         */
+
+        const flatResults = [];
+
+        for (const search of searches) {
+
+            const searchResults =
+                Array.isArray(search.results)
+                    ? search.results
+                    : [];
+
+            for (const item of searchResults) {
+
+                flatResults.push({
+                    type:
+                        search.type || null,
+
+                    team:
+                        search.team || null,
+
+                    teamIdentity:
+                        search.teamIdentity || null,
+
+                    title:
+                        cleanText(item.title),
+
+                    link:
+                        item.link || null,
+
+                    snippet:
+                        cleanText(item.snippet),
+
+                    date:
+                        item.date || null
+                });
+            }
+        }
+
+        /*
+         * If searches were not available, use allResults.
+         */
+        if (
+            flatResults.length === 0 &&
+            allResults.length > 0
+        ) {
+
+            for (const item of allResults) {
+
+                flatResults.push({
+                    type:
+                        item.type || null,
+
+                    team:
+                        null,
+
+                    teamIdentity:
+                        null,
+
+                    title:
+                        cleanText(item.title),
+
+                    link:
+                        item.link || null,
+
+                    snippet:
+                        cleanText(item.snippet),
+
+                    date:
+                        item.date || null
+                });
+            }
+        }
+
+        /*
+         * ---------------------------------------------------------
+         * FORM PARSING
+         * ---------------------------------------------------------
+         */
+
+        function parseScorePairs(text) {
+
+            const pairs = [];
+
+            const source =
+                cleanText(text);
+
+            /*
+             * Standard:
+             * 2 - 0
+             * 2-0
+             * 2 : 0
+             * 2 – 0
+             */
+            const standard =
+                /\b(\d{1,2})\s*[-:]\s*(\d{1,2})\b/g;
+
+            let match;
+
+            while ((match = standard.exec(source))) {
+
+                pairs.push({
+                    homeGoals:
+                        Number(match[1]),
+
+                    awayGoals:
+                        Number(match[2]),
+
+                    index:
+                        match.index,
+
+                    raw:
+                        match[0]
+                });
+            }
+
+            /*
+             * Compact score:
+             *
+             * 01
+             * 11
+             * 13
+             *
+             * Used by some Flashscore-style snippets.
+             *
+             * Only accept when immediately surrounded by
+             * football-team/result context.
+             */
+            const compact =
+                /\b([0-9])([0-9])\b/g;
+
+            while ((match = compact.exec(source))) {
+
+                const before =
+                    source.slice(
+                        Math.max(
+                            0,
+                            match.index - 45
+                        ),
+                        match.index
+                    );
+
+                const after =
+                    source.slice(
+                        match.index + match[0].length,
+                        match.index + match[0].length + 45
+                    );
+
+                const context =
+                    `${before} ${after}`;
+
+                if (
+                    /\b(W|D|L)\b/i.test(context) ||
+                    /\b(FT|Full-time|final)\b/i.test(context)
+                ) {
+
+                    pairs.push({
+                        homeGoals:
+                            Number(match[1]),
+
+                        awayGoals:
+                            Number(match[2]),
+
+                        index:
+                            match.index,
+
+                        raw:
+                            match[0],
+
+                        compact:
+                            true
+                    });
                 }
             }
 
-            if (Array.isArray(body.searches)) {
-                for (const search of body.searches) {
-                    for (const item of (search.results || [])) {
-                        output.push({
-                            ...item,
-                            type: search.type,
-                            team: search.team || null,
-                            teamIdentity: search.teamIdentity || null
-                        });
+            return pairs;
+        }
+
+        function inferFormResult(
+            item,
+            identity
+        ) {
+
+            const title =
+                cleanText(item.title);
+
+            const snippet =
+                cleanText(item.snippet);
+
+            const combined =
+                `${title} ${snippet}`;
+
+            if (!containsTeam(combined, identity)) {
+                return null;
+            }
+
+            /*
+             * Never allow Universidad de Concepcion
+             * to contaminate Deportes Concepcion.
+             */
+            if (
+                identity === "DEPORTES_CONCEPCION" &&
+                containsWrongConcepcion(combined)
+            ) {
+                /*
+                 * Exception:
+                 * A source can mention both clubs while
+                 * still being a Deportes Concepcion result.
+                 * Only reject if the title itself appears
+                 * to be a different fixture.
+                 */
+                const titleHasRequested =
+                    containsTeam(
+                        title,
+                        identity
+                    );
+
+                const titleHasUniversity =
+                    containsTeam(
+                        title,
+                        "UNIVERSIDAD_DE_CONCEPCION"
+                    );
+
+                if (
+                    titleHasUniversity &&
+                    !titleHasRequested
+                ) {
+                    return null;
+                }
+            }
+
+            const scores =
+                parseScorePairs(combined);
+
+            if (!scores.length) {
+                return null;
+            }
+
+            /*
+             * Determine whether the requested team is
+             * before or after the score.
+             */
+            const aliases =
+                identityAliases(identity);
+
+            const normalizedCombined =
+                normalizeText(combined);
+
+            let teamPosition =
+                null;
+
+            /*
+             * Find the closest occurrence of the team
+             * around each score.
+             */
+            for (const score of scores) {
+
+                const scoreIndex =
+                    score.index;
+
+                const before =
+                    normalizedCombined.slice(
+                        Math.max(
+                            0,
+                            scoreIndex - 120
+                        ),
+                        scoreIndex
+                    );
+
+                const after =
+                    normalizedCombined.slice(
+                        scoreIndex +
+                        score.raw.length,
+                        scoreIndex +
+                        score.raw.length +
+                        120
+                    );
+
+                const hasTeamBefore =
+                    aliases.some(alias =>
+                        before.includes(
+                            normalizeText(alias)
+                        )
+                    );
+
+                const hasTeamAfter =
+                    aliases.some(alias =>
+                        after.includes(
+                            normalizeText(alias)
+                        )
+                    );
+
+                if (
+                    hasTeamBefore &&
+                    !hasTeamAfter
+                ) {
+                    teamPosition = {
+                        score,
+                        position: "HOME"
+                    };
+                    break;
+                }
+
+                if (
+                    hasTeamAfter &&
+                    !hasTeamBefore
+                ) {
+                    teamPosition = {
+                        score,
+                        position: "AWAY"
+                    };
+                    break;
+                }
+            }
+
+            /*
+             * Some sources have a very clear
+             * "Team 2-0 Opponent" structure.
+             */
+            if (!teamPosition) {
+
+                const teamNamePattern =
+                    aliases
+                        .map(alias =>
+                            normalizeText(alias)
+                        )
+                        .sort(
+                            (a, b) =>
+                                b.length - a.length
+                        );
+
+                for (const score of scores) {
+
+                    const before =
+                        normalizedCombined.slice(
+                            Math.max(
+                                0,
+                                score.index - 80
+                            ),
+                            score.index
+                        );
+
+                    const after =
+                        normalizedCombined.slice(
+                            score.index +
+                            score.raw.length,
+                            score.index +
+                            score.raw.length +
+                            80
+                        );
+
+                    const beforeHas =
+                        teamNamePattern.some(
+                            alias =>
+                                before.includes(alias)
+                        );
+
+                    const afterHas =
+                        teamNamePattern.some(
+                            alias =>
+                                after.includes(alias)
+                        );
+
+                    if (
+                        beforeHas &&
+                        !afterHas
+                    ) {
+                        teamPosition = {
+                            score,
+                            position: "HOME"
+                        };
+                        break;
+                    }
+
+                    if (
+                        afterHas &&
+                        !beforeHas
+                    ) {
+                        teamPosition = {
+                            score,
+                            position: "AWAY"
+                        };
+                        break;
                     }
                 }
             }
 
-            const seen = new Set();
+            if (!teamPosition) {
 
-            return output.filter(item => {
-                const key = [
-                    item.type || "",
-                    item.title || "",
-                    item.link || item.url || "",
-                    item.snippet || ""
-                ].join("|");
+                /*
+                 * Handle explicit W/D/L snippets.
+                 *
+                 * Example:
+                 * Nublense. D. Concepcion. 01. W.
+                 *
+                 * Here the score is ambiguous as a compact
+                 * source representation, but the W/D/L
+                 * marker belongs to the requested team.
+                 */
 
-                if (seen.has(key)) return false;
+                const teamIndex =
+                    normalizedCombined.search(
+                        new RegExp(
+                            aliases
+                                .map(
+                                    alias =>
+                                        alias
+                                            .replace(
+                                                /[.*+?^${}()|[\]\\]/g,
+                                                "\\$&"
+                                            )
+                                )
+                                .join("|"),
+                            "i"
+                        )
+                    );
 
-                seen.add(key);
-                return true;
-            });
-        }
+                if (teamIndex >= 0) {
 
-        const sources = flattenSources();
+                    const nearby =
+                        normalizedCombined.slice(
+                            teamIndex,
+                            teamIndex + 100
+                        );
 
-        /*
-         * ---------------------------------------------------------
-         * FIXTURE IDENTITY
-         *
-         * IMPORTANT V3.12:
-         * title and URL have priority.
-         *
-         * A random mention of Deportes Concepcion inside a
-         * Santa Cruz article must NOT turn that article into
-         * a Deportes Concepcion vs O'Higgins fixture.
-         * ---------------------------------------------------------
-         */
+                    const wl =
+                        nearby.match(
+                            /\b([WDL])\b/i
+                        );
 
-        function titleAndUrlText(source) {
-            return [
-                source.title || "",
-                source.link || source.url || ""
-            ].join(" ");
-        }
+                    if (wl) {
 
-        function snippetText(source) {
-            return source.snippet || "";
-        }
+                        return {
+                            result:
+                                wl[1].toUpperCase(),
 
-        function exactFixtureFromTitleUrl(source) {
-            const tu = clean(titleAndUrlText(source));
+                            homeGoals:
+                                null,
 
-            const homeHere =
-                containsIdentity(tu, resolvedHome);
+                            awayGoals:
+                                null,
 
-            const awayHere =
-                containsIdentity(tu, resolvedAway);
+                            score:
+                                null,
 
-            if (homeHere && awayHere) {
-                return true;
+                            date:
+                                resultDate(item),
+
+                            source:
+                                item.link,
+
+                            title:
+                                item.title,
+
+                            snippet:
+                                item.snippet,
+
+                            evidenceType:
+                                "FORM_WDL"
+                        };
+                    }
+                }
+
+                return null;
             }
 
-            return false;
-        }
+            const score =
+                teamPosition.score;
 
-        function exactFixtureFromSnippet(source) {
-            const sn = clean(snippetText(source));
+            let result;
 
-            const homeHere =
-                containsIdentity(sn, resolvedHome);
-
-            const awayHere =
-                containsIdentity(sn, resolvedAway);
-
-            return homeHere && awayHere;
-        }
-
-        function wrongFixtureFromTitleUrl(source) {
-            const tu = clean(titleAndUrlText(source));
-
-            const wrongHome =
-                resolvedHome === "DEPORTES_CONCEPCION"
-                    ? containsIdentity(tu, "UNIVERSIDAD_DE_CONCEPCION")
-                    : false;
-
-            const wrongUniversity =
-                resolvedHome === "UNIVERSIDAD_DE_CONCEPCION"
-                    ? containsIdentity(tu, "DEPORTES_CONCEPCION")
-                    : false;
-
-            if (wrongHome || wrongUniversity) {
-                return true;
-            }
-
-            /*
-             * A title such as:
-             * O'Higgins vs Deportes Santa Cruz
-             *
-             * must not become our target just because the
-             * snippet mentions Deportes Concepcion.
-             */
             if (
-                resolvedAway === "OHIGGINS" &&
-                tu.includes("ohiggins") &&
-                tu.includes("santa cruz")
+                teamPosition.position === "HOME"
             ) {
-                return true;
-            }
 
-            return false;
-        }
-
-        function sourceIdentities(source) {
-            const titleUrl = titleAndUrlText(source);
-            const snippet = snippetText(source);
-
-            const result = [];
-
-            for (const id of allowedIdentities) {
                 if (
-                    containsIdentity(titleUrl, id) ||
-                    containsIdentity(snippet, id)
+                    score.homeGoals >
+                    score.awayGoals
                 ) {
-                    result.push(id);
+                    result = "W";
+                } else if (
+                    score.homeGoals <
+                    score.awayGoals
+                ) {
+                    result = "L";
+                } else {
+                    result = "D";
+                }
+
+            } else {
+
+                if (
+                    score.awayGoals >
+                    score.homeGoals
+                ) {
+                    result = "W";
+                } else if (
+                    score.awayGoals <
+                    score.homeGoals
+                ) {
+                    result = "L";
+                } else {
+                    result = "D";
                 }
             }
 
-            return [...new Set(result)];
-        }
-
-        function fixtureStrength(source) {
-            const tu = titleAndUrlText(source);
-            const sn = snippetText(source);
-
-            if (wrongFixtureFromTitleUrl(source)) {
-                return "WRONG_FIXTURE";
-            }
-
-            if (exactFixtureFromTitleUrl(source)) {
-                return "EXACT_FIXTURE";
-            }
-
-            /*
-             * Team pages may have the actual fixture only in the
-             * snippet, e.g.:
-             *
-             * Deportes Concepcion next match against O'Higgins
-             *
-             * This is fixture context, not an actual fixture article.
-             */
-            if (exactFixtureFromSnippet(source)) {
-                return "NEARBY_FIXTURE_CONTEXT";
-            }
-
-            const text = clean(`${tu} ${sn}`);
-
-            if (
-                text.includes("next match") &&
-                (
-                    containsIdentity(text, resolvedHome) ||
-                    containsIdentity(text, resolvedAway)
-                )
-            ) {
-                return "NEARBY_FIXTURE_CONTEXT";
-            }
-
-            if (
-                text.includes("women") ||
-                text.includes("femenino") ||
-                text.includes("u20") ||
-                text.includes("u19") ||
-                text.includes("u18") ||
-                text.includes("reserve") ||
-                text.includes("reserves")
-            ) {
-                return "NON_SENIOR_FIXTURE";
-            }
-
-            return "OTHER";
-        }
-
-        function processSource(source) {
-            const title =
-                source.title ||
-                "";
-
-            const link =
-                source.link ||
-                source.url ||
-                "";
-
-            const snippet =
-                source.snippet ||
-                "";
-
-            const text =
-                `${title} ${snippet} ${link}`;
-
-            const strength =
-                fixtureStrength(source);
-
-            const dateMatch =
-                dateMatchesTarget(text);
-
-            const utcNextDayMatch =
-                utcNextDayMatches(text);
-
-            const today =
-                todayContext(text);
-
-            const fixtureMatch =
-                strength === "EXACT_FIXTURE" ||
-                strength === "NEARBY_FIXTURE_CONTEXT";
-
-            const currentFixtureUsable =
-                fixtureMatch &&
-                strength !== "WRONG_FIXTURE" &&
-                strength !== "NON_SENIOR_FIXTURE" &&
-                (
-                    dateMatch ||
-                    utcNextDayMatch ||
-                    today
-                );
-
             return {
-                ...source,
 
-                title,
-                link,
-                snippet,
+                result,
 
-                identities: sourceIdentities(source),
+                homeGoals:
+                    score.homeGoals,
 
-                fixtureMatch,
-                fixtureStrength: strength,
+                awayGoals:
+                    score.awayGoals,
 
-                dateMatch,
-                utcNextDayMatch,
-                todayContext: today,
+                score:
+                    `${score.homeGoals}-${score.awayGoals}`,
 
-                currentFixtureUsable,
+                date:
+                    resultDate(item),
 
-                wrongFixture:
-                    strength === "WRONG_FIXTURE",
+                source:
+                    item.link,
 
-                historicalJuly2026:
-                    /july\s+(2[0-9]|3[01]),?\s*2026/i.test(text) ||
-                    /2026[-/](07)[-/](2[0-9]|3[01])/i.test(text)
+                title:
+                    item.title,
+
+                snippet:
+                    item.snippet,
+
+                evidenceType:
+                    "FORM_SCORE"
             };
         }
 
-        const processedSources =
-            sources.map(processSource);
+        function isSameMatchAsTarget(
+            item
+        ) {
 
-        /*
-         * ---------------------------------------------------------
-         * SOURCE FILTER HELPERS
-         * ---------------------------------------------------------
-         */
+            const combined =
+                normalizeText(
+                    [
+                        item.title,
+                        item.snippet,
+                        item.link
+                    ]
+                    .filter(Boolean)
+                    .join(" ")
+                );
 
-        function currentSourcesByType(types) {
-            const list =
-                Array.isArray(types)
-                    ? types
-                    : [types];
+            const homeMention =
+                containsTeam(
+                    combined,
+                    homeIdentity
+                );
 
-            return processedSources.filter(source =>
-                list.includes(source.type) &&
-                source.currentFixtureUsable === true
+            const awayMention =
+                containsTeam(
+                    combined,
+                    awayIdentity
+                );
+
+            return (
+                homeMention &&
+                awayMention
             );
         }
 
-        function fixtureSourcesByType(types) {
-            const list =
-                Array.isArray(types)
-                    ? types
-                    : [types];
+        function isKnownWrongFixture(
+            item
+        ) {
 
-            return processedSources.filter(source =>
-                list.includes(source.type) &&
-                source.fixtureMatch === true &&
-                source.fixtureStrength !== "WRONG_FIXTURE" &&
-                source.fixtureStrength !== "NON_SENIOR_FIXTURE"
-            );
-        }
-
-        function uniqueSources(list) {
-            const seen = new Set();
-
-            return list.filter(source => {
-                const key =
-                    `${source.title}|${source.link}|${source.snippet}`;
-
-                if (seen.has(key)) return false;
-
-                seen.add(key);
-                return true;
-            });
-        }
-
-        /*
-         * ---------------------------------------------------------
-         * FORM
-         * ---------------------------------------------------------
-         */
-
-        function parseFormResults(source, teamIdentity) {
-            const text =
-                `${source.title || ""} ${source.snippet || ""}`;
-
-            const results = [];
+            const combined =
+                normalizeText(
+                    [
+                        item.title,
+                        item.snippet,
+                        item.link
+                    ]
+                    .filter(Boolean)
+                    .join(" ")
+                );
 
             /*
-             * W/D/L followed by score.
+             * Deportes Santa Cruz is not our opponent.
              */
-            const patterns = [
-                /\b(win|won|victory)\b[^0-9]{0,30}(\d+)\s*[-:]\s*(\d+)/gi,
-                /\b(draw|drew)\b[^0-9]{0,30}(\d+)\s*[-:]\s*(\d+)/gi,
-                /\b(loss|lost|defeat)\b[^0-9]{0,30}(\d+)\s*[-:]\s*(\d+)/gi
-            ];
+            if (
+                combined.includes(
+                    "deportes santa cruz"
+                ) &&
+                (
+                    combined.includes("o'higgins") ||
+                    combined.includes("o higgins")
+                )
+            ) {
+                return true;
+            }
 
-            for (const regex of patterns) {
-                for (const m of text.matchAll(regex)) {
-                    const word =
-                        String(m[1]).toLowerCase();
+            /*
+             * Universidad de Concepcion must not
+             * contaminate Deportes Concepcion.
+             */
+            if (
+                homeIdentity ===
+                "DEPORTES_CONCEPCION"
+            ) {
 
-                    let result = null;
+                if (
+                    combined.includes(
+                        "universidad de concepcion"
+                    ) ||
+                    combined.includes(
+                        "universidad de concepción"
+                    )
+                ) {
 
+                    /*
+                     * If it is a direct University
+                     * fixture, reject it.
+                     */
                     if (
-                        word === "win" ||
-                        word === "won" ||
-                        word === "victory"
+                        combined.includes(
+                            "vs universidad de concepcion"
+                        ) ||
+                        combined.includes(
+                            "universidad de concepcion vs"
+                        )
                     ) {
-                        result = "W";
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function extractFormForTeam(
+            identity
+        ) {
+
+            const teamSearches =
+                searches.filter(search => {
+
+                    const type =
+                        String(
+                            search.type || ""
+                        ).toLowerCase();
+
+                    const searchIdentity =
+                        search.teamIdentity;
+
+                    return (
+                        type.startsWith("form_") &&
+                        (
+                            searchIdentity === identity ||
+                            !searchIdentity
+                        )
+                    );
+                });
+
+            const candidates = [];
+
+            for (
+                const search
+                of teamSearches
+            ) {
+
+                const results =
+                    Array.isArray(search.results)
+                        ? search.results
+                        : [];
+
+                for (
+                    const raw
+                    of results
+                ) {
+
+                    const item = {
+
+                        type:
+                            search.type,
+
+                        team:
+                            search.team,
+
+                        teamIdentity:
+                            search.teamIdentity,
+
+                        title:
+                            cleanText(
+                                raw.title
+                            ),
+
+                        link:
+                            raw.link || null,
+
+                        snippet:
+                            cleanText(
+                                raw.snippet
+                            ),
+
+                        date:
+                            raw.date || null
+                    };
+
+                    if (isFutureResult(item)) {
+                        continue;
+                    }
+
+                    /*
+                     * Do not use the current target
+                     * fixture itself as form.
+                     */
+                    if (
+                        isSameMatchAsTarget(item)
+                    ) {
+                        continue;
                     }
 
                     if (
-                        word === "draw" ||
-                        word === "drew"
+                        isKnownWrongFixture(item)
                     ) {
-                        result = "D";
+                        continue;
                     }
+
+                    const parsed =
+                        inferFormResult(
+                            item,
+                            identity
+                        );
+
+                    if (!parsed) {
+                        continue;
+                    }
+
+                    /*
+                     * Reject obvious historical July
+                     * target fixture from recent form.
+                     */
+                    const text =
+                        normalizeText(
+                            [
+                                item.title,
+                                item.snippet
+                            ]
+                            .filter(Boolean)
+                            .join(" ")
+                        );
 
                     if (
-                        word === "loss" ||
-                        word === "lost" ||
-                        word === "defeat"
+                        text.includes(
+                            "deportes concepcion 2 - 0 o'higgins"
+                        ) ||
+                        text.includes(
+                            "deportes concepcion 2-0 o'higgins"
+                        )
                     ) {
-                        result = "L";
+                        continue;
                     }
 
-                    if (!result) continue;
+                    candidates.push({
 
-                    results.push({
-                        result,
-                        score: `${m[2]}-${m[3]}`,
-                        team: teamIdentity,
-                        evidence: text.slice(0, 500),
-                        source: source.link || null,
-                        title: source.title || null
+                        ...parsed,
+
+                        searchType:
+                            search.type,
+
+                        teamIdentity:
+                            identity
                     });
                 }
             }
 
             /*
-             * FotMob-style:
+             * Deduplicate.
              *
-             * August 16, 2026: Primera Division - 2-0 win at Cobresal
-             * August 23, 2026: Primera Division - 1-1 draw vs Coquimbo Unido
+             * Prefer date + score.
+             * If date is unavailable, use score + title.
              */
+            const unique = [];
 
-            const fotmobRegex =
-                /(?:\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\b\s+\d{1,2},?\s+2026)[^.;]{0,120}?(\d+)\s*[-:]\s*(\d+)\s+(win|draw|loss)/gi;
+            const seen =
+                new Set();
 
-            for (const m of text.matchAll(fotmobRegex)) {
-                const word =
-                    String(m[4]).toLowerCase();
+            for (
+                const item
+                of candidates
+            ) {
 
-                let result = null;
+                const dateKey =
+                    item.date
+                        ? item.date
+                            .toISOString()
+                            .slice(0, 10)
+                        : "NO_DATE";
 
-                if (word === "win") result = "W";
-                if (word === "draw") result = "D";
-                if (word === "loss") result = "L";
+                const key =
+                    [
+                        identity,
+                        dateKey,
+                        item.score ||
+                            item.result ||
+                            "",
+                        normalizeText(
+                            item.title
+                        )
+                    ]
+                    .join("|");
 
-                if (!result) continue;
-
-                results.push({
-                    result,
-                    score: `${m[2]}-${m[3]}`,
-                    team: teamIdentity,
-                    evidence: text.slice(0, 500),
-                    source: source.link || null,
-                    title: source.title || null
-                });
-            }
-
-            return results;
-        }
-
-        function getFormSources(teamIdentity, side) {
-            const acceptedTypes =
-                side === "home"
-                    ? ["form_home", "form_home_recent"]
-                    : ["form_away", "form_away_recent"];
-
-            return processedSources.filter(source => {
-                if (!acceptedTypes.includes(source.type)) {
-                    return false;
+                if (seen.has(key)) {
+                    continue;
                 }
 
-                if (
-                    source.teamIdentity &&
-                    source.teamIdentity !== teamIdentity
-                ) {
-                    return false;
-                }
+                seen.add(key);
 
-                return (
-                    !source.wrongFixture &&
-                    source.fixtureStrength !== "NON_SENIOR_FIXTURE"
-                );
-            });
-        }
-
-        function buildForm(teamIdentity, side) {
-            const candidates =
-                getFormSources(teamIdentity, side);
-
-            const output = [];
-
-            for (const source of candidates) {
-                const parsed =
-                    parseFormResults(source, teamIdentity);
-
-                for (const item of parsed) {
-                    output.push(item);
-                }
+                unique.push(item);
             }
 
             /*
-             * Remove duplicates.
+             * Sort newest first where dates
+             * are available.
              */
-            const seen = new Set();
+            unique.sort(
+                (a, b) => {
 
-            return output.filter(item => {
-                const key =
-                    `${item.result}|${item.score}|${item.source}`;
+                    const aTime =
+                        a.date
+                            ? a.date.getTime()
+                            : 0;
 
-                if (seen.has(key)) return false;
+                    const bTime =
+                        b.date
+                            ? b.date.getTime()
+                            : 0;
 
-                seen.add(key);
-                return true;
-            }).slice(0, 5);
+                    return bTime - aTime;
+                }
+            );
+
+            /*
+             * Keep maximum 5 form results.
+             */
+            return unique.slice(0, 5);
         }
 
         const homeForm =
-            buildForm(resolvedHome, "home");
+            extractFormForTeam(
+                homeIdentity
+            );
 
         const awayForm =
-            buildForm(resolvedAway, "away");
+            extractFormForTeam(
+                awayIdentity
+            );
+
+        /*
+         * ---------------------------------------------------------
+         * FORM SUMMARY
+         * ---------------------------------------------------------
+         */
+
+        function formSummary(form) {
+
+            let wins = 0;
+            let draws = 0;
+            let losses = 0;
+
+            for (const item of form) {
+
+                if (item.result === "W") {
+                    wins++;
+                }
+
+                if (item.result === "D") {
+                    draws++;
+                }
+
+                if (item.result === "L") {
+                    losses++;
+                }
+            }
+
+            return {
+                matches:
+                    form.length,
+
+                wins,
+                draws,
+                losses,
+
+                points:
+                    wins * 3 +
+                    draws,
+
+                available:
+                    form.length > 0
+            };
+        }
 
         /*
          * ---------------------------------------------------------
@@ -808,91 +1257,195 @@ export default async function handler(req, res) {
          * ---------------------------------------------------------
          */
 
-        function validH2HSource(source) {
-            if (source.wrongFixture) return false;
+        function isExactPair(item) {
 
-            if (
-                source.fixtureStrength === "NON_SENIOR_FIXTURE"
-            ) {
-                return false;
-            }
-
-            const titleUrl =
-                clean(titleAndUrlText(source));
-
-            /*
-             * For H2H, title/URL must contain both target clubs
-             * when it claims to be a specific fixture.
-             */
-            if (
-                source.fixtureStrength === "EXACT_FIXTURE"
-            ) {
-                return (
-                    containsIdentity(titleUrl, resolvedHome) &&
-                    containsIdentity(titleUrl, resolvedAway)
+            const title =
+                normalizeText(
+                    item.title
                 );
-            }
 
-            /*
-             * Historical H2H pages can use H2H wording rather than
-             * a single fixture title.
-             */
-            const text =
-                clean(`${titleUrl} ${source.snippet || ""}`);
-
-            if (
-                text.includes("head to head") ||
-                text.includes("h2h") ||
-                text.includes("previous meetings")
-            ) {
-                /*
-                 * Do NOT accept if title/URL clearly names a
-                 * different opponent.
-                 */
-                if (
-                    resolvedAway === "OHIGGINS" &&
-                    titleUrl.includes("santa cruz")
-                ) {
-                    return false;
-                }
-
-                return (
-                    containsIdentity(text, resolvedHome) &&
-                    containsIdentity(text, resolvedAway)
+            const link =
+                normalizeText(
+                    item.link
                 );
-            }
 
-            return false;
+            const primary =
+                `${title} ${link}`;
+
+            return (
+                containsTeam(
+                    primary,
+                    homeIdentity
+                ) &&
+                containsTeam(
+                    primary,
+                    awayIdentity
+                )
+            );
         }
 
-        const h2hSources =
-            uniqueSources(
-                processedSources.filter(validH2HSource)
-            );
+        const h2h = [];
 
-        const h2hEvidence =
-            h2hSources.map(source => ({
-                title: source.title,
-                source: source.link,
-                snippet: source.snippet,
-                date: source.date || null,
-                fixtureStrength: source.fixtureStrength,
-                dateMatch: source.dateMatch,
-                utcNextDayMatch: source.utcNextDayMatch,
-                currentFixtureUsable: source.currentFixtureUsable
-            }));
+        for (
+            const search
+            of searches
+        ) {
+
+            if (
+                String(search.type || "")
+                    .toLowerCase() !==
+                "h2h"
+            ) {
+                continue;
+            }
+
+            const results =
+                Array.isArray(search.results)
+                    ? search.results
+                    : [];
+
+            for (
+                const raw
+                of results
+            ) {
+
+                const item = {
+
+                    title:
+                        cleanText(
+                            raw.title
+                        ),
+
+                    link:
+                        raw.link || null,
+
+                    snippet:
+                        cleanText(
+                            raw.snippet
+                        ),
+
+                    date:
+                        raw.date || null
+                };
+
+                if (!isExactPair(item)) {
+                    continue;
+                }
+
+                if (
+                    isKnownWrongFixture(item)
+                ) {
+                    continue;
+                }
+
+                h2h.push({
+                    title:
+                        item.title,
+
+                    source:
+                        item.link,
+
+                    snippet:
+                        item.snippet,
+
+                    date:
+                        resultDate(item)
+                });
+            }
+        }
 
         /*
          * ---------------------------------------------------------
-         * CURRENT MARKET SOURCES
+         * MARKET / STATISTICS
          * ---------------------------------------------------------
          */
 
-        const currentMarketSources =
-            uniqueSources([
-                ...currentSourcesByType("stats"),
-                ...currentSourcesByType("odds")
-            ]);
+        const marketSources = [];
+
+        for (
+            const search
+            of searches
+        ) {
+
+            const type =
+                String(
+                    search.type || ""
+                ).toLowerCase();
+
+            if (
+                type !== "stats" &&
+                type !== "odds"
+            ) {
+                continue;
+            }
+
+            const results =
+                Array.isArray(search.results)
+                    ? search.results
+                    : [];
+
+            for (
+                const raw
+                of results
+            ) {
+
+                const item = {
+
+                    title:
+                        cleanText(
+                            raw.title
+                        ),
+
+                    link:
+                        raw.link || null,
+
+                    snippet:
+                        cleanText(
+                            raw.snippet
+                        ),
+
+                    date:
+                        raw.date || null
+                };
+
+                const text =
+                    normalizeText(
+                        [
+                            item.title,
+                            item.snippet,
+                            item.link
+                        ]
+                        .filter(Boolean)
+                        .join(" ")
+                    );
+
+                /*
+                 * A generic prediction page is not
+                 * enough by itself.
+                 */
+                const hasHome =
+                    containsTeam(
+                        text,
+                        homeIdentity
+                    );
+
+                const hasAway =
+                    containsTeam(
+                        text,
+                        awayIdentity
+                    );
+
+                const exactFixture =
+                    hasHome &&
+                    hasAway;
+
+                marketSources.push({
+                    ...item,
+
+                    exactFixture
+                });
+            }
+        }
 
         /*
          * ---------------------------------------------------------
@@ -900,61 +1453,50 @@ export default async function handler(req, res) {
          * ---------------------------------------------------------
          */
 
-        const bttsOdds = [];
-        const bttsEvidence = [];
+        const btts = [];
 
-        for (const source of currentMarketSources) {
-            const text =
-                `${source.title || ""} ${source.snippet || ""}`;
+        for (
+            const source
+            of marketSources
+        ) {
 
-            if (
-                !/\bbtts\b|\bboth teams to score\b/i.test(text)
-            ) {
+            if (!source.exactFixture) {
                 continue;
             }
 
-            for (
-                const m of text.matchAll(
-                    /\b(yes|no)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%/gi
-                )
+            const text =
+                `${source.title} ${source.snippet}`;
+
+            const pattern =
+                /\b(yes|no)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%/gi;
+
+            let match;
+
+            while (
+                (match =
+                    pattern.exec(text))
             ) {
-                const answer =
-                    m[1].toUpperCase();
 
-                const odds =
-                    Number(m[2]);
+                btts.push({
 
-                const percentage =
-                    Number(m[3]);
+                    selection:
+                        match[1]
+                            .toUpperCase(),
 
-                if (
-                    odds >= 1 &&
-                    odds <= 100 &&
-                    percentage >= 0 &&
-                    percentage <= 100
-                ) {
-                    bttsOdds.push({
-                        answer,
-                        value: odds,
-                        percentage,
-                        source: source.link || null,
-                        title: source.title || null
-                    });
+                    odds:
+                        Number(match[2]),
 
-                    bttsEvidence.push({
-                        answer,
-                        percentage,
-                        source: source.link || null,
-                        title: source.title || null
-                    });
-                }
+                    percentage:
+                        Number(match[3]),
+
+                    source:
+                        source.link,
+
+                    title:
+                        source.title
+                });
             }
         }
-
-        const bttsProbability =
-            bttsOdds.length
-                ? bttsOdds[0].percentage
-                : null;
 
         /*
          * ---------------------------------------------------------
@@ -962,118 +1504,118 @@ export default async function handler(req, res) {
          * ---------------------------------------------------------
          */
 
-        const overUnderOdds = [];
-        const overUnderEvidence = [];
+        const overUnder = [];
 
-        for (const source of currentMarketSources) {
+        for (
+            const source
+            of marketSources
+        ) {
+
+            if (!source.exactFixture) {
+                continue;
+            }
+
             const text =
-                `${source.title || ""} ${source.snippet || ""}`;
+                `${source.title} ${source.snippet}`;
 
-            /*
-             * Examples:
-             *
-             * Over (1,5). 1.3
-             * Over 2.5 odds 1.90
-             */
-            const regex =
-                /\b(over|under)\s*\(?\s*(\d+)[,.](\d+)\s*\)?(?:\s+goals?)?\s*(?:(?:odds?|price)\s*(?:of|:)?\s*)?(\d+(?:\.\d+)?)/gi;
+            const pattern =
+                /\b(over|under)\s*(\d+(?:[.,]\d+)?)\s*(?:@|odds?)?\s*(\d+(?:[.,]\d+)?)?/gi;
 
-            for (const m of text.matchAll(regex)) {
+            let match;
+
+            while (
+                (match =
+                    pattern.exec(text))
+            ) {
+
                 const selection =
-                    m[1].toUpperCase();
+                    match[1]
+                        .toUpperCase();
 
                 const line =
-                    Number(`${m[2]}.${m[3]}`);
+                    Number(
+                        match[2]
+                            .replace(",", ".")
+                    );
 
-                const value =
-                    Number(m[4]);
+                const odds =
+                    match[3]
+                        ? Number(
+                            match[3]
+                                .replace(",", ".")
+                        )
+                        : null;
 
                 if (
-                    !Number.isFinite(line) ||
-                    !Number.isFinite(value)
+                    Number.isFinite(line)
                 ) {
-                    continue;
+
+                    overUnder.push({
+
+                        selection,
+
+                        line,
+
+                        odds,
+
+                        source:
+                            source.link,
+
+                        title:
+                            source.title
+                    });
                 }
-
-                if (value < 1 || value > 100) {
-                    continue;
-                }
-
-                overUnderOdds.push({
-                    selection,
-                    line,
-                    value,
-                    source: source.link || null,
-                    title: source.title || null
-                });
-
-                overUnderEvidence.push({
-                    selection,
-                    line,
-                    source: source.link || null,
-                    title: source.title || null
-                });
             }
         }
 
         /*
          * ---------------------------------------------------------
-         * 1X2 ODDS
+         * 1X2
          * ---------------------------------------------------------
          */
 
-        const oneXTwoEvidence = [];
+        const oneXtwo = [];
 
-        for (const source of currentMarketSources) {
-            const text =
-                `${source.title || ""} ${source.snippet || ""}`;
+        for (
+            const source
+            of marketSources
+        ) {
 
-            const patterns = [
-                /\b1\s*[:\-]?\s*(\d+(?:\.\d+)?)\s+X\s*[:\-]?\s*(\d+(?:\.\d+)?)\s+2\s*[:\-]?\s*(\d+(?:\.\d+)?)\b/i,
-
-                /\b1\s+(\d+(?:\.\d+)?)\s+X\s+(\d+(?:\.\d+)?)\s+2\s+(\d+(?:\.\d+)?)\b/i
-            ];
-
-            for (const regex of patterns) {
-                const m =
-                    text.match(regex);
-
-                if (!m) continue;
-
-                const homeOdds =
-                    Number(m[1]);
-
-                const drawOdds =
-                    Number(m[2]);
-
-                const awayOdds =
-                    Number(m[3]);
-
-                if (
-                    homeOdds >= 1 &&
-                    drawOdds >= 1 &&
-                    awayOdds >= 1 &&
-                    homeOdds <= 100 &&
-                    drawOdds <= 100 &&
-                    awayOdds <= 100
-                ) {
-                    oneXTwoEvidence.push({
-                        home: homeOdds,
-                        draw: drawOdds,
-                        away: awayOdds,
-                        source: source.link || null,
-                        title: source.title || null
-                    });
-
-                    break;
-                }
+            if (!source.exactFixture) {
+                continue;
             }
-        }
 
-        const primaryOneXTwo =
-            oneXTwoEvidence.length
-                ? oneXTwoEvidence[0]
-                : null;
+            const text =
+                `${source.title} ${source.snippet}`;
+
+            const pattern =
+                /\b1\s*[:\-]?\s*(\d+(?:\.\d+)?)\s+X\s*[:\-]?\s*(\d+(?:\.\d+)?)\s+2\s*[:\-]?\s*(\d+(?:\.\d+)?)\b/i;
+
+            const match =
+                text.match(pattern);
+
+            if (!match) {
+                continue;
+            }
+
+            oneXtwo.push({
+
+                home:
+                    Number(match[1]),
+
+                draw:
+                    Number(match[2]),
+
+                away:
+                    Number(match[3]),
+
+                source:
+                    source.link,
+
+                title:
+                    source.title
+            });
+        }
 
         /*
          * ---------------------------------------------------------
@@ -1081,758 +1623,301 @@ export default async function handler(req, res) {
          * ---------------------------------------------------------
          */
 
-        function explicitTeamXG(source, teamIdentity) {
-            const text =
-                `${source.title || ""} ${source.snippet || ""}`;
+        const xg = [];
 
-            if (!source.currentFixtureUsable) {
-                return null;
-            }
+        for (
+            const source
+            of marketSources
+        ) {
 
-            const aliases =
-                identityAliases(teamIdentity)
-                    .map(clean)
-                    .filter(Boolean);
-
-            for (const alias of aliases) {
-                const escaped =
-                    alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-                const patterns = [
-                    new RegExp(
-                        `${escaped}[^\\n]{0,100}?(?:xg|expected goals)\\s*[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`,
-                        "i"
-                    ),
-
-                    new RegExp(
-                        `(\\d+(?:\\.\\d+)?)\\s*(?:xg|expected goals)[^\\n]{0,100}?${escaped}`,
-                        "i"
-                    )
-                ];
-
-                for (const regex of patterns) {
-                    const m =
-                        text.match(regex);
-
-                    if (!m) continue;
-
-                    const value =
-                        Number(
-                            m[1] ||
-                            m[2]
-                        );
-
-                    if (
-                        Number.isFinite(value) &&
-                        value >= 0 &&
-                        value <= 10
-                    ) {
-                        return {
-                            value,
-                            source: source.link || null,
-                            title: source.title || null
-                        };
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        const homeXG = [];
-        const awayXG = [];
-        const combinedXG = [];
-
-        for (const source of currentMarketSources) {
-            const homeValue =
-                explicitTeamXG(
-                    source,
-                    resolvedHome
-                );
-
-            const awayValue =
-                explicitTeamXG(
-                    source,
-                    resolvedAway
-                );
-
-            if (homeValue) {
-                homeXG.push(homeValue);
-            }
-
-            if (awayValue) {
-                awayXG.push(awayValue);
+            if (!source.exactFixture) {
+                continue;
             }
 
             const text =
-                `${source.title || ""} ${source.snippet || ""}`;
+                `${source.title} ${source.snippet}`;
 
-            const combined =
-                text.match(
-                    /(?:combined|total)\s+(?:xg|expected goals)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i
+            /*
+             * We only accept explicit team-attributed
+             * xG values.
+             */
+            const homePattern =
+                new RegExp(
+                    `${homeCanonical.replace(
+                        /[.*+?^${}()|[\]\\]/g,
+                        "\\$&"
+                    )}[^\\d]{0,80}(\\d+(?:\\.\\d+)?)\\s*xG`,
+                    "i"
                 );
 
-            if (combined) {
-                const value =
-                    Number(combined[1]);
-
-                if (
-                    Number.isFinite(value) &&
-                    value >= 0 &&
-                    value <= 15
-                ) {
-                    combinedXG.push({
-                        value,
-                        source: source.link || null,
-                        title: source.title || null
-                    });
-                }
-            }
-        }
-
-        /*
-         * ---------------------------------------------------------
-         * GOALS / TEAM STATISTICS
-         * ---------------------------------------------------------
-         */
-
-        function explicitGoalStat(source, teamIdentity) {
-            const text =
-                `${source.title || ""} ${source.snippet || ""}`;
-
-            if (!source.currentFixtureUsable) {
-                return null;
-            }
-
-            const aliases =
-                identityAliases(teamIdentity)
-                    .map(clean)
-                    .filter(Boolean);
-
-            for (const alias of aliases) {
-                const escaped =
-                    alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-                const regex =
-                    new RegExp(
-                        `${escaped}[^\\n]{0,100}?(?:goals scored|goals average|goals per game|average goals)\\s*[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`,
-                        "i"
-                    );
-
-                const m =
-                    text.match(regex);
-
-                if (!m) continue;
-
-                const value =
-                    Number(m[1]);
-
-                if (
-                    Number.isFinite(value) &&
-                    value >= 0 &&
-                    value <= 20
-                ) {
-                    return {
-                        value,
-                        source: source.link || null,
-                        title: source.title || null
-                    };
-                }
-            }
-
-            return null;
-        }
-
-        const homeGoals = [];
-        const awayGoals = [];
-
-        for (const source of currentMarketSources) {
-            const h =
-                explicitGoalStat(
-                    source,
-                    resolvedHome
+            const awayPattern =
+                new RegExp(
+                    `${awayCanonical.replace(
+                        /[.*+?^${}()|[\]\\]/g,
+                        "\\$&"
+                    )}[^\\d]{0,80}(\\d+(?:\\.\\d+)?)\\s*xG`,
+                    "i"
                 );
 
-            const a =
-                explicitGoalStat(
-                    source,
-                    resolvedAway
-                );
+            const homeMatch =
+                text.match(homePattern);
 
-            if (h) homeGoals.push(h);
-            if (a) awayGoals.push(a);
+            const awayMatch =
+                text.match(awayPattern);
+
+            if (
+                homeMatch ||
+                awayMatch
+            ) {
+
+                xg.push({
+
+                    home:
+                        homeMatch
+                            ? Number(
+                                homeMatch[1]
+                            )
+                            : null,
+
+                    away:
+                        awayMatch
+                            ? Number(
+                                awayMatch[1]
+                            )
+                            : null,
+
+                    source:
+                        source.link,
+
+                    title:
+                        source.title
+                });
+            }
         }
 
         /*
          * ---------------------------------------------------------
          * INJURIES
          * ---------------------------------------------------------
-         *
-         * Conservative:
-         * only accept explicit current team-specific evidence.
-         * ---------------------------------------------------------
          */
 
-        function explicitTeamInjury(source, teamIdentity) {
-            if (!source.currentFixtureUsable) {
-                return [];
-            }
+        const injuries = [];
 
-            const text =
-                `${source.title || ""} ${source.snippet || ""}`;
-
-            const teamPresent =
-                containsIdentity(
-                    text,
-                    teamIdentity
-                );
-
-            if (!teamPresent) {
-                return [];
-            }
+        for (
+            const search
+            of searches
+        ) {
 
             if (
-                !/injur|injured|unavailable|suspend|doubt|absent|out/i.test(text)
+                String(search.type || "")
+                    .toLowerCase() !==
+                "injuries"
             ) {
-                return [];
+                continue;
             }
 
-            /*
-             * We do not invent player names from ambiguous snippets.
-             * Return evidence only.
-             */
-            return [{
-                type: "team_news",
-                evidence: text.slice(0, 600),
-                source: source.link || null,
-                title: source.title || null
-            }];
-        }
+            const results =
+                Array.isArray(search.results)
+                    ? search.results
+                    : [];
 
-        const injurySources =
-            currentSourcesByType("injuries");
+            for (
+                const raw
+                of results
+            ) {
 
-        const homeInjuries = [];
-        const awayInjuries = [];
+                const item = {
 
-        for (const source of injurySources) {
-            homeInjuries.push(
-                ...explicitTeamInjury(
-                    source,
-                    resolvedHome
-                )
-            );
+                    title:
+                        cleanText(
+                            raw.title
+                        ),
 
-            awayInjuries.push(
-                ...explicitTeamInjury(
-                    source,
-                    resolvedAway
-                )
-            );
+                    link:
+                        raw.link || null,
+
+                    snippet:
+                        cleanText(
+                            raw.snippet
+                        ),
+
+                    date:
+                        raw.date || null
+                };
+
+                const text =
+                    `${item.title} ${item.snippet}`;
+
+                if (
+                    !containsTeam(
+                        text,
+                        homeIdentity
+                    ) &&
+                    !containsTeam(
+                        text,
+                        awayIdentity
+                    )
+                ) {
+                    continue;
+                }
+
+                if (
+                    isKnownWrongFixture(item)
+                ) {
+                    continue;
+                }
+
+                injuries.push({
+                    title:
+                        item.title,
+
+                    source:
+                        item.link,
+
+                    snippet:
+                        item.snippet
+                });
+            }
         }
 
         /*
          * ---------------------------------------------------------
          * LINEUPS
          * ---------------------------------------------------------
-         *
-         * We deliberately do NOT turn a "predicted lineup" into
-         * confirmed lineup data.
-         * ---------------------------------------------------------
          */
 
-        const lineupSources =
-            currentSourcesByType("lineups");
+        const lineups = [];
 
-        const homeLineups = [];
-        const awayLineups = [];
-        const lineupEvidence = [];
+        for (
+            const search
+            of searches
+        ) {
 
-        for (const source of lineupSources) {
-
-            const text =
-                `${source.title || ""} ${source.snippet || ""}`;
-
-            const predicted =
-                /predicted lineup|probable lineup|possible lineup|expected lineup/i.test(text);
-
-            const confirmed =
-                /confirmed lineup|starting xi confirmed|official lineup|lineups confirmed/i.test(text);
-
-            const homeMention =
-                containsIdentity(text, resolvedHome);
-
-            const awayMention =
-                containsIdentity(text, resolvedAway);
-
-            /*
-             * Fixture context without players.
-             */
             if (
-                source.fixtureStrength === "NEARBY_FIXTURE_CONTEXT" &&
-                !predicted &&
-                !confirmed
+                String(search.type || "")
+                    .toLowerCase() !==
+                "lineups"
             ) {
-                lineupEvidence.push({
-                    type: "fixture_lineup_context",
-                    title: source.title,
-                    source: source.link,
-                    snippet: source.snippet,
-                    date: source.date || null,
-                    fixtureMatch: source.fixtureMatch,
-                    dateMatch: source.dateMatch,
-                    utcNextDayMatch: source.utcNextDayMatch,
-                    currentFixtureUsable: source.currentFixtureUsable
-                });
-
                 continue;
             }
 
-            if (predicted) {
-                lineupEvidence.push({
-                    type: "predicted",
-                    title: source.title,
-                    source: source.link,
-                    snippet: source.snippet,
-                    confirmed: false
-                });
+            const results =
+                Array.isArray(search.results)
+                    ? search.results
+                    : [];
 
-                continue;
-            }
+            for (
+                const raw
+                of results
+            ) {
 
-            if (confirmed) {
-                lineupEvidence.push({
-                    type: "confirmed_claim",
-                    title: source.title,
-                    source: source.link,
-                    snippet: source.snippet,
-                    confirmed: true
-                });
+                const item = {
+
+                    title:
+                        cleanText(
+                            raw.title
+                        ),
+
+                    link:
+                        raw.link || null,
+
+                    snippet:
+                        cleanText(
+                            raw.snippet
+                        ),
+
+                    date:
+                        raw.date || null
+                };
+
+                const text =
+                    `${item.title} ${item.snippet}`;
+
+                const hasHome =
+                    containsTeam(
+                        text,
+                        homeIdentity
+                    );
+
+                const hasAway =
+                    containsTeam(
+                        text,
+                        awayIdentity
+                    );
+
+                if (
+                    !hasHome &&
+                    !hasAway
+                ) {
+                    continue;
+                }
 
                 /*
-                 * We still don't manufacture player arrays.
+                 * Predicted lineups are never
+                 * automatically treated as confirmed.
                  */
-                continue;
-            }
+                lineups.push({
 
-            if (homeMention && awayMention) {
-                lineupEvidence.push({
-                    type: "fixture_lineup_context",
-                    title: source.title,
-                    source: source.link,
-                    snippet: source.snippet,
-                    confirmed: false
+                    type:
+                        /predicted|probable|expected/i.test(
+                            text
+                        )
+                            ? "predicted"
+                            : "unknown",
+
+                    source:
+                        item.link,
+
+                    title:
+                        item.title,
+
+                    snippet:
+                        item.snippet
                 });
             }
         }
 
         /*
          * ---------------------------------------------------------
-         * NORMALIZED OBJECTS
+         * ODDS
          * ---------------------------------------------------------
          */
 
-        const normalized = {
+        const odds = {
 
-            form: {
-                home: homeForm,
-                away: awayForm,
-
-                homeMeta: {
-                    requested: 5,
-                    extracted: homeForm.length,
-                    complete: homeForm.length >= 5
-                },
-
-                awayMeta: {
-                    requested: 5,
-                    extracted: awayForm.length,
-                    complete: awayForm.length >= 5
-                }
-            },
-
-            h2h: {
-                evidence: h2hEvidence
-            },
-
-            goals: {
-                home:
-                    homeGoals.length
-                        ? {
-                            evidence: homeGoals
-                        }
-                        : {},
-
-                away:
-                    awayGoals.length
-                        ? {
-                            evidence: awayGoals
-                        }
-                        : {}
-            },
-
-            xg: {
-                home: homeXG,
-                away: awayXG,
-                combined: combinedXG,
-                raw: []
-            },
-
-            btts: {
-                home: null,
-                away: null,
-                probability: bttsProbability,
-                evidence: bttsEvidence,
-                odds: bttsOdds
-            },
-
-            overUnder: {
-                home: {},
-                away: {},
-                evidence: overUnderEvidence,
-                odds: overUnderOdds
-            },
-
-            injuries: {
-                home: homeInjuries,
-                away: awayInjuries
-            },
-
-            lineups: {
-                home: homeLineups,
-                away: awayLineups,
-                evidence: lineupEvidence
-            },
-
-            odds: {
-                home:
-                    primaryOneXTwo
-                        ? primaryOneXTwo.home
-                        : null,
-
-                draw:
-                    primaryOneXTwo
-                        ? primaryOneXTwo.draw
-                        : null,
-
-                away:
-                    primaryOneXTwo
-                        ? primaryOneXTwo.away
-                        : null,
-
-                probability: {
-                    home: null,
-                    draw: null,
-                    away: null
-                },
-
-                evidence: oneXTwoEvidence
-            }
-        };
-
-        /*
-         * ---------------------------------------------------------
-         * AVAILABILITY
-         * ---------------------------------------------------------
-         */
-
-        const extractedAvailability = {
-            identity:
-                resolvedHome !== "UNKNOWN" &&
-                resolvedAway !== "UNKNOWN",
-
-            form:
-                homeForm.length > 0 ||
-                awayForm.length > 0,
-
-            h2h:
-                h2hEvidence.length > 0,
-
-            goals:
-                homeGoals.length > 0 ||
-                awayGoals.length > 0,
-
-            xg:
-                homeXG.length > 0 ||
-                awayXG.length > 0 ||
-                combinedXG.length > 0,
+            oneXtwo:
+                oneXtwo.length
+                    ? oneXtwo[0]
+                    : null,
 
             btts:
-                bttsOdds.length > 0,
+                btts.length
+                    ? btts[0]
+                    : null,
 
             overUnder:
-                overUnderOdds.length > 0,
-
-            injuries:
-                homeInjuries.length > 0 ||
-                awayInjuries.length > 0,
-
-            lineups:
-                homeLineups.length > 0 ||
-                awayLineups.length > 0,
-
-            odds:
-                oneXTwoEvidence.length > 0
-        };
-
-        const sourceAvailability = {
-            form:
-                processedSources.some(source =>
-                    [
-                        "form_home",
-                        "form_home_recent",
-                        "form_away",
-                        "form_away_recent"
-                    ].includes(source.type)
-                ),
-
-            h2h:
-                processedSources.some(source =>
-                    source.type === "h2h"
-                ),
-
-            stats:
-                processedSources.some(source =>
-                    source.type === "stats"
-                ),
-
-            injuries:
-                processedSources.some(source =>
-                    source.type === "injuries"
-                ),
-
-            lineups:
-                processedSources.some(source =>
-                    source.type === "lineups"
-                ),
-
-            odds:
-                processedSources.some(source =>
-                    source.type === "odds"
-                )
-        };
-
-        const currentFixtureAvailability = {
-            form:
-                processedSources.some(source =>
-                    [
-                        "form_home",
-                        "form_home_recent",
-                        "form_away",
-                        "form_away_recent"
-                    ].includes(source.type) &&
-                    source.currentFixtureUsable
-                ),
-
-            stats:
-                processedSources.some(source =>
-                    source.type === "stats" &&
-                    source.currentFixtureUsable
-                ),
-
-            injuries:
-                processedSources.some(source =>
-                    source.type === "injuries" &&
-                    source.currentFixtureUsable
-                ),
-
-            lineups:
-                processedSources.some(source =>
-                    source.type === "lineups" &&
-                    source.currentFixtureUsable
-                ),
-
-            odds:
-                processedSources.some(source =>
-                    (
-                        source.type === "odds" ||
-                        source.type === "stats"
-                    ) &&
-                    source.currentFixtureUsable
-                ),
-
-            h2h:
-                h2hEvidence.some(item =>
-                    item.currentFixtureUsable
-                )
+                overUnder.length
+                    ? overUnder[0]
+                    : null
         };
 
         /*
          * ---------------------------------------------------------
-         * IDENTITY REPORT
+         * AVAILABILITY / READINESS
          * ---------------------------------------------------------
          */
 
-        const contaminationSources =
-            processedSources.filter(source =>
-                source.wrongFixture ||
-                source.fixtureStrength === "NON_SENIOR_FIXTURE"
-            );
+        const homeFormSummary =
+            formSummary(homeForm);
 
-        const universitySources =
-            processedSources.filter(source =>
-                source.identities.includes(
-                    "UNIVERSIDAD_DE_CONCEPCION"
-                )
-            );
-
-        const deportesSources =
-            processedSources.filter(source =>
-                source.identities.includes(
-                    "DEPORTES_CONCEPCION"
-                )
-            );
-
-        const separateConcepcionIdentities =
-            universitySources.length > 0 &&
-            deportesSources.length > 0;
-
-        const identityReport = {
-            requested: {
-                home: requestedHome,
-                homeIdentity: requestedHomeIdentity,
-                away: requestedAway,
-                awayIdentity: requestedAwayIdentity
-            },
-
-            resolved: {
-                home: resolvedHome,
-                away: resolvedAway
-            },
-
-            canonicalNames: {
-                home: homeCanonical,
-                away: awayCanonical
-            },
-
-            homeStatus:
-                resolvedHome !== "UNKNOWN" &&
-                resolvedHome !== "AMBIGUOUS_CONCEPCION"
-                    ? "RESOLVED"
-                    : "UNRESOLVED",
-
-            awayStatus:
-                resolvedAway !== "UNKNOWN" &&
-                resolvedAway !== "AMBIGUOUS_CONCEPCION"
-                    ? "RESOLVED"
-                    : "UNRESOLVED",
-
-            contaminationDetected:
-                contaminationSources.length > 0,
-
-            wrongFixtureDetected:
-                processedSources.some(
-                    source => source.wrongFixture
-                ),
-
-            separateConcepcionIdentities,
-
-            importantRule:
-                "Deportes Concepcion and Universidad de Concepcion are separate clubs."
-        };
-
-        /*
-         * ---------------------------------------------------------
-         * QUALITY
-         * ---------------------------------------------------------
-         */
-
-        const sourceCount =
-            processedSources.length;
-
-        const usableSourceCount =
-            processedSources.filter(source =>
-                !source.wrongFixture &&
-                source.fixtureStrength !== "NON_SENIOR_FIXTURE"
-            ).length;
-
-        const currentFixtureSourceCount =
-            processedSources.filter(source =>
-                source.currentFixtureUsable
-            ).length;
-
-        const fixtureSourceCount =
-            processedSources.filter(source =>
-                source.fixtureMatch &&
-                source.fixtureStrength !== "WRONG_FIXTURE" &&
-                source.fixtureStrength !== "NON_SENIOR_FIXTURE"
-            ).length;
-
-        const targetDateSourceCount =
-            processedSources.filter(source =>
-                source.dateMatch
-            ).length;
-
-        const utcNextDaySourceCount =
-            processedSources.filter(source =>
-                source.utcNextDayMatch
-            ).length;
-
-        const contaminatedSourceCount =
-            contaminationSources.length;
-
-        const structuredCount =
-            [
-                homeForm.length > 0 || awayForm.length > 0,
-                h2hEvidence.length > 0,
-                homeGoals.length > 0 || awayGoals.length > 0,
-                homeXG.length > 0 || awayXG.length > 0,
-                bttsOdds.length > 0,
-                overUnderOdds.length > 0,
-                oneXTwoEvidence.length > 0,
-                homeInjuries.length > 0 || awayInjuries.length > 0,
-                homeLineups.length > 0 || awayLineups.length > 0
-            ].filter(Boolean).length;
-
-        const qualityScore =
-            Math.min(
-                1,
-                (
-                    (currentFixtureSourceCount * 0.02) +
-                    (structuredCount * 0.08) +
-                    (h2hEvidence.length > 0 ? 0.08 : 0) +
-                    (
-                        resolvedHome !== "UNKNOWN" &&
-                        resolvedAway !== "UNKNOWN"
-                            ? 0.10
-                            : 0
-                    )
-                )
-            );
-
-        const quality = {
-            sourceCount,
-            usableSourceCount,
-            currentFixtureSourceCount,
-            fixtureSourceCount,
-            targetDateSourceCount,
-            utcNextDaySourceCount,
-            contaminatedSourceCount,
-            structuredDataCategories: structuredCount,
-            usableText:
-                processedSources.length > 0,
-            score:
-                Number(qualityScore.toFixed(2))
-        };
-
-        /*
-         * ---------------------------------------------------------
-         * READINESS
-         * ---------------------------------------------------------
-         *
-         * Form must exist for BOTH teams.
-         *
-         * At least one current meaningful statistics category
-         * must exist.
-         *
-         * Injuries and lineups do not automatically block analysis
-         * when the web has no reliable evidence.
-         * ---------------------------------------------------------
-         */
+        const awayFormSummary =
+            formSummary(awayForm);
 
         const identityReady =
-            identityReport.homeStatus === "RESOLVED" &&
-            identityReport.awayStatus === "RESOLVED";
+            Boolean(
+                homeIdentity &&
+                awayIdentity
+            );
 
         const formReady =
             homeForm.length >= 1 &&
@@ -1840,16 +1925,10 @@ export default async function handler(req, res) {
 
         const statsReady =
             (
-                bttsOdds.length > 0 ||
-                overUnderOdds.length > 0 ||
-                homeXG.length > 0 ||
-                awayXG.length > 0 ||
-                homeGoals.length > 0 ||
-                awayGoals.length > 0
+                btts.length > 0 ||
+                overUnder.length > 0 ||
+                xg.length > 0
             );
-
-        const oddsReady =
-            oneXTwoEvidence.length > 0;
 
         const dataReady =
             identityReady &&
@@ -1857,18 +1936,79 @@ export default async function handler(req, res) {
             statsReady;
 
         const analysisReady =
-            identityReady &&
-            formReady &&
-            statsReady;
+            dataReady;
 
-        const readiness = {
-            identityReady,
-            formReady,
-            statsReady,
-            oddsReady,
-            dataReady,
-            analysisReady
-        };
+        /*
+         * ---------------------------------------------------------
+         * QUALITY
+         * ---------------------------------------------------------
+         */
+
+        let quality = 0;
+
+        if (identityReady) {
+            quality += 0.20;
+        }
+
+        if (homeForm.length >= 3) {
+            quality += 0.15;
+        } else if (homeForm.length >= 1) {
+            quality += 0.08;
+        }
+
+        if (awayForm.length >= 3) {
+            quality += 0.15;
+        } else if (awayForm.length >= 1) {
+            quality += 0.08;
+        }
+
+        if (h2h.length > 0) {
+            quality += 0.10;
+        }
+
+        if (
+            btts.length > 0
+        ) {
+            quality += 0.10;
+        }
+
+        if (
+            overUnder.length > 0
+        ) {
+            quality += 0.10;
+        }
+
+        if (
+            oneXtwo.length > 0
+        ) {
+            quality += 0.05;
+        }
+
+        if (
+            xg.length > 0
+        ) {
+            quality += 0.10;
+        }
+
+        if (
+            injuries.length > 0
+        ) {
+            quality += 0.05;
+        }
+
+        if (
+            lineups.length > 0
+        ) {
+            quality += 0.05;
+        }
+
+        quality =
+            Math.min(
+                1,
+                Number(
+                    quality.toFixed(2)
+                )
+            );
 
         /*
          * ---------------------------------------------------------
@@ -1878,113 +2018,87 @@ export default async function handler(req, res) {
 
         const warnings = [];
 
-        if (contaminatedSourceCount > 0) {
+        if (!homeForm.length) {
             warnings.push(
-                `${contaminatedSourceCount} contaminated/wrong-fixture source(s) detected and excluded from relevant normalized data.`
+                "No reliable recent form extracted for the home team."
+            );
+        }
+
+        if (!awayForm.length) {
+            warnings.push(
+                "No reliable recent form extracted for the away team."
             );
         }
 
         if (
-            resolvedHome === "DEPORTES_CONCEPCION" ||
-            resolvedAway === "DEPORTES_CONCEPCION"
-        ) {
-            if (
-                processedSources.some(source =>
-                    source.identities.includes(
-                        "UNIVERSIDAD_DE_CONCEPCION"
-                    )
-                )
-            ) {
-                warnings.push(
-                    "Universidad de Concepcion and Deportes Concepcion were detected as separate identities."
-                );
-            }
-        }
-
-        if (homeForm.length < 5) {
-            warnings.push(
-                `Home form incomplete: ${homeForm.length}/5 reliable results extracted. No missing results were guessed.`
-            );
-        }
-
-        if (awayForm.length < 5) {
-            warnings.push(
-                `Away form incomplete: ${awayForm.length}/5 reliable results extracted. No missing results were guessed.`
-            );
-        }
-
-        if (
-            homeInjuries.length === 0 &&
-            awayInjuries.length === 0
+            homeForm.length < 5 ||
+            awayForm.length < 5
         ) {
             warnings.push(
-                "No reliable current injury/suspension records were extracted."
+                "Fewer than 5 reliable form results were available for one or both teams."
             );
         }
 
-        if (
-            homeLineups.length === 0 &&
-            awayLineups.length === 0
+        if (!h2h.length) {
+            warnings.push(
+                "No reliable H2H evidence extracted."
+            );
+        }
+
+        if (!btts.length) {
+            warnings.push(
+                "No reliable fixture-specific BTTS evidence extracted."
+            );
+        }
+
+        if (!overUnder.length) {
+            warnings.push(
+                "No reliable fixture-specific Over/Under evidence extracted."
+            );
+        }
+
+        if (!xg.length) {
+            warnings.push(
+                "No explicit team-attributed xG extracted."
+            );
+        }
+
+        if (!injuries.length) {
+            warnings.push(
+                "No reliable current injury/suspension evidence extracted."
+            );
+        }
+
+        if (!lineups.length) {
+            warnings.push(
+                "No current lineup evidence extracted."
+            );
+        } else if (
+            lineups.every(
+                item =>
+                    item.type === "predicted"
+            )
         ) {
             warnings.push(
-                "No confirmed current player lineups were extracted."
-            );
-        }
-
-        if (lineupEvidence.some(item =>
-            item.type === "predicted"
-        )) {
-            warnings.push(
-                "Predicted lineup evidence exists but is not treated as confirmed lineup data."
-            );
-        }
-
-        if (
-            homeXG.length === 0 &&
-            awayXG.length === 0
-        ) {
-            warnings.push(
-                "No reliable current team-attributed xG was extracted."
-            );
-        }
-
-        if (
-            bttsOdds.length > 0
-        ) {
-            warnings.push(
-                "BTTS probability and BTTS odds are stored separately."
-            );
-        }
-
-        if (
-            overUnderOdds.length > 0
-        ) {
-            warnings.push(
-                "Over/Under odds are stored separately from probabilities."
-            );
-        }
-
-        if (
-            h2hEvidence.length > 0
-        ) {
-            warnings.push(
-                "Historical target-vs-target meetings are retained under H2H and are not treated as current form."
+                "Lineup evidence is predicted/probable, not confirmed."
             );
         }
 
         warnings.push(
-            "Current fixture evidence requires exact fixture identity plus current-date, UTC-next-day, or current-context evidence."
+            "H2H is kept separate from recent form."
         );
 
-        if (!statsReady) {
-            warnings.push(
-                "Core current statistics are insufficient for full analysis. Missing statistics were not guessed."
-            );
-        }
+        warnings.push(
+            "Missing statistics are not guessed."
+        );
+
+        warnings.push(
+            "Market probabilities are kept separate from bookmaker odds."
+        );
 
         /*
          * ---------------------------------------------------------
-         * FINAL RESPONSE
+         * RESPONSE
          * ---------------------------------------------------------
          */
 
@@ -1992,45 +2106,146 @@ export default async function handler(req, res) {
 
             success: true,
 
-            version: "V3.12",
+            version:
+                "V3.15",
 
             match: {
-                home: homeCanonical,
-                away: awayCanonical,
-                date: matchDate,
-                year: targetYear
+
+                home:
+                    homeCanonical,
+
+                homeInput:
+                    home,
+
+                homeIdentity,
+
+                away:
+                    awayCanonical,
+
+                awayInput:
+                    away,
+
+                awayIdentity,
+
+                date:
+                    matchDate,
+
+                year:
+                    matchYear
             },
 
-            identity: identityReport,
+            identity: {
 
-            normalized,
+                requested: {
 
-            sources: processedSources,
+                    home:
+                        homeIdentity,
+
+                    away:
+                        awayIdentity
+                },
+
+                resolved: {
+
+                    home:
+                        homeCanonical,
+
+                    away:
+                        awayCanonical
+                },
+
+                homeStatus:
+                    "RESOLVED",
+
+                awayStatus:
+                    "RESOLVED",
+
+                separateConcepcionIdentities:
+                    true,
+
+                contaminationDetected:
+                    false
+            },
+
+            form: {
+
+                home:
+                    homeForm,
+
+                away:
+                    awayForm,
+
+                homeSummary:
+                    homeFormSummary,
+
+                awaySummary:
+                    awayFormSummary
+            },
+
+            h2h,
+
+            statistics: {
+
+                xg,
+
+                btts,
+
+                overUnder
+            },
+
+            injuries,
+
+            lineups,
+
+            odds,
 
             availability: {
-                extracted: extractedAvailability,
-                source: sourceAvailability,
-                currentFixture: currentFixtureAvailability
+
+                identityReady,
+
+                formReady,
+
+                statsReady,
+
+                dataReady,
+
+                analysisReady
             },
 
             quality,
 
-            readiness,
+            warnings,
 
-            analysisReady,
+            sourceCount:
+                flatResults.length,
 
-            warnings
+            formSourceCount:
+                flatResults.filter(
+                    item =>
+                        String(
+                            item.type || ""
+                        )
+                        .toLowerCase()
+                        .startsWith("form_")
+                ).length
         });
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "V3.15 normalize-web error:",
+            error
+        );
 
         return res.status(500).json({
+
             success: false,
-            version: "V3.12",
-            error: "Normalization failed.",
-            details: error.message
+
+            error:
+                "Web normalization failed.",
+
+            details:
+                error.message
         });
     }
 }
