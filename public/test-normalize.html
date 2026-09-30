@@ -1,341 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>TomsonStakes Normalize Test</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TomsonStakes Full Pipeline Test</title>
 
     <style>
-
         body {
-
-            font-family:
-                Arial,
-                sans-serif;
-
-            padding:
-                20px;
-
-            background:
-                #f4f4f4;
-
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 20px;
         }
 
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
 
         h1 {
-
-            font-size:
-                22px;
-
+            margin-top: 0;
         }
 
+        .match-box {
+            background: #f0f3f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .pipeline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            padding: 10px 14px;
+            background: #e8edf2;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .step.active {
+            background: #d9f2df;
+        }
 
         button {
-
-            padding:
-                12px 18px;
-
-            font-size:
-                16px;
-
-            cursor:
-                pointer;
-
-            margin-bottom:
-                15px;
-
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 7px;
+            background: #111827;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
         }
 
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
 
         pre {
-
-            background:
-                #111;
-
-            color:
-                #00ff88;
-
-            padding:
-                15px;
-
-            overflow-x:
-                auto;
-
-            white-space:
-                pre-wrap;
-
-            word-break:
-                break-word;
-
-            border-radius:
-                8px;
-
+            background: #111827;
+            color: #e5e7eb;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 13px;
+            margin-top: 20px;
         }
-
 
         .status {
-
-            padding:
-                10px;
-
-            background:
-                white;
-
-            margin-bottom:
-                15px;
-
-            border-radius:
-                6px;
-
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 7px;
+            background: #eef2ff;
         }
-
     </style>
-
 </head>
-
 
 <body>
 
+<div class="container">
 
-    <h1>
-        TomsonStakes Web Data → Normalize Test
-    </h1>
+    <h1>TomsonStakes Full Pipeline Test</h1>
 
+    <div class="match-box">
+        <strong>Match:</strong> Deportes Concepcion vs O'Higgins<br>
+        <strong>Date:</strong> 2026-09-30<br>
+        <strong>Home Identity:</strong> DEPORTES_CONCEPCION<br>
+        <strong>Away Identity:</strong> OHIGGINS
+    </div>
 
-    <div
-        class="status"
-        id="status"
-    >
+    <div class="pipeline">
+        <div id="step1" class="step">1. Web Data V3.12</div>
+        <div id="step2" class="step">2. Normalize V3.12</div>
+        <div id="step3" class="step">3. Prediction V1.0</div>
+    </div>
+
+    <button id="runButton" onclick="runPipeline()">
+        Run Full TomsonStakes Pipeline
+    </button>
+
+    <div id="status" class="status">
         Ready.
     </div>
 
+    <pre id="output"></pre>
 
-    <button onclick="runTest()">
-        Run Real Pipeline Test
-    </button>
-
-
-    <pre id="output">
-No test has been run yet.
-    </pre>
-
-
+</div>
 
 <script>
 
+async function runPipeline() {
 
-async function runTest() {
+    const button = document.getElementById("runButton");
+    const status = document.getElementById("status");
+    const output = document.getElementById("output");
 
+    button.disabled = true;
+    output.textContent = "";
 
-    const status =
-        document.getElementById(
-            "status"
-        );
+    const home = "Deportes Concepcion";
+    const homeIdentity = "DEPORTES_CONCEPCION";
 
+    const away = "O'Higgins";
+    const awayIdentity = "OHIGGINS";
 
-    const output =
-        document.getElementById(
-            "output"
-        );
-
-
-    status.textContent =
-        "Step 1/3: Resolving team identities...";
-
-
-    output.textContent =
-        "Working...";
-
-
-    /*
-    ============================================================
-    MATCH WE ARE TESTING
-    ============================================================
-    */
-
-    const home =
-        "Deportes Concepcion";
-
-
-    const homeIdentity =
-        "DEPORTES_CONCEPCION";
-
-
-    const away =
-        "O'Higgins";
-
-
-    const awayIdentity =
-        "OHIGGINS";
-
-
-    const date =
-        "2026-09-30";
-
+    const date = "2026-09-30";
 
     try {
 
+        // =====================================================
+        // STEP 1 — WEB DATA V3.12
+        // =====================================================
 
-        /*
-        ========================================================
-        STEP 1
-        GET WEB DATA
-        ========================================================
-        */
+        status.textContent = "Step 1/3: Searching web data...";
 
-        status.textContent =
-            "Step 1/3: Getting targeted web data...";
+        document.getElementById("step1").classList.add("active");
 
+        const webUrl =
+            `/api/web-data?home=${encodeURIComponent(home)}` +
+            `&homeIdentity=${encodeURIComponent(homeIdentity)}` +
+            `&away=${encodeURIComponent(away)}` +
+            `&awayIdentity=${encodeURIComponent(awayIdentity)}` +
+            `&date=${encodeURIComponent(date)}`;
 
-        const webResponse =
-            await fetch(
+        const webResponse = await fetch(webUrl);
 
-                `/api/web-data` +
+        const webText = await webResponse.text();
 
-                `?home=${encodeURIComponent(home)}` +
+        let webData;
 
-                `&homeIdentity=${encodeURIComponent(homeIdentity)}` +
-
-                `&away=${encodeURIComponent(away)}` +
-
-                `&awayIdentity=${encodeURIComponent(awayIdentity)}` +
-
-                `&date=${encodeURIComponent(date)}`
-
+        try {
+            webData = JSON.parse(webText);
+        } catch (error) {
+            throw new Error(
+                "Web Data endpoint returned invalid JSON:\n\n" +
+                webText
             );
-
-
-        const webData =
-            await webResponse.json();
-
+        }
 
         if (!webResponse.ok) {
-
             throw new Error(
-
-                "Web-data request failed: " +
-
-                JSON.stringify(
-                    webData,
-                    null,
-                    2
-                )
-
+                "Web Data failed:\n\n" +
+                JSON.stringify(webData, null, 2)
             );
-
         }
 
+        // =====================================================
+        // STEP 2 — NORMALIZE V3.12
+        // =====================================================
 
-        /*
-        ========================================================
-        STEP 2
-        NORMALIZE
-        ========================================================
-        */
+        status.textContent = "Step 2/3: Normalizing source data...";
 
-        status.textContent =
-            "Step 2/3: Normalizing identity-safe web data...";
+        document.getElementById("step2").classList.add("active");
 
+        const normalizeResponse = await fetch("/api/normalize-web", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(webData)
+        });
 
-        const normalizeResponse =
-            await fetch(
+        const normalizeText = await normalizeResponse.text();
 
-                "/api/normalize-web",
+        let normalizedData;
 
-                {
-
-                    method:
-                        "POST",
-
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-
-                    body:
-                        JSON.stringify(
-                            webData
-                        )
-
-                }
-
+        try {
+            normalizedData = JSON.parse(normalizeText);
+        } catch (error) {
+            throw new Error(
+                "Normalize endpoint returned invalid JSON:\n\n" +
+                normalizeText
             );
-
-
-        const normalizedData =
-            await normalizeResponse.json();
-
+        }
 
         if (!normalizeResponse.ok) {
-
             throw new Error(
-
-                "Normalize request failed: " +
-
-                JSON.stringify(
-                    normalizedData,
-                    null,
-                    2
-                )
-
+                "Normalization failed:\n\n" +
+                JSON.stringify(normalizedData, null, 2)
             );
-
         }
 
+        // =====================================================
+        // STEP 3 — PREDICTION ENGINE V1.0
+        // =====================================================
 
-        /*
-        ========================================================
-        STEP 3
-        COMPLETE
-        ========================================================
-        */
+        status.textContent = "Step 3/3: Running prediction engine...";
+
+        document.getElementById("step3").classList.add("active");
+
+        const predictionResponse = await fetch("/api/predict", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(normalizedData)
+        });
+
+        const predictionText = await predictionResponse.text();
+
+        let predictionData;
+
+        try {
+            predictionData = JSON.parse(predictionText);
+        } catch (error) {
+            throw new Error(
+                "Prediction endpoint returned invalid JSON:\n\n" +
+                predictionText
+            );
+        }
+
+        if (!predictionResponse.ok) {
+            throw new Error(
+                "Prediction engine failed:\n\n" +
+                JSON.stringify(predictionData, null, 2)
+            );
+        }
+
+        // =====================================================
+        // SUCCESS
+        // =====================================================
 
         status.textContent =
-            "Step 3/3: Pipeline completed successfully.";
-
+            "Pipeline completed successfully.";
 
         output.textContent =
-            JSON.stringify(
-
-                normalizedData,
-
-                null,
-
-                2
-
-            );
-
+            JSON.stringify(predictionData, null, 2);
 
     } catch (error) {
 
-
         status.textContent =
-            "Pipeline failed.";
-
+            "Pipeline stopped because of an error.";
 
         output.textContent =
             error.message;
 
+        console.error(error);
+
+    } finally {
+
+        button.disabled = false;
     }
-
 }
-
 
 </script>
 
-
 </body>
-
 </html>
