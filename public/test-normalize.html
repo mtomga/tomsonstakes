@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Football Web Data Pipeline Test</title>
+    <title>TomsonStakes Normalize Test</title>
 
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
-            background: #f5f5f5;
+            background: #f4f4f4;
         }
 
         h1 {
@@ -18,99 +18,122 @@
         }
 
         button {
-            padding: 14px 20px;
+            padding: 12px 18px;
             font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            background: #111;
-            color: white;
+            cursor: pointer;
+            margin-bottom: 15px;
         }
 
         pre {
-            margin-top: 20px;
+            background: #111;
+            color: #00ff88;
             padding: 15px;
-            background: white;
-            border-radius: 8px;
             overflow-x: auto;
             white-space: pre-wrap;
+            word-break: break-word;
+            border-radius: 8px;
+        }
+
+        .status {
+            padding: 10px;
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 6px;
         }
     </style>
 </head>
 
 <body>
 
-<h1>Football Web Data Pipeline Test</h1>
+    <h1>TomsonStakes Web Data → Normalize Test</h1>
 
-<p>
-    This test will:
-</p>
+    <div class="status" id="status">
+        Ready.
+    </div>
 
-<ol>
-    <li>Call <strong>/api/web-data</strong></li>
-    <li>Get real Serper results</li>
-    <li>Send those results to <strong>/api/normalize-web</strong></li>
-    <li>Display the normalized result</li>
-</ol>
+    <button onclick="runTest()">
+        Run Real Pipeline Test
+    </button>
 
-<button onclick="runTest()">
-    Run Real Pipeline Test
-</button>
+    <pre id="output">No test has been run yet.</pre>
 
-<pre id="result">Waiting for test...</pre>
 
 <script>
 
 async function runTest() {
 
-    const resultBox =
-        document.getElementById("result");
+    const status =
+        document.getElementById("status");
 
-    resultBox.textContent =
-        "Step 1: Getting real web data...\n\n";
+    const output =
+        document.getElementById("output");
+
+
+    status.textContent =
+        "Step 1/2: Getting web data...";
+
+    output.textContent =
+        "Working...";
+
+
+    /*
+    ============================================================
+    MATCH WE ARE TESTING
+    ============================================================
+    */
+
+    const home =
+        "Concepcion";
+
+    const away =
+        "O'Higgins";
+
+    const date =
+        "2026-09-30";
+
 
     try {
 
-        // ------------------------------------------------
-        // STEP 1
-        // Get REAL Serper data
-        // ------------------------------------------------
+        /*
+        ========================================================
+        STEP 1
+        Call /api/web-data
+        ========================================================
+        */
 
         const webResponse =
             await fetch(
-                "/api/web-data" +
-                "?home=" +
-                encodeURIComponent("Concepcion") +
-                "&away=" +
-                encodeURIComponent("O'Higgins") +
-                "&date=2026-09-30"
+                `/api/web-data?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`
             );
+
 
         const webData =
             await webResponse.json();
 
+
         if (!webResponse.ok) {
 
-            resultBox.textContent =
-                "WEB DATA ERROR:\n\n" +
+            throw new Error(
+                "Web-data request failed: " +
                 JSON.stringify(
                     webData,
                     null,
                     2
-                );
-
-            return;
+                )
+            );
         }
 
-        resultBox.textContent =
-            "Step 1 complete.\n\n" +
-            "Real web data received.\n\n" +
-            "Step 2: Normalizing...\n\n";
+
+        status.textContent =
+            "Step 2/2: Normalizing web data...";
 
 
-        // ------------------------------------------------
-        // STEP 2
-        // Send REAL web data to normalizer
-        // ------------------------------------------------
+        /*
+        ========================================================
+        STEP 2
+        Send the ENTIRE web-data response to normalize-web
+        ========================================================
+        */
 
         const normalizeResponse =
             await fetch(
@@ -123,33 +146,44 @@ async function runTest() {
                             "application/json"
                     },
 
-                    body: JSON.stringify({
-
-                        home: "Concepcion",
-
-                        away: "O'Higgins",
-
-                        date: "2026-09-30",
-
-                        webData: webData
-
-                    })
+                    body:
+                        JSON.stringify(
+                            webData
+                        )
                 }
             );
 
 
-        const normalized =
+        const normalizedData =
             await normalizeResponse.json();
 
 
-        // ------------------------------------------------
-        // STEP 3
-        // Display final result
-        // ------------------------------------------------
+        if (!normalizeResponse.ok) {
 
-        resultBox.textContent =
+            throw new Error(
+                "Normalize request failed: " +
+                JSON.stringify(
+                    normalizedData,
+                    null,
+                    2
+                )
+            );
+        }
+
+
+        status.textContent =
+            "Pipeline completed successfully.";
+
+
+        /*
+        ========================================================
+        DISPLAY RESULT
+        ========================================================
+        */
+
+        output.textContent =
             JSON.stringify(
-                normalized,
+                normalizedData,
                 null,
                 2
             );
@@ -157,12 +191,12 @@ async function runTest() {
 
     } catch (error) {
 
-        resultBox.textContent =
-            "PIPELINE ERROR:\n\n" +
+        status.textContent =
+            "Pipeline failed.";
+
+        output.textContent =
             error.message;
-
     }
-
 }
 
 </script>
