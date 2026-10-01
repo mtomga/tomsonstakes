@@ -11,7 +11,7 @@
 >
 
 <title>
-    TomsonStakes Global Football
+    TomsonStakes Global Football Predictions 
 </title>
 
 
@@ -1724,498 +1724,51 @@ function buildAnalysisHTML(
 
     if (
         !prediction ||
-        !prediction.success
+        !prediction.success ||
+        !prediction.prediction
     ) {
 
         return `
-
             <div class="status status-warning">
-
-                ⚠️ Prediction engine did not
-                return a successful result.
-
-                <details>
-
-                    <summary>
-                        Prediction response
-                    </summary>
-
-                    <pre>
-${escapeHtml(
-    JSON.stringify(
-        prediction,
-        null,
-        2
-    )
-)}
-                    </pre>
-
-                </details>
-
+                ⚠️ No sufficiently supported prediction
+                was produced for this fixture.
             </div>
-
         `;
-
     }
 
-
-    const internal =
-        prediction.internalAnalysis ||
-        {};
-
-
     const probability =
-        Number(
-            prediction.probability
-        );
-
-
-    const confidence =
-        Number(
-            internal.confidence
-        );
-
-
-    const modelMethod =
-        internal.modelMethod ||
-        "—";
-
-
-    const status =
-        prediction.status ||
-        "—";
-
-
-    const xg =
-        internal.xg ||
-        {};
-
-
-    const modelProbability =
-        internal.modelProbability ||
-        {};
-
-
-    const doubleChance =
-        internal.doubleChance ||
-        {};
-
+        Number(prediction.probability);
 
     return `
 
-        <h2>
-            📊 Match Analysis
-        </h2>
+        <div class="final-result">
 
-
-        <!-- FINAL PREDICTION -->
-
-        ${
-            prediction.prediction
-            ? `
-
-                <div class="prediction-result">
-
-                    <div class="prediction-label">
-
-                        FINAL PREDICTION
-
-                    </div>
-
-                    <div class="prediction-value">
-
-                        ${escapeHtml(
-                            prediction.prediction
-                        )}
-
-                    </div>
-
-
-                    <div class="probability-label">
-
-                        PROBABILITY
-
-                    </div>
-
-                    <div class="probability-value">
-
-                        ${
-                            Number.isFinite(
-                                probability
-                            )
-                            ? probability.toFixed(0) + "%"
-                            : "—"
-                        }
-
-                    </div>
-
-                </div>
-
-            `
-            : `
-
-                <div class="status status-warning">
-
-                    ⚠️ No sufficiently supported
-                    prediction was produced.
-
-                </div>
-
-            `
-        }
-
-
-        <!-- STATUS -->
-
-        <h3>
-            Analysis Status
-        </h3>
-
-
-        <div class="grid">
-
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Overall Status
-                </div>
-
-                <div class="stat-value">
-
-                    ${escapeHtml(
-                        String(status)
-                    )}
-
-                </div>
-
+            <div class="final-title">
+                FINAL PREDICTION
             </div>
 
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Confidence
-                </div>
-
-                <div class="stat-value">
-
-                    ${formatPercentValue(
-                        confidence
-                    )}
-
-                </div>
-
+            <div class="final-prediction">
+                ${escapeHtml(
+                    prediction.prediction
+                )}
             </div>
 
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Model Method
-                </div>
-
-                <div class="stat-value">
-
-                    ${escapeHtml(
-                        String(modelMethod)
-                    )}
-
-                </div>
-
+            <div class="final-title">
+                PROBABILITY
             </div>
 
+            <div class="final-probability">
+                ${
+                    Number.isFinite(probability)
+                    ? probability.toFixed(0) + "%"
+                    : "—"
+                }
+            </div>
 
         </div>
-
-
-        <!-- FORM -->
-
-        <h3>
-            Recent Form
-        </h3>
-
-
-        <div class="grid">
-
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Home
-                </div>
-
-                <div>
-
-                    ${buildForm(
-                        normalized.form?.home
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Away
-                </div>
-
-                <div>
-
-                    ${buildForm(
-                        normalized.form?.away
-                    )}
-
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-        <!-- 1X2 -->
-
-        <h3>
-            1X2 Model Probability
-        </h3>
-
-
-        <div class="market-grid">
-
-
-            <div class="market">
-
-                <div class="market-title">
-                    HOME
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        modelProbability.home
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="market">
-
-                <div class="market-title">
-                    DRAW
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        modelProbability.draw
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="market">
-
-                <div class="market-title">
-                    AWAY
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        modelProbability.away
-                    )}
-
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-        <!-- xG -->
-
-        <h3>
-            Expected Goals
-        </h3>
-
-
-        <div class="grid">
-
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Home xG
-                </div>
-
-                <div class="stat-value">
-
-                    ${formatNumber(
-                        xg.home
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Away xG
-                </div>
-
-                <div class="stat-value">
-
-                    ${formatNumber(
-                        xg.away
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Total xG
-                </div>
-
-                <div class="stat-value">
-
-                    ${formatNumber(
-                        xg.total
-                    )}
-
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-        <!-- DOUBLE CHANCE -->
-
-        <h3>
-            Double Chance
-        </h3>
-
-
-        <div class="market-grid">
-
-
-            <div class="market">
-
-                <div class="market-title">
-                    HOME OR DRAW
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        doubleChance.homeOrDraw
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="market">
-
-                <div class="market-title">
-                    AWAY OR DRAW
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        doubleChance.awayOrDraw
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="market">
-
-                <div class="market-title">
-                    HOME OR AWAY
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        doubleChance.homeOrAway
-                    )}
-
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-        <!-- EVIDENCE -->
-
-        <h3>
-            Data Evidence
-        </h3>
-
-        ${buildEvidence(
-            normalized,
-            internal
-        )}
-
-
-        <!-- WARNINGS -->
-
-        <h3>
-            Warnings
-        </h3>
-
-        ${buildWarnings(
-            normalized
-        )}
-
-
-        <!-- DEBUG -->
-
-        <details>
-
-            <summary>
-                🔧 Technical Analysis Data
-            </summary>
-
-            <pre>
-${escapeHtml(
-    JSON.stringify(
-        prediction,
-        null,
-        2
-    )
-)}
-            </pre>
-
-        </details>
 
     `;
-
 }
-
-
 /* =========================================================
    EVIDENCE
 ========================================================= */
