@@ -1,62 +1,661 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TomsonStakes</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>TomsonStakes Global Football</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    color: #17202a;
+}
+
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
+}
+
+.header {
+    background: #111827;
+    color: white;
+    padding: 24px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+}
+
+.header h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+}
+
+.header p {
+    margin: 0;
+    color: #cbd5e1;
+}
+
+.search-box {
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+.search-box label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+input[type="date"] {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+button {
+    width: 100%;
+    border: none;
+    padding: 14px;
+    margin-top: 12px;
+    border-radius: 9px;
+    background: #111827;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: .9;
+}
+
+button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.status {
+    padding: 14px;
+    border-radius: 10px;
+    margin-bottom: 18px;
+    background: #eef2ff;
+    color: #3730a3;
+    font-weight: bold;
+}
+
+.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.section {
+    background: white;
+    padding: 18px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.section h2 {
+    margin-top: 0;
+}
+
+.fixture {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+}
+
+.fixture h3 {
+    margin: 0 0 10px;
+    font-size: 18px;
+}
+
+.fixture p {
+    margin: 7px 0;
+    color: #4b5563;
+}
+
+.analyze-btn {
+    background: #2563eb;
+}
+
+.empty {
+    text-align: center;
+    padding: 25px;
+    color: #6b7280;
+}
+
+.hidden {
+    display: none;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+}
+
+.spinner {
+    width: 28px;
+    height: 28px;
+    border: 4px solid #ddd;
+    border-top-color: #111827;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 12px;
+    }
+
+    .header h1 {
+        font-size: 24px;
+    }
+}
+</style>
 </head>
 
 <body>
 
-    <h1>🔥 TOMSONSTAKES</h1>
+<div class="container">
 
-    <p>Global Football Prediction Engine</p>
+    <!-- HEADER -->
+    <div class="header">
+        <h1>🔥 TOMSONSTAKES</h1>
+        <p>Global Football Prediction Engine</p>
+    </div>
 
-    <button onclick="testAPI()">
-        TEST FOOTBALL API
-    </button>
 
-    <div id="result"></div>
+    <!-- DATE SEARCH -->
+    <div class="search-box">
 
-    <script>
-        async function testAPI() {
+        <label for="matchDate">
+            Select Match Date
+        </label>
 
-            const result = document.getElementById("result");
+        <input
+            type="date"
+            id="matchDate"
+        >
 
-            result.innerHTML = "⏳ Testing API...";
+        <button
+            id="searchButton"
+            onclick="loadFixtures()"
+        >
+            🔎 FIND FOOTBALL MATCHES
+        </button>
 
-            try {
+    </div>
 
-                const response = await fetch(
-                    "/api/fixtures?date=2026-09-30"
-                );
 
-                const data = await response.json();
+    <!-- STATUS -->
+    <div
+        id="status"
+        class="status"
+    >
+        Select a date and search for football matches.
+    </div>
 
-                if (!response.ok) {
-                    throw new Error(
-                        data.error || "API request failed"
-                    );
+
+    <!-- RESULTS -->
+    <div
+        id="results"
+        class="hidden"
+    >
+
+        <div class="section">
+
+            <h2>🌍 Global Football Fixtures</h2>
+
+            <div id="fixtureCount"></div>
+
+            <div id="fixtureList"></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   DEFAULT DATE
+===================================================== */
+
+const dateInput =
+    document.getElementById("matchDate");
+
+const today =
+    new Date();
+
+const year =
+    today.getFullYear();
+
+const month =
+    String(today.getMonth() + 1).padStart(2, "0");
+
+const day =
+    String(today.getDate()).padStart(2, "0");
+
+dateInput.value =
+    `${year}-${month}-${day}`;
+
+
+/* =====================================================
+   LOAD FIXTURES
+===================================================== */
+
+async function loadFixtures() {
+
+    const date =
+        document.getElementById("matchDate").value;
+
+    const status =
+        document.getElementById("status");
+
+    const results =
+        document.getElementById("results");
+
+    const fixtureList =
+        document.getElementById("fixtureList");
+
+    const fixtureCount =
+        document.getElementById("fixtureCount");
+
+    const button =
+        document.getElementById("searchButton");
+
+
+    /* VALIDATE DATE */
+
+    if (!date) {
+
+        status.className =
+            "status error";
+
+        status.textContent =
+            "⚠️ Please select a match date.";
+
+        return;
+    }
+
+
+    /* LOADING */
+
+    button.disabled = true;
+
+    button.textContent =
+        "⏳ LOADING FIXTURES...";
+
+    results.classList.remove("hidden");
+
+    fixtureList.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Connecting to football data...</p>
+        </div>
+    `;
+
+    fixtureCount.textContent = "";
+
+    status.className =
+        "status";
+
+    status.textContent =
+        "🔎 Searching football fixtures for " + date + "...";
+
+
+    try {
+
+        /* CALL YOUR VERCEL API */
+
+        const response =
+            await fetch(
+                "/api/fixtures?date=" +
+                encodeURIComponent(date)
+            );
+
+
+        /* READ RESPONSE */
+
+        const data =
+            await response.json();
+
+
+        /* API ERROR */
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                data.message ||
+                "The football API returned an error."
+            );
+        }
+
+
+        /* CHECK RESPONSE */
+
+        if (
+            !data.response ||
+            !Array.isArray(data.response)
+        ) {
+
+            throw new Error(
+                "Unexpected API response."
+            );
+        }
+
+
+        /* NO FIXTURES */
+
+        if (data.response.length === 0) {
+
+            status.className =
+                "status";
+
+            status.textContent =
+                "No football fixtures were found for " +
+                date + ".";
+
+            fixtureCount.textContent =
+                "";
+
+            fixtureList.innerHTML = `
+                <div class="empty">
+                    ⚽ No fixtures available for this date.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        /* SUCCESS */
+
+        status.className =
+            "status success";
+
+        status.textContent =
+            "✅ Fixtures successfully loaded.";
+
+
+        fixtureCount.innerHTML = `
+            <p>
+                📅 Date:
+                <strong>${escapeHtml(date)}</strong>
+            </p>
+
+            <p>
+                ⚽ Fixtures found:
+                <strong>${data.response.length}</strong>
+            </p>
+        `;
+
+
+        /* BUILD FIXTURE LIST */
+
+        let html = "";
+
+
+        data.response.forEach(
+            (match, index) => {
+
+                const league =
+                    match.league?.name ||
+                    "Unknown Competition";
+
+                const country =
+                    match.league?.country ||
+                    "";
+
+                const home =
+                    match.teams?.home?.name ||
+                    "Home Team";
+
+                const away =
+                    match.teams?.away?.name ||
+                    "Away Team";
+
+                const fixtureDate =
+                    match.fixture?.date;
+
+                const fixtureId =
+                    match.fixture?.id ||
+                    "";
+
+                let kickoff =
+                    "Time unavailable";
+
+
+                if (fixtureDate) {
+
+                    const dateObject =
+                        new Date(fixtureDate);
+
+                    kickoff =
+                        dateObject.toLocaleTimeString(
+                            "en-NG",
+                            {
+                                timeZone:
+                                    "Africa/Lagos",
+
+                                hour:
+                                    "2-digit",
+
+                                minute:
+                                    "2-digit",
+
+                                hour12:
+                                    false
+                            }
+                        ) + " WAT";
                 }
 
-                result.innerHTML = `
-                    <h2>✅ API WORKING</h2>
-                    <p>Fixtures returned:</p>
-                    <strong>
-                        ${data.response?.length || 0}
-                    </strong>
+
+                html += `
+
+                    <div class="fixture">
+
+                        <h3>
+                            ⚽
+                            ${escapeHtml(home)}
+                            vs
+                            ${escapeHtml(away)}
+                        </h3>
+
+                        <p>
+                            🏆
+                            <strong>
+                                ${escapeHtml(league)}
+                            </strong>
+
+                            ${
+                                country
+                                ? " — " +
+                                  escapeHtml(country)
+                                : ""
+                            }
+                        </p>
+
+                        <p>
+                            🕐 Kickoff:
+                            <strong>
+                                ${escapeHtml(kickoff)}
+                            </strong>
+                        </p>
+
+                        <p>
+                            🆔 Fixture ID:
+                            ${escapeHtml(
+                                String(fixtureId)
+                            )}
+                        </p>
+
+                        <button
+                            class="analyze-btn"
+                            onclick="analyzeMatch(
+                                '${escapeJs(home)}',
+                                '${escapeJs(away)}',
+                                '${escapeJs(date)}'
+                            )"
+                        >
+                            📊 ANALYZE THIS MATCH
+                        </button>
+
+                    </div>
+
                 `;
-
-            } catch (error) {
-
-                result.innerHTML = `
-                    <h2>❌ ERROR</h2>
-                    <p>${error.message}</p>
-                `;
-
             }
-        }
-    </script>
+        );
+
+
+        fixtureList.innerHTML =
+            html;
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        status.className =
+            "status error";
+
+        status.textContent =
+            "❌ Unable to load fixtures.";
+
+
+        fixtureList.innerHTML = `
+
+            <div class="empty">
+
+                <h3>
+                    API Error
+                </h3>
+
+                <p>
+                    ${escapeHtml(
+                        error.message
+                    )}
+                </p>
+
+                <p>
+                    Check your Vercel deployment
+                    and API configuration.
+                </p>
+
+            </div>
+
+        `;
+
+    } finally {
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            "🔎 FIND FOOTBALL MATCHES";
+
+    }
+
+}
+
+
+/* =====================================================
+   ANALYZE MATCH
+===================================================== */
+
+function analyzeMatch(
+    home,
+    away,
+    date
+) {
+
+    const status =
+        document.getElementById("status");
+
+
+    status.className =
+        "status";
+
+    status.textContent =
+        "📊 Match selected: " +
+        home +
+        " vs " +
+        away;
+
+
+    alert(
+        "Match selected:\n\n" +
+        home +
+        " vs " +
+        away +
+        "\n\n" +
+        "Date: " +
+        date +
+        "\n\n" +
+        "The full TomsonStakes analysis engine will be connected here next."
+    );
+
+}
+
+
+/* =====================================================
+   SECURITY HELPERS
+===================================================== */
+
+function escapeHtml(value) {
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+function escapeJs(value) {
+
+    return String(value)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r");
+
+}
+
+</script>
 
 </body>
 </html>
