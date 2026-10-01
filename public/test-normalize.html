@@ -1,242 +1,1241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>TomsonStakes Form Diagnostic</title>
+<title>TomsonStakes Analysis</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            padding: 20px;
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f4f6f8;
+        color: #17202a;
+    }
+
+    .container {
+        max-width: 1100px;
+        margin: auto;
+        padding: 20px;
+    }
+
+    .header {
+        background: #111827;
+        color: white;
+        padding: 22px;
+        border-radius: 14px;
+        margin-bottom: 18px;
+    }
+
+    .header h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+    }
+
+    .header p {
+        margin: 0;
+        opacity: .75;
+    }
+
+    .match-card {
+        background: white;
+        border-radius: 14px;
+        padding: 22px;
+        text-align: center;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+
+    .teams {
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    .vs {
+        margin: 8px 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .date {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    button {
+        width: 100%;
+        border: none;
+        padding: 14px;
+        margin-top: 15px;
+        border-radius: 9px;
+        background: #111827;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover {
+        opacity: .9;
+    }
+
+    .status {
+        margin: 15px 0;
+        padding: 12px;
+        border-radius: 8px;
+        background: #eef2ff;
+        color: #3730a3;
+        font-weight: bold;
+    }
+
+    .section {
+        background: white;
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+
+    .section h2 {
+        margin-top: 0;
+        font-size: 19px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 10px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+    }
+
+    .stat {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px;
+    }
+
+    .stat-title {
+        font-size: 13px;
+        color: #6b7280;
+        margin-bottom: 7px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .team-form {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 15px;
+    }
+
+    .team-form h3 {
+        margin-top: 0;
+    }
+
+    .form-item {
+        display: inline-block;
+        padding: 7px 10px;
+        margin: 3px;
+        border-radius: 7px;
+        font-weight: bold;
+        font-size: 13px;
+    }
+
+    .win {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .draw {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .loss {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .market {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+
+    .market-box {
+        border: 1px solid #e5e7eb;
+        padding: 15px;
+        text-align: center;
+        border-radius: 10px;
+    }
+
+    .market-label {
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .market-value {
+        font-size: 22px;
+        font-weight: bold;
+        margin-top: 5px;
+    }
+
+    .warning {
+        background: #fff7ed;
+        color: #9a3412;
+        border: 1px solid #fed7aa;
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 8px;
+    }
+
+    .ready {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .partial {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .not-ready {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    details {
+        background: white;
+        border-radius: 14px;
+        padding: 15px;
+        margin-bottom: 18px;
+    }
+
+    summary {
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #111827;
+        color: #e5e7eb;
+        padding: 15px;
+        border-radius: 10px;
+        overflow-x: auto;
+        font-size: 12px;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    @media(max-width: 700px) {
+        .form-grid {
+            grid-template-columns: 1fr;
         }
 
-        .container {
-            max-width: 1100px;
-            margin: auto;
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
+        .market {
+            grid-template-columns: 1fr;
         }
 
-        button {
-            width: 100%;
-            padding: 14px;
-            background: #111827;
-            color: white;
-            border: 0;
-            border-radius: 7px;
-            font-size: 16px;
-            cursor: pointer;
+        .teams {
+            font-size: 20px;
         }
-
-        pre {
-            background: #111827;
-            color: #e5e7eb;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-size: 13px;
-        }
-
-        .status {
-            padding: 12px;
-            margin: 15px 0;
-            background: #eef2ff;
-            border-radius: 7px;
-        }
-    </style>
+    }
+</style>
 </head>
 
 <body>
 
 <div class="container">
 
-    <h1>TomsonStakes Form Diagnostic</h1>
-
-    <p>
-        <strong>Match:</strong>
-        Deportes Concepcion vs O'Higgins
-    </p>
-
-    <p>
-        This test inspects the raw V3.14 form-search results
-        before normalization.
-    </p>
-
-    <button id="runButton" onclick="runDiagnostic()">
-        Inspect Raw Form Data
-    </button>
-
-    <div id="status" class="status">
-        Ready.
+    <div class="header">
+        <h1>TomsonStakes</h1>
+        <p>Football Web Data & Prediction Analysis</p>
     </div>
 
-    <pre id="output"></pre>
+    <div class="match-card">
+
+        <div class="teams">
+            Deportes Concepcion
+            <div class="vs">VS</div>
+            O'Higgins
+        </div>
+
+        <div class="date">
+            30 September 2026
+        </div>
+
+        <button onclick="runAnalysis()">
+            RUN ANALYSIS
+        </button>
+
+    </div>
+
+    <div id="status" class="status">
+        Ready to analyze.
+    </div>
+
+    <div id="results" class="hidden">
+
+        <!-- READINESS -->
+
+        <div class="section">
+            <h2>Analysis Status</h2>
+
+            <div class="grid">
+
+                <div class="stat">
+                    <div class="stat-title">Overall Status</div>
+                    <div id="analysisStatus" class="stat-value">
+                        -
+                    </div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-title">Confidence</div>
+                    <div id="confidence" class="stat-value">
+                        -
+                    </div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-title">Model Method</div>
+                    <div id="modelMethod" class="stat-value">
+                        -
+                    </div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-title">Data Quality</div>
+                    <div id="dataQuality" class="stat-value">
+                        -
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- FORM -->
+
+        <div class="section">
+            <h2>Recent Form</h2>
+
+            <div class="form-grid">
+
+                <div class="team-form">
+                    <h3>Deportes Concepcion</h3>
+                    <div id="homeForm"></div>
+                </div>
+
+                <div class="team-form">
+                    <h3>O'Higgins</h3>
+                    <div id="awayForm"></div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- 1X2 -->
+
+        <div class="section">
+            <h2>1X2 Market</h2>
+
+            <div class="market">
+
+                <div class="market-box">
+                    <div class="market-label">
+                        Home
+                    </div>
+
+                    <div id="home1x2" class="market-value">
+                        -
+                    </div>
+                </div>
+
+                <div class="market-box">
+                    <div class="market-label">
+                        Draw
+                    </div>
+
+                    <div id="draw1x2" class="market-value">
+                        -
+                    </div>
+                </div>
+
+                <div class="market-box">
+                    <div class="market-label">
+                        Away
+                    </div>
+
+                    <div id="away1x2" class="market-value">
+                        -
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- BTTS / O-U -->
+
+        <div class="section">
+
+            <h2>Goals Markets</h2>
+
+            <div class="grid">
+
+                <div class="stat">
+
+                    <div class="stat-title">
+                        BTTS
+                    </div>
+
+                    <div id="btts" class="stat-value">
+                        -
+                    </div>
+
+                </div>
+
+                <div class="stat">
+
+                    <div class="stat-title">
+                        Over / Under
+                    </div>
+
+                    <div id="ou" class="stat-value">
+                        -
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- XG -->
+
+        <div class="section">
+
+            <h2>Expected Goals</h2>
+
+            <div class="grid">
+
+                <div class="stat">
+
+                    <div class="stat-title">
+                        Deportes Concepcion xG
+                    </div>
+
+                    <div id="homeXg" class="stat-value">
+                        -
+                    </div>
+
+                </div>
+
+                <div class="stat">
+
+                    <div class="stat-title">
+                        O'Higgins xG
+                    </div>
+
+                    <div id="awayXg" class="stat-value">
+                        -
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- AVAILABILITY -->
+
+        <div class="section">
+
+            <h2>Evidence Availability</h2>
+
+            <div class="grid">
+
+                <div id="availability"></div>
+
+            </div>
+
+        </div>
+
+
+        <!-- WARNINGS -->
+
+        <div class="section">
+
+            <h2>Important Warnings</h2>
+
+            <div id="warnings"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- RAW DEBUG DATA -->
+
+    <details>
+
+        <summary>
+            View Raw API Data
+        </summary>
+
+        <h3>Web Data</h3>
+        <pre id="webRaw"></pre>
+
+        <h3>Normalized Data</h3>
+        <pre id="normalizedRaw"></pre>
+
+        <h3>Prediction</h3>
+        <pre id="predictionRaw"></pre>
+
+    </details>
 
 </div>
 
+
 <script>
 
-async function runDiagnostic() {
+const MATCH = {
+    home: "Deportes Concepcion",
+    homeIdentity: "DEPORTES_CONCEPCION",
 
-    const button =
-        document.getElementById("runButton");
+    away: "O'Higgins",
+    awayIdentity: "OHIGGINS",
 
-    const status =
-        document.getElementById("status");
+    date: "2026-09-30"
+};
 
-    const output =
-        document.getElementById("output");
 
-    button.disabled = true;
+async function runAnalysis() {
 
-    status.textContent =
-        "Searching raw form data...";
+    const status = document.getElementById("status");
 
-    output.textContent = "";
+    const results = document.getElementById("results");
+
+    results.classList.add("hidden");
+
+    status.className = "status";
+    status.textContent = "Searching web data...";
+
 
     try {
 
-        const url =
+        /*
+         * STEP 1
+         * WEB DATA
+         */
+
+        const webUrl =
             `/api/web-data` +
-            `?home=${encodeURIComponent("Deportes Concepcion")}` +
-            `&homeIdentity=${encodeURIComponent("DEPORTES_CONCEPCION")}` +
-            `&away=${encodeURIComponent("O'Higgins")}` +
-            `&awayIdentity=${encodeURIComponent("OHIGGINS")}` +
-            `&date=${encodeURIComponent("2026-09-30")}`;
+            `?home=${encodeURIComponent(MATCH.home)}` +
+            `&homeIdentity=${encodeURIComponent(MATCH.homeIdentity)}` +
+            `&away=${encodeURIComponent(MATCH.away)}` +
+            `&awayIdentity=${encodeURIComponent(MATCH.awayIdentity)}` +
+            `&date=${encodeURIComponent(MATCH.date)}`;
 
-        const response =
-            await fetch(url);
 
-        const text =
-            await response.text();
+        const webResponse = await fetch(webUrl);
 
-        let data;
+        const webData = await webResponse.json();
 
-        try {
 
-            data = JSON.parse(text);
-
-        } catch (error) {
-
+        if (!webResponse.ok) {
             throw new Error(
-                "Web Data returned invalid JSON:\n\n" +
-                text
+                webData.error ||
+                "Web data request failed."
             );
         }
 
-        if (!response.ok) {
 
-            throw new Error(
-                JSON.stringify(
-                    data,
-                    null,
-                    2
-                )
-            );
-        }
+        document.getElementById("webRaw").textContent =
+            JSON.stringify(webData, null, 2);
 
-        // =====================================================
-        // KEEP ONLY FORM SEARCHES
-        // =====================================================
 
-        const formSearches =
-            (data.searches || [])
-                .filter(search =>
-                    String(search.type || "")
-                        .startsWith("form_")
-                );
-
-        // =====================================================
-        // CREATE COMPACT DIAGNOSTIC
-        // =====================================================
-
-        const diagnostic = {
-
-            version:
-                data.version || null,
-
-            match:
-                data.match || null,
-
-            formSearchSummary:
-                data.formSearchSummary || null,
-
-            totalFormSearches:
-                formSearches.length,
-
-            searches:
-                formSearches.map(search => ({
-
-                    type:
-                        search.type,
-
-                    team:
-                        search.team,
-
-                    teamIdentity:
-                        search.teamIdentity,
-
-                    query:
-                        search.query,
-
-                    status:
-                        search.status,
-
-                    success:
-                        search.success,
-
-                    resultCount:
-                        Array.isArray(search.results)
-                            ? search.results.length
-                            : 0,
-
-                    results:
-                        (search.results || [])
-                            .map(item => ({
-
-                                title:
-                                    item.title,
-
-                                link:
-                                    item.link,
-
-                                snippet:
-                                    item.snippet,
-
-                                date:
-                                    item.date
-                            }))
-                }))
-        };
+        /*
+         * STEP 2
+         * NORMALIZE
+         */
 
         status.textContent =
-            "Diagnostic completed.";
+            "Normalizing sources...";
 
-        output.textContent =
-            JSON.stringify(
-                diagnostic,
-                null,
-                2
+
+        const normalizeResponse =
+            await fetch("/api/normalize-web", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(webData)
+
+            });
+
+
+        const normalized =
+            await normalizeResponse.json();
+
+
+        if (!normalizeResponse.ok) {
+
+            throw new Error(
+                normalized.error ||
+                "Normalization failed."
             );
+
+        }
+
+
+        document.getElementById("normalizedRaw").textContent =
+            JSON.stringify(normalized, null, 2);
+
+
+        /*
+         * STEP 3
+         * PREDICTION
+         */
+
+        status.textContent =
+            "Running prediction engine...";
+
+
+        const predictionResponse =
+            await fetch("/api/predict", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    match: MATCH,
+
+                    normalized: normalized
+
+                })
+
+            });
+
+
+        const prediction =
+            await predictionResponse.json();
+
+
+        if (!predictionResponse.ok) {
+
+            throw new Error(
+                prediction.error ||
+                "Prediction failed."
+            );
+
+        }
+
+
+        document.getElementById("predictionRaw").textContent =
+            JSON.stringify(prediction, null, 2);
+
+
+        /*
+         * DISPLAY RESULTS
+         */
+
+        displayResults(
+            normalized,
+            prediction
+        );
+
+
+        results.classList.remove("hidden");
+
+        status.textContent =
+            "Analysis completed.";
+
+        status.className =
+            "status ready";
+
 
     } catch (error) {
 
+        console.error(error);
+
         status.textContent =
-            "Diagnostic failed.";
+            "Error: " + error.message;
 
-        output.textContent =
-            error.message;
+        status.className =
+            "status not-ready";
 
-    } finally {
-
-        button.disabled = false;
     }
+
+}
+
+
+/* =========================
+   DISPLAY RESULTS
+========================= */
+
+function displayResults(
+    normalized,
+    prediction
+) {
+
+    /*
+     * STATUS
+     */
+
+    const status =
+        prediction.status ||
+        prediction.analysisStatus ||
+        normalized.readiness?.status ||
+        "UNKNOWN";
+
+
+    document.getElementById(
+        "analysisStatus"
+    ).textContent = status;
+
+
+    /*
+     * CONFIDENCE
+     */
+
+    const confidence =
+        prediction.confidence ??
+        normalized.quality?.score ??
+        0;
+
+
+    document.getElementById(
+        "confidence"
+    ).textContent =
+        confidence + "%";
+
+
+    /*
+     * MODEL METHOD
+     */
+
+    document.getElementById(
+        "modelMethod"
+    ).textContent =
+        prediction.modelMethod ||
+        "MARKET_BASELINE";
+
+
+    /*
+     * QUALITY
+     */
+
+    const quality =
+        normalized.quality?.score ??
+        normalized.quality ??
+        "-";
+
+
+    document.getElementById(
+        "dataQuality"
+    ).textContent =
+        typeof quality === "number"
+            ? quality + "%"
+            : quality;
+
+
+    /*
+     * FORM
+     */
+
+    displayForm(
+        "homeForm",
+        normalized.form?.home || []
+    );
+
+    displayForm(
+        "awayForm",
+        normalized.form?.away || []
+    );
+
+
+    /*
+     * 1X2
+     */
+
+    const oneXtwo =
+        prediction.oneXtwo ||
+        prediction.markets?.oneXtwo ||
+        prediction.markets?.["1X2"] ||
+        {};
+
+
+    document.getElementById(
+        "home1x2"
+    ).textContent =
+        formatPercent(
+            oneXtwo.home ??
+            oneXtwo.homeProbability ??
+            oneXtwo["1"]
+        );
+
+
+    document.getElementById(
+        "draw1x2"
+    ).textContent =
+        formatPercent(
+            oneXtwo.draw ??
+            oneXtwo.drawProbability ??
+            oneXtwo.X
+        );
+
+
+    document.getElementById(
+        "away1x2"
+    ).textContent =
+        formatPercent(
+            oneXtwo.away ??
+            oneXtwo.awayProbability ??
+            oneXtwo["2"]
+        );
+
+
+    /*
+     * BTTS
+     */
+
+    const btts =
+        prediction.btts ||
+        normalized.btts ||
+        {};
+
+
+    document.getElementById(
+        "btts"
+    ).textContent =
+        formatMarket(
+            btts
+        );
+
+
+    /*
+     * OVER / UNDER
+     */
+
+    const ou =
+        prediction.overUnder ||
+        prediction.ou ||
+        normalized.overUnder ||
+        normalized.ou ||
+        {};
+
+
+    document.getElementById(
+        "ou"
+    ).textContent =
+        formatMarket(
+            ou
+        );
+
+
+    /*
+     * XG
+     */
+
+    document.getElementById(
+        "homeXg"
+    ).textContent =
+        formatNumber(
+            normalized.xG?.home ??
+            normalized.xg?.home
+        );
+
+
+    document.getElementById(
+        "awayXg"
+    ).textContent =
+        formatNumber(
+            normalized.xG?.away ??
+            normalized.xg?.away
+        );
+
+
+    /*
+     * AVAILABILITY
+     */
+
+    displayAvailability(
+        normalized
+    );
+
+
+    /*
+     * WARNINGS
+     */
+
+    displayWarnings(
+        normalized
+    );
+
+}
+
+
+/* =========================
+   FORM
+========================= */
+
+function displayForm(
+    elementId,
+    form
+) {
+
+    const element =
+        document.getElementById(elementId);
+
+
+    if (!Array.isArray(form) ||
+        form.length === 0) {
+
+        element.innerHTML =
+            "<span>No reliable recent form found.</span>";
+
+        return;
+    }
+
+
+    element.innerHTML =
+        form.map(match => {
+
+            const result =
+                String(
+                    match.result ||
+                    match.outcome ||
+                    "?"
+                ).toUpperCase();
+
+
+            let css = "draw";
+
+            if (result === "W")
+                css = "win";
+
+            if (result === "L")
+                css = "loss";
+
+
+            const score =
+                match.score ||
+                match.resultScore ||
+                "";
+
+
+            const opponent =
+                match.opponent ||
+                "";
+
+
+            return `
+                <span
+                    class="form-item ${css}"
+                    title="${opponent} ${score}"
+                >
+                    ${result}
+                </span>
+            `;
+
+        })
+        .join("");
+
+}
+
+
+/* =========================
+   AVAILABILITY
+========================= */
+
+function displayAvailability(
+    normalized
+) {
+
+    const container =
+        document.getElementById(
+            "availability"
+        );
+
+
+    const availability =
+        normalized.availability ||
+        normalized.readiness ||
+        {};
+
+
+    const items = [
+
+        ["Identity", availability.identityReady],
+        ["Form", availability.formReady],
+        ["Stats", availability.statsReady],
+        ["BTTS", availability.btts],
+        ["O/U", availability.overUnder],
+        ["xG", availability.xG],
+        ["Injuries", availability.injuries],
+        ["Lineups", availability.lineups],
+        ["Odds", availability.odds]
+
+    ];
+
+
+    container.innerHTML =
+        items.map(item => {
+
+            const value =
+                item[1] === true;
+
+            return `
+                <div class="stat">
+                    <div class="stat-title">
+                        ${item[0]}
+                    </div>
+
+                    <div class="stat-value">
+                        ${value ? "✓ Available" : "— Missing"}
+                    </div>
+                </div>
+            `;
+
+        })
+        .join("");
+
+}
+
+
+/* =========================
+   WARNINGS
+========================= */
+
+function displayWarnings(
+    normalized
+) {
+
+    const container =
+        document.getElementById(
+            "warnings"
+        );
+
+
+    const warnings =
+        normalized.warnings || [];
+
+
+    if (!warnings.length) {
+
+        container.innerHTML =
+            "<div class='stat'>No warnings.</div>";
+
+        return;
+    }
+
+
+    container.innerHTML =
+        warnings.map(warning => {
+
+            return `
+                <div class="warning">
+                    ${escapeHtml(
+                        String(warning)
+                    )}
+                </div>
+            `;
+
+        }).join("");
+
+}
+
+
+/* =========================
+   HELPERS
+========================= */
+
+function formatPercent(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+        return "-";
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (Number.isNaN(number))
+        return String(value);
+
+
+    return number.toFixed(1) + "%";
+
+}
+
+
+function formatNumber(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+        return "-";
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (Number.isNaN(number))
+        return String(value);
+
+
+    return number.toFixed(2);
+
+}
+
+
+function formatMarket(
+    market
+) {
+
+    if (
+        market === undefined ||
+        market === null
+    ) {
+        return "-";
+    }
+
+
+    if (typeof market === "string")
+        return market;
+
+
+    if (
+        market.answer !== undefined
+    ) {
+
+        let text =
+            String(
+                market.answer
+            );
+
+
+        if (
+            market.percentage !== undefined
+        ) {
+
+            text +=
+                " " +
+                market.percentage +
+                "%";
+
+        }
+
+
+        if (
+            market.odds !== undefined
+        ) {
+
+            text +=
+                " @ " +
+                market.odds;
+
+        }
+
+
+        return text;
+
+    }
+
+
+    if (
+        market.selection !== undefined
+    ) {
+
+        let text =
+            String(
+                market.selection
+            );
+
+
+        if (
+            market.line !== undefined
+        ) {
+
+            text +=
+                " " +
+                market.line;
+
+        }
+
+
+        if (
+            market.odds !== undefined
+        ) {
+
+            text +=
+                " @ " +
+                market.odds;
+
+        }
+
+
+        return text;
+
+    }
+
+
+    return "-";
+
+}
+
+
+function escapeHtml(
+    value
+) {
+
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
 }
 
 </script>
