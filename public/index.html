@@ -1,1228 +1,1098 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>TomsonStakes Global Football</title>
-
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            margin: 0;
-            background:
-                radial-gradient(
-                    circle at top,
-                    #162033 0%,
-                    #0b111c 42%,
-                    #05080d 100%
-                );
-            color: #f5f7fa;
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-            min-height: 100vh;
-        }
-
-        button,
-        input {
-            font: inherit;
-        }
-
-        .page {
-            width: 100%;
-            max-width: 1250px;
-            margin: 0 auto;
-            padding: 24px 16px 60px;
-        }
-
-        /* =========================
-           HEADER
-        ========================= */
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .brand {
-            font-size: clamp(28px, 6vw, 52px);
-            font-weight: 900;
-            letter-spacing: 1px;
-            margin: 0;
-            color: #ffffff;
-        }
-
-        .brand span {
-            color: #20e58a;
-        }
-
-        .subtitle {
-            margin: 10px auto 0;
-            max-width: 700px;
-            color: #9eabbc;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        /* =========================
-           SCAN PANEL
-        ========================= */
-
-        .scan-panel {
-            background: rgba(15, 23, 36, 0.94);
-            border: 1px solid #263449;
-            border-radius: 18px;
-            padding: 20px;
-            margin-bottom: 24px;
-            box-shadow:
-                0 15px 45px rgba(0, 0, 0, 0.28);
-        }
-
-        .scan-title {
-            margin: 0 0 6px;
-            font-size: 20px;
-            font-weight: 800;
-        }
-
-        .scan-description {
-            margin: 0 0 18px;
-            color: #8e9caf;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns:
-                minmax(180px, 1fr)
-                minmax(180px, 1fr);
-            gap: 12px;
-        }
-
-        .date-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-        }
-
-        .date-wrapper label {
-            color: #aab5c4;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-        }
-
-        #matchDate {
-            width: 100%;
-            height: 50px;
-            padding: 0 14px;
-            border: 1px solid #314158;
-            border-radius: 10px;
-            background: #0b121e;
-            color: #ffffff;
-            outline: none;
-        }
-
-        #matchDate:focus {
-            border-color: #20e58a;
-            box-shadow: 0 0 0 3px rgba(32, 229, 138, 0.1);
-        }
-
-        .main-button {
-            align-self: end;
-            height: 50px;
-            border: 0;
-            border-radius: 10px;
-            background: linear-gradient(
-                135deg,
-                #20e58a,
-                #0dbb70
-            );
-            color: #03130c;
-            font-weight: 900;
-            cursor: pointer;
-            transition:
-                transform 0.15s ease,
-                opacity 0.15s ease;
-        }
-
-        .main-button:hover {
-            transform: translateY(-1px);
-        }
-
-        .main-button:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* =========================
-           STATUS
-        ========================= */
-
-        .status {
-            display: none;
-            margin: 18px 0;
-            padding: 14px 16px;
-            border-radius: 10px;
-            border: 1px solid #29374b;
-            background: #0d1624;
-            color: #b8c3d1;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .status.show {
-            display: block;
-        }
-
-        .status.success {
-            border-color: rgba(32, 229, 138, 0.35);
-            color: #75efb3;
-        }
-
-        .status.warning {
-            border-color: rgba(245, 181, 66, 0.35);
-            color: #f5c86e;
-        }
-
-        .status.error {
-            border-color: rgba(255, 85, 85, 0.35);
-            color: #ff9999;
-        }
-
-        .status.loading {
-            border-color: rgba(87, 166, 255, 0.35);
-            color: #8fc4ff;
-        }
-
-        /* =========================
-           FIXTURE AREA
-        ========================= */
-
-        .results-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin: 26px 0 14px;
-        }
-
-        .results-title {
-            margin: 0;
-            font-size: 20px;
-        }
-
-        .fixture-count {
-            color: #8d9aae;
-            font-size: 13px;
-        }
-
-        #fixturesContainer {
-            display: grid;
-            gap: 16px;
-        }
-
-        .empty-state {
-            padding: 35px 20px;
-            text-align: center;
-            border: 1px dashed #334157;
-            border-radius: 16px;
-            color: #8794a8;
-            background: rgba(10, 17, 27, 0.6);
-        }
-
-        /* =========================
-           FIXTURE CARD
-        ========================= */
-
-        .fixture-card {
-            overflow: hidden;
-            background:
-                linear-gradient(
-                    145deg,
-                    rgba(19, 30, 46, 0.98),
-                    rgba(9, 15, 24, 0.98)
-                );
-            border: 1px solid #263449;
-            border-radius: 16px;
-            box-shadow:
-                0 12px 35px rgba(0, 0, 0, 0.22);
-        }
-
-        .fixture-top {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            align-items: center;
-            padding: 16px 18px;
-            border-bottom: 1px solid #202d40;
-        }
-
-        .league-name {
-            color: #ffffff;
-            font-weight: 800;
-            font-size: 14px;
-        }
-
-        .league-country {
-            margin-top: 4px;
-            color: #77859a;
-            font-size: 12px;
-        }
-
-        .kickoff {
-            text-align: right;
-            color: #20e58a;
-            font-size: 12px;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        .teams {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            gap: 12px;
-            padding: 22px 18px;
-        }
-
-        .team {
-            min-width: 0;
-        }
-
-        .team.away {
-            text-align: right;
-        }
-
-        .team-name {
-            color: #ffffff;
-            font-size: clamp(16px, 3vw, 22px);
-            font-weight: 900;
-            line-height: 1.25;
-            overflow-wrap: anywhere;
-        }
-
-        .team-identity {
-            margin-top: 6px;
-            color: #66758b;
-            font-size: 10px;
-            letter-spacing: 0.6px;
-            overflow-wrap: anywhere;
-        }
-
-        .vs {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background: #111b2a;
-            border: 1px solid #2a394e;
-            color: #8997aa;
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        .fixture-actions {
-            padding: 0 18px 18px;
-        }
-
-        .analyze-button {
-            width: 100%;
-            height: 46px;
-            border: 1px solid #285840;
-            border-radius: 9px;
-            background: #10281e;
-            color: #4ef0a1;
-            font-weight: 900;
-            cursor: pointer;
-            transition:
-                background 0.15s ease,
-                border-color 0.15s ease;
-        }
-
-        .analyze-button:hover {
-            background: #143d2b;
-            border-color: #357653;
-        }
-
-        .analyze-button:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-        }
-
-        /* =========================
-           ANALYSIS
-        ========================= */
-
-        .analysis {
-            margin: 0 18px 18px;
-            border-top: 1px solid #202d40;
-            padding-top: 18px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .analysis-loading {
-            padding: 18px;
-            border-radius: 10px;
-            background: #0c1522;
-            border: 1px solid #243249;
-            color: #8fbef0;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-
-        .analysis-error {
-            padding: 18px;
-            border-radius: 10px;
-            background: #251315;
-            border: 1px solid #5a292d;
-            color: #ff9a9a;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-
-        .analysis-error pre {
-            margin-top: 12px;
-            padding: 12px;
-            overflow: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            background: #0c0d10;
-            border-radius: 8px;
-            color: #c3cbd6;
-            font-size: 11px;
-        }
-
-        /* =========================
-           PREDICTION
-        ========================= */
-
-        .prediction-result {
-            padding: 20px;
-            border-radius: 14px;
-            background:
-                linear-gradient(
-                    145deg,
-                    #12271e,
-                    #0b1712
-                );
-            border: 1px solid #285d43;
-            margin-bottom: 16px;
-        }
-
-        .prediction-label {
-            color: #6fe8aa;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .prediction-value {
-            margin-top: 7px;
-            color: #ffffff;
-            font-size: clamp(24px, 5vw, 36px);
-            font-weight: 950;
-            line-height: 1.1;
-        }
-
-        .probability-label {
-            margin-top: 15px;
-            color: #8493a7;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-        }
-
-        .probability-value {
-            margin-top: 3px;
-            color: #20e58a;
-            font-size: 25px;
-            font-weight: 900;
-        }
-
-        .prediction-meta {
-            display: grid;
-            grid-template-columns:
-                repeat(3, minmax(0, 1fr));
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .meta-box {
-            padding: 10px;
-            background: rgba(255,255,255,0.025);
-            border: 1px solid #263c31;
-            border-radius: 8px;
-        }
-
-        .meta-label {
-            color: #718093;
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-        }
-
-        .meta-value {
-            margin-top: 4px;
-            color: #dce5ee;
-            font-size: 12px;
-            font-weight: 800;
-            overflow-wrap: anywhere;
-        }
-
-        /* =========================
-           GRID
-        ========================= */
-
-        .analysis-grid {
-            display: grid;
-            grid-template-columns:
-                repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .info-card {
-            min-width: 0;
-            padding: 16px;
-            border-radius: 12px;
-            background: #0c1522;
-            border: 1px solid #243249;
-        }
-
-        .info-card.full {
-            grid-column: 1 / -1;
-        }
-
-        .info-title {
-            margin: 0 0 12px;
-            color: #ffffff;
-            font-size: 13px;
-            font-weight: 900;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 8px 0;
-            border-bottom: 1px solid #1b2737;
-        }
-
-        .info-row:last-child {
-            border-bottom: 0;
-        }
-
-        .info-key {
-            color: #78879b;
-            font-size: 11px;
-        }
-
-        .info-value {
-            color: #dce4ed;
-            font-size: 11px;
-            font-weight: 800;
-            text-align: right;
-        }
-
-        /* =========================
-           MARKET TABLE
-        ========================= */
-
-        .market-list {
-            display: grid;
-            gap: 8px;
-        }
-
-        .market-item {
-            padding: 11px;
-            border: 1px solid #202e42;
-            border-radius: 9px;
-            background: #0a121e;
-        }
-
-        .market-item-top {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .market-name {
-            color: #e9eef4;
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        .market-probability {
-            color: #20e58a;
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        .market-details {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 7px;
-            margin-top: 7px;
-        }
-
-        .tag {
-            padding: 4px 7px;
-            border-radius: 5px;
-            background: #111c2b;
-            color: #8998ab;
-            font-size: 9px;
-        }
-
-        .tag.positive {
-            color: #6be9aa;
-            background: #10271c;
-        }
-
-        .tag.negative {
-            color: #ff9696;
-            background: #2a1517;
-        }
-
-        /* =========================
-           FORM
-        ========================= */
-
-        .form-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            padding: 8px 0;
-            border-bottom: 1px solid #1b2737;
-        }
-
-        .form-row:last-child {
-            border-bottom: 0;
-        }
-
-        .form-team {
-            color: #dbe4ee;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .form-sequence {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        .form-badge {
-            width: 21px;
-            height: 21px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: 900;
-            background: #1b2635;
-            color: #9ba7b7;
-        }
-
-        .form-badge.win {
-            background: #123923;
-            color: #62e8a2;
-        }
-
-        .form-badge.draw {
-            background: #3a3216;
-            color: #e7cb69;
-        }
-
-        .form-badge.loss {
-            background: #38191c;
-            color: #ff9292;
-        }
-
-        /* =========================
-           WARNINGS / EVIDENCE
-        ========================= */
-
-        .warning-list,
-        .evidence-list {
-            margin: 0;
-            padding-left: 17px;
-            color: #9ba8b9;
-            font-size: 11px;
-            line-height: 1.7;
-        }
-
-        .warning-list li,
-        .evidence-list li {
-            margin-bottom: 5px;
-        }
-
-        .no-data {
-            color: #69788d;
-            font-size: 11px;
-        }
-
-        /* =========================
-           FOOTER
-        ========================= */
-
-        .footer {
-            margin-top: 45px;
-            text-align: center;
-            color: #526176;
-            font-size: 11px;
-        }
-
-        /* =========================
-           RESPONSIVE
-        ========================= */
-
-        @media (max-width: 700px) {
-            .page {
-                padding: 18px 11px 45px;
-            }
-
-            .controls {
-                grid-template-columns: 1fr;
-            }
-
-            .main-button {
-                align-self: stretch;
-            }
-
-            .teams {
-                grid-template-columns:
-                    minmax(0, 1fr)
-                    38px
-                    minmax(0, 1fr);
-            }
-
-            .prediction-meta {
-                grid-template-columns: 1fr;
-            }
-
-            .analysis-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .info-card.full {
-                grid-column: auto;
-            }
-
-            .fixture-top {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .kickoff {
-                text-align: left;
-            }
-        }
-    </style>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+    TomsonStakes Global Football
+</title>
+
+
+<style>
+
+/* =========================================================
+   GLOBAL
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+
+    margin: 0;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    background: #111827;
+
+    color: #ffffff;
+}
+
+.container {
+
+    width: 100%;
+
+    max-width: 1100px;
+
+    margin: auto;
+
+    padding: 20px;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header {
+
+    text-align: center;
+
+    padding: 25px 10px 30px;
+}
+
+.header h1 {
+
+    margin: 0;
+
+    font-size: 34px;
+
+    font-weight: 800;
+}
+
+.subtitle {
+
+    color: #9ca3af;
+
+    margin-top: 8px;
+
+    font-size: 14px;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================================
+   CONTROL
+========================================================= */
+
+.control-box {
+
+    background: #1f2937;
+
+    padding: 22px;
+
+    border-radius: 14px;
+
+    text-align: center;
+
+    margin-bottom: 20px;
+
+    box-shadow:
+        0 10px 30px
+        rgba(0,0,0,.20);
+}
+
+.control-box p {
+
+    margin-top: 0;
+
+    color: #d1d5db;
+}
+
+input[type="date"] {
+
+    width: 100%;
+
+    max-width: 400px;
+
+    padding: 14px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    font-size: 16px;
+
+    background: #ffffff;
+
+    color: #111827;
+}
+
+button {
+
+    border: none;
+
+    border-radius: 8px;
+
+    padding: 13px 18px;
+
+    font-size: 15px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition:
+        opacity .2s,
+        transform .1s;
+}
+
+button:active {
+
+    transform: scale(.98);
+}
+
+button:disabled {
+
+    opacity: .6;
+
+    cursor: wait;
+}
+
+.main-button {
+
+    background: #16a34a;
+
+    color: white;
+
+    width: 100%;
+
+    max-width: 400px;
+
+    margin-top: 12px;
+}
+
+
+/* =========================================================
+   NOTICE / STATUS
+========================================================= */
+
+.notice {
+
+    background: #1f2937;
+
+    padding: 18px;
+
+    border-radius: 12px;
+
+    margin-top: 15px;
+}
+
+.status {
+
+    padding: 12px;
+
+    border-radius: 8px;
+
+    margin-top: 12px;
+
+    font-weight: bold;
+}
+
+.status-ready {
+
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+.status-warning {
+
+    background: #fef3c7;
+
+    color: #92400e;
+}
+
+.status-error {
+
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+
+/* =========================================================
+   FIXTURE
+========================================================= */
+
+.fixture {
+
+    background: #ffffff;
+
+    color: #111827;
+
+    border-radius: 14px;
+
+    padding: 18px;
+
+    margin-top: 15px;
+
+    box-shadow:
+        0 8px 25px
+        rgba(0,0,0,.12);
+}
+
+.fixture-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-bottom: 15px;
+}
+
+.fixture-title {
+
+    font-size: 18px;
+
+    font-weight: 800;
+
+    margin: 0;
+}
+
+.fixture-meta {
+
+    color: #6b7280;
+
+    font-size: 13px;
+
+    margin-top: 6px;
+}
+
+
+/* =========================================================
+   TEAMS
+========================================================= */
+
+.teams {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        auto
+        1fr;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin: 18px 0;
+}
+
+.team {
+
+    text-align: center;
+}
+
+.team-logo {
+
+    width: 55px;
+
+    height: 55px;
+
+    object-fit: contain;
+
+    display: block;
+
+    margin: 0 auto 8px;
+}
+
+.team-name {
+
+    font-size: 14px;
+
+    font-weight: bold;
+}
+
+.vs {
+
+    font-size: 14px;
+
+    font-weight: bold;
+
+    color: #6b7280;
+}
+
+
+/* =========================================================
+   ANALYZE BUTTON
+========================================================= */
+
+.analyze-button {
+
+    background: #2563eb;
+
+    color: white;
+
+    width: 100%;
+
+    margin-top: 12px;
+}
+
+
+/* =========================================================
+   ANALYSIS
+========================================================= */
+
+.analysis {
+
+    margin-top: 15px;
+
+    background: #f3f4f6;
+
+    color: #111827;
+
+    border-radius: 12px;
+
+    padding: 15px;
+}
+
+.hidden {
+
+    display: none;
+}
+
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(180px, 1fr)
+        );
+
+    gap: 10px;
+
+    margin-top: 12px;
+}
+
+.stat {
+
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 9px;
+
+    padding: 12px;
+}
+
+.stat-title {
+
+    font-size: 12px;
+
+    color: #6b7280;
+}
+
+.stat-value {
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    margin-top: 5px;
+}
+
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.form-item {
+
+    display: inline-block;
+
+    padding: 6px 9px;
+
+    margin: 3px;
+
+    border-radius: 6px;
+
+    font-weight: bold;
+
+    font-size: 12px;
+}
+
+.win {
+
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+.draw {
+
+    background: #fef3c7;
+
+    color: #92400e;
+}
+
+.loss {
+
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+
+/* =========================================================
+   MARKET
+========================================================= */
+
+.market-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 8px;
+
+    margin-top: 10px;
+}
+
+.market {
+
+    background: white;
+
+    border: 1px solid #ddd;
+
+    border-radius: 8px;
+
+    padding: 12px;
+
+    text-align: center;
+}
+
+.market-title {
+
+    font-size: 12px;
+
+    color: #6b7280;
+}
+
+.market-value {
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    margin-top: 4px;
+}
+
+
+/* =========================================================
+   EVIDENCE
+========================================================= */
+
+.evidence {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(140px, 1fr)
+        );
+
+    gap: 8px;
+}
+
+.evidence-item {
+
+    padding: 10px;
+
+    border-radius: 7px;
+
+    font-size: 13px;
+
+    font-weight: bold;
+}
+
+.available {
+
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+.missing {
+
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+
+/* =========================================================
+   WARNING
+========================================================= */
+
+.warning {
+
+    background: #fff7ed;
+
+    border: 1px solid #fed7aa;
+
+    color: #9a3412;
+
+    padding: 10px;
+
+    border-radius: 7px;
+
+    margin-top: 7px;
+}
+
+
+/* =========================================================
+   FINAL PREDICTION
+========================================================= */
+
+.prediction-result {
+
+    margin-top: 15px;
+
+    background: #111827;
+
+    color: white;
+
+    border-radius: 14px;
+
+    padding: 25px 20px;
+
+    text-align: center;
+
+    border: 2px solid #2563eb;
+}
+
+.prediction-label {
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+    color: #9ca3af;
+
+    letter-spacing: 2px;
+}
+
+.prediction-value {
+
+    font-size: 30px;
+
+    font-weight: bold;
+
+    margin-top: 8px;
+
+    color: #22c55e;
+}
+
+.probability-label {
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+    color: #9ca3af;
+
+    letter-spacing: 2px;
+
+    margin-top: 20px;
+}
+
+.probability-value {
+
+    font-size: 26px;
+
+    font-weight: bold;
+
+    margin-top: 6px;
+}
+
+
+/* =========================================================
+   DETAILS
+========================================================= */
+
+details {
+
+    margin-top: 12px;
+}
+
+summary {
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+pre {
+
+    white-space: pre-wrap;
+
+    word-break: break-word;
+
+    background: #111827;
+
+    color: #e5e7eb;
+
+    padding: 12px;
+
+    border-radius: 8px;
+
+    font-size: 11px;
+
+    overflow-x: auto;
+}
+
+
+/* =========================================================
+   DIVIDER
+========================================================= */
+
+hr {
+
+    border: 0;
+
+    border-top:
+        1px solid #e5e7eb;
+
+    margin: 15px 0;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width:600px) {
+
+    .container {
+
+        padding: 12px;
+    }
+
+    .header h1 {
+
+        font-size: 27px;
+    }
+
+    .teams {
+
+        grid-template-columns:
+            1fr
+            auto
+            1fr;
+    }
+
+    .team-logo {
+
+        width: 45px;
+
+        height: 45px;
+    }
+
+    .market-grid {
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .fixture-title {
+
+        font-size: 16px;
+    }
+
+    .prediction-value {
+
+        font-size: 25px;
+    }
+
+}
+
+</style>
+
 </head>
+
 
 <body>
 
-<div class="page">
 
-    <!-- =========================
+<div class="container">
+
+
+    <!-- =====================================================
          HEADER
-    ========================== -->
+    ====================================================== -->
 
-    <header class="header">
+    <div class="header">
 
-        <h1 class="brand">
-            TOMSON<span>STAKES</span>
+        <h1>
+            🔥 TOMSONSTAKES
         </h1>
 
-        <p class="subtitle">
-            Global Football Prediction Engine —
-            fixture scanning, evidence collection,
-            market analysis and probability-driven predictions.
-        </p>
-
-    </header>
-
-
-    <!-- =========================
-         SCAN PANEL
-    ========================== -->
-
-    <section class="scan-panel">
-
-        <h2 class="scan-title">
-            Fixture Scanner
-        </h2>
-
-        <p class="scan-description">
-            Select a date to retrieve available fixtures.
-            You can then analyze individual matches using
-            the web-evidence, normalization and prediction
-            pipeline.
-        </p>
-
-        <div class="controls">
-
-            <div class="date-wrapper">
-
-                <label for="matchDate">
-                    Match Date
-                </label>
-
-                <input
-                    type="date"
-                    id="matchDate"
-                >
-
-            </div>
-
-            <button
-                type="button"
-                class="main-button"
-                id="scanButton"
-            >
-                ANALYZE MATCHES
-            </button>
-
-        </div>
-
-    </section>
-
-
-    <!-- =========================
-         STATUS
-    ========================== -->
-
-    <div
-        id="status"
-        class="status"
-    ></div>
-
-
-    <!-- =========================
-         RESULTS HEADER
-    ========================== -->
-
-    <div
-        class="results-header"
-        id="resultsHeader"
-        style="display:none;"
-    >
-
-        <h2 class="results-title">
-            Fixtures
-        </h2>
-
-        <div
-            id="fixtureCount"
-            class="fixture-count"
-        >
-            0 fixtures
+        <div class="subtitle">
+            GLOBAL FOOTBALL PREDICTION ENGINE
         </div>
 
     </div>
 
 
-    <!-- =========================
-         FIXTURES
-    ========================== -->
+    <!-- =====================================================
+         DATE CONTROL
+    ====================================================== -->
 
-    <section id="fixturesContainer">
+    <div class="control-box">
 
-        <div class="empty-state">
-            Select a match date and click
-            <strong>ANALYZE MATCHES</strong>.
-        </div>
+        <p>
+            Select a date to scan available football fixtures.
+        </p>
 
-    </section>
+        <input
+            type="date"
+            id="matchDate"
+        >
+
+        <br>
+
+        <button
+            class="main-button"
+            id="scanButton"
+        >
+            🔎 ANALYZE MATCHES
+        </button>
+
+    </div>
 
 
-    <!-- =========================
-         FOOTER
-    ========================== -->
+    <!-- =====================================================
+         RESULTS
+    ====================================================== -->
 
-    <footer class="footer">
-        TomsonStakes Global Football
-        · Prediction Engine V2
-    </footer>
+    <div id="results"></div>
+
 
 </div>
 
 
+
 <script>
-"use strict";
-
-/* =========================================================
-   GLOBAL STATE
-========================================================= */
-
-const appState = {
-    fixtures: [],
-    selectedDate: "",
-    scanning: false,
-    analyzing: {}
-};
-
-
-/* =========================================================
-   DOM ELEMENTS
-========================================================= */
-
-const matchDateInput =
-    document.getElementById("matchDate");
-
-const scanButton =
-    document.getElementById("scanButton");
-
-const statusBox =
-    document.getElementById("status");
-
-const fixturesContainer =
-    document.getElementById("fixturesContainer");
-
-const resultsHeader =
-    document.getElementById("resultsHeader");
-
-const fixtureCount =
-    document.getElementById("fixtureCount");
-
 
 /* =========================================================
    INITIALIZATION
 ========================================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
 
-    setDefaultDate();
+        const dateInput =
+            document.getElementById(
+                "matchDate"
+            );
 
-    scanButton.addEventListener(
-        "click",
-        analyzeMatches
-    );
+        const scanButton =
+            document.getElementById(
+                "scanButton"
+            );
 
-    /*
-     * Automatically scan when the user selects a date.
-     * The button can still be used manually.
-     */
-    matchDateInput.addEventListener(
-        "change",
-        () => {
-            if (matchDateInput.value) {
-                analyzeMatches();
+
+        /*
+         * Date selection automatically scans.
+         */
+
+        dateInput.addEventListener(
+            "change",
+            function () {
+
+                if (this.value) {
+
+                    analyzeMatches();
+
+                }
+
             }
-        }
-    );
-
-});
+        );
 
 
-/* =========================================================
-   DEFAULT DATE
-========================================================= */
+        /*
+         * Button also scans manually.
+         */
 
-function setDefaultDate() {
+        scanButton.addEventListener(
+            "click",
+            analyzeMatches
+        );
 
-    /*
-     * Use the browser's local date rather than relying
-     * on UTC so the date displayed to the Nigerian user
-     * does not unexpectedly shift.
-     */
-
-    const now = new Date();
-
-    const year =
-        now.getFullYear();
-
-    const month =
-        String(now.getMonth() + 1)
-            .padStart(2, "0");
-
-    const day =
-        String(now.getDate())
-            .padStart(2, "0");
-
-    matchDateInput.value =
-        `${year}-${month}-${day}`;
-}
+    }
+);
 
 
 /* =========================================================
-   STATUS FUNCTIONS
-========================================================= */
-
-function showStatus(
-    message,
-    type = "loading"
-) {
-
-    statusBox.textContent =
-        message;
-
-    statusBox.className =
-        `status show ${type}`;
-}
-
-
-function hideStatus() {
-
-    statusBox.className =
-        "status";
-
-    statusBox.textContent =
-        "";
-}
-
-
-/* =========================================================
-   MAIN FIXTURE SCANNER
+   GLOBAL FIXTURE SEARCH
 ========================================================= */
 
 async function analyzeMatches() {
 
-    if (appState.scanning) {
-        return;
-    }
-
     const date =
-        matchDateInput.value;
+        document.getElementById(
+            "matchDate"
+        ).value;
+
+    const results =
+        document.getElementById(
+            "results"
+        );
+
+    const scanButton =
+        document.getElementById(
+            "scanButton"
+        );
+
 
     if (!date) {
 
-        showStatus(
-            "Please select a match date first.",
-            "warning"
-        );
+        results.innerHTML = `
 
-        return;
-    }
+            <div class="notice status-warning">
 
-    appState.selectedDate =
-        date;
+                ⚠️ Please select a match date.
 
-    appState.scanning =
-        true;
+            </div>
 
-    scanButton.disabled =
-        true;
-
-    scanButton.textContent =
-        "SCANNING FIXTURES...";
-
-    fixturesContainer.innerHTML =
-        `
-        <div class="empty-state">
-            Connecting to the fixture service...
-        </div>
         `;
 
-    resultsHeader.style.display =
-        "none";
+        return;
 
-    showStatus(
-        `Retrieving fixtures for ${formatDate(date)}...`,
-        "loading"
-    );
+    }
+
+
+    scanButton.disabled = true;
+
+
+    results.innerHTML = `
+
+        <div class="notice">
+
+            <h2>
+                🔥 TOMSONSTAKES
+            </h2>
+
+            <p>
+                🔎 Scanning global football fixtures for
+                <strong>
+                    ${escapeHtml(date)}
+                </strong>
+                ...
+            </p>
+
+            <p>
+                ⏳ Connecting to football data...
+            </p>
+
+        </div>
+
+    `;
+
 
     try {
 
-        const url =
-            `/api/fixtures?date=${encodeURIComponent(date)}`;
-
-        console.log(
-            "[TomsonStakes] Fixture request:",
-            url
-        );
-
-        const data =
-            await fetchJSON(url);
-
-        console.log(
-            "[TomsonStakes] Fixture response:",
-            data
-        );
-
-        const fixtures =
-            extractFixtures(data);
-
-        if (!fixtures.length) {
-
-            appState.fixtures = [];
-
-            fixturesContainer.innerHTML =
-                `
-                <div class="empty-state">
-                    No fixtures were returned for
-                    <strong>${escapeHtml(
-                        formatDate(date)
-                    )}</strong>.
-                    <br><br>
-                    Check the fixture API or try another date.
-                </div>
-                `;
-
-            showStatus(
-                "The fixture endpoint responded successfully, but no fixtures were found.",
-                "warning"
+        const response =
+            await fetch(
+                "/api/fixtures?date=" +
+                encodeURIComponent(date)
             );
 
-            return;
+
+        const data =
+            await readJsonResponse(
+                response
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                data.message ||
+                "Unable to retrieve football fixtures."
+            );
+
         }
 
-        appState.fixtures =
-            fixtures;
 
-        renderFixtures(fixtures);
+        /*
+         * API-Football normally returns:
+         *
+         * {
+         *     response: [...]
+         * }
+         */
 
-        resultsHeader.style.display =
-            "flex";
+        const fixtures =
+            Array.isArray(
+                data.response
+            )
+                ? data.response
+                : [];
 
-        fixtureCount.textContent =
-            `${fixtures.length} fixture${fixtures.length === 1 ? "" : "s"}`;
 
-        showStatus(
-            `${fixtures.length} fixture${fixtures.length === 1 ? "" : "s"} loaded for ${formatDate(date)}.`,
-            "success"
+        if (
+            fixtures.length === 0
+        ) {
+
+            results.innerHTML = `
+
+                <div class="notice status-warning">
+
+                    <h2>
+                        🔥 TOMSONSTAKES
+                    </h2>
+
+                    <p>
+                        📅 Date:
+                        <strong>
+                            ${escapeHtml(date)}
+                        </strong>
+                    </p>
+
+                    <p>
+                        ⚠️ No fixtures were returned
+                        for this date.
+                    </p>
+
+                </div>
+
+            `;
+
+            return;
+
+        }
+
+
+        let html = `
+
+            <div class="notice">
+
+                <h2>
+                    🔥 GLOBAL FIXTURES
+                </h2>
+
+                <p>
+                    📅 Date:
+                    <strong>
+                        ${escapeHtml(date)}
+                    </strong>
+                </p>
+
+                <p>
+                    🌍 Fixtures found:
+                    <strong>
+                        ${fixtures.length}
+                    </strong>
+                </p>
+
+            </div>
+
+        `;
+
+
+        fixtures.forEach(
+            function (
+                match,
+                index
+            ) {
+
+                html +=
+                    buildFixtureCard(
+                        match,
+                        index
+                    );
+
+            }
         );
+
+
+        results.innerHTML =
+            html;
+
 
     } catch (error) {
 
         console.error(
-            "[TomsonStakes] Fixture scan failed:",
+            "FIXTURE SEARCH ERROR:",
             error
         );
 
-        fixturesContainer.innerHTML =
-            createErrorHTML(
-                "Fixture scan failed",
-                error
-            );
 
-        showStatus(
-            "Unable to retrieve fixtures. Check the API endpoint and browser console.",
-            "error"
-        );
+        results.innerHTML = `
+
+            <div class="notice status-error">
+
+                <h2>
+                    ❌ Fixture Search Failed
+                </h2>
+
+                <p>
+                    ${escapeHtml(
+                        error.message
+                    )}
+                </p>
+
+                <details>
+
+                    <summary>
+                        Technical details
+                    </summary>
+
+                    <pre>
+${escapeHtml(
+    error.stack ||
+    String(error)
+)}
+                    </pre>
+
+                </details>
+
+            </div>
+
+        `;
 
     } finally {
-
-        appState.scanning =
-            false;
 
         scanButton.disabled =
             false;
 
-        scanButton.textContent =
-            "ANALYZE MATCHES";
     }
+
 }
 
 
 /* =========================================================
-   EXTRACT FIXTURES
-========================================================= */
-
-function extractFixtures(data) {
-
-    /*
-     * Your current frontend expects:
-     *
-     * {
-     *     response: [...]
-     * }
-     *
-     * This function also accepts a few common variations
-     * so the frontend is more tolerant.
-     */
-
-    if (Array.isArray(data)) {
-        return data;
-    }
-
-    if (
-        data &&
-        Array.isArray(data.response)
-    ) {
-        return data.response;
-    }
-
-    if (
-        data &&
-        data.data &&
-        Array.isArray(data.data.response)
-    ) {
-        return data.data.response;
-    }
-
-    if (
-        data &&
-        Array.isArray(data.fixtures)
-    ) {
-        return data.fixtures;
-    }
-
-    if (
-        data &&
-        data.data &&
-        Array.isArray(data.data.fixtures)
-    ) {
-        return data.data.fixtures;
-    }
-
-    return [];
-}
-
-
-/* =========================================================
-   RENDER FIXTURES
-========================================================= */
-
-function renderFixtures(fixtures) {
-
-    fixturesContainer.innerHTML =
-        "";
-
-    fixtures.forEach(
-        (match, index) => {
-
-            const card =
-                buildFixtureCard(
-                    match,
-                    index
-                );
-
-            fixturesContainer.insertAdjacentHTML(
-                "beforeend",
-                card
-            );
-        }
-    );
-}
-
-
-/* =========================================================
-   BUILD FIXTURE CARD
+   FIXTURE CARD
 ========================================================= */
 
 function buildFixtureCard(
@@ -1230,70 +1100,127 @@ function buildFixtureCard(
     index
 ) {
 
-    const home =
-        getTeamName(
-            match,
-            "home"
-        );
-
-    const away =
-        getTeamName(
-            match,
-            "away"
-        );
-
     const league =
-        match?.league?.name ||
-        match?.competition?.name ||
+        match.league?.name ||
         "Unknown Competition";
 
+
     const country =
-        match?.league?.country ||
-        match?.competition?.country ||
+        match.league?.country ||
         "";
 
-    const fixtureDate =
-        match?.fixture?.date ||
-        match?.date ||
+
+    const home =
+        match.teams?.home?.name ||
+        "Home Team";
+
+
+    const away =
+        match.teams?.away?.name ||
+        "Away Team";
+
+
+    const homeLogo =
+        match.teams?.home?.logo ||
         "";
+
+
+    const awayLogo =
+        match.teams?.away?.logo ||
+        "";
+
+
+    const fixtureId =
+        match.fixture?.id ||
+        null;
+
 
     const homeIdentity =
         createIdentity(home);
 
+
     const awayIdentity =
         createIdentity(away);
 
-    const selectedDate =
-        appState.selectedDate ||
-        getDateFromFixture(
-            fixtureDate
+
+    const identitiesValid =
+        Boolean(
+            homeIdentity
+        ) &&
+        Boolean(
+            awayIdentity
+        ) &&
+        homeIdentity !==
+            awayIdentity;
+
+
+    const kickoffUTC =
+        match.fixture?.date ||
+        null;
+
+
+    const kickoffWAT =
+        formatKickoff(
+            kickoffUTC
         );
 
-    const kickoff =
-        formatKickoffWAT(
-            fixtureDate
-        );
+
+    const matchDate =
+        kickoffUTC
+            ? kickoffUTC.substring(
+                0,
+                10
+            )
+            : document.getElementById(
+                "matchDate"
+              ).value;
+
 
     return `
-        <article
-            class="fixture-card"
-            id="fixture-card-${index}"
+
+        <div
+            class="fixture"
+            id="fixture-${index}"
         >
 
-            <div class="fixture-top">
+            <div class="fixture-header">
 
                 <div>
-                    <div class="league-name">
+
+                    <h3 class="fixture-title">
+
+                        ⚽
+                        ${escapeHtml(home)}
+                        vs
+                        ${escapeHtml(away)}
+
+                    </h3>
+
+                    <div class="fixture-meta">
+
+                        🏆
                         ${escapeHtml(league)}
+
+                        ${
+                            country
+                            ? " — " +
+                              escapeHtml(country)
+                            : ""
+                        }
+
                     </div>
 
-                    <div class="league-country">
-                        ${escapeHtml(country)}
-                    </div>
-                </div>
+                    <div class="fixture-meta">
 
-                <div class="kickoff">
-                    ${escapeHtml(kickoff)}
+                        🕐 Kickoff:
+                        <strong>
+                            ${escapeHtml(
+                                kickoffWAT
+                            )}
+                        </strong>
+
+                    </div>
+
                 </div>
 
             </div>
@@ -1301,58 +1228,144 @@ function buildFixtureCard(
 
             <div class="teams">
 
+
                 <div class="team">
 
-                    <div class="team-name">
-                        ${escapeHtml(home)}
-                    </div>
+                    ${
+                        homeLogo
+                        ? `
+                            <img
+                                class="team-logo"
+                                src="${escapeHtml(
+                                    homeLogo
+                                )}"
+                                alt="${escapeHtml(
+                                    home
+                                )}"
+                                loading="lazy"
+                                onerror="
+                                    this.style.display='none'
+                                "
+                            >
+                        `
+                        : ""
+                    }
 
-                    <div class="team-identity">
-                        ${escapeHtml(homeIdentity)}
+                    <div class="team-name">
+
+                        ${escapeHtml(home)}
+
                     </div>
 
                 </div>
 
 
                 <div class="vs">
+
                     VS
+
                 </div>
 
 
-                <div class="team away">
+                <div class="team">
+
+                    ${
+                        awayLogo
+                        ? `
+                            <img
+                                class="team-logo"
+                                src="${escapeHtml(
+                                    awayLogo
+                                )}"
+                                alt="${escapeHtml(
+                                    away
+                                )}"
+                                loading="lazy"
+                                onerror="
+                                    this.style.display='none'
+                                "
+                            >
+                        `
+                        : ""
+                    }
 
                     <div class="team-name">
-                        ${escapeHtml(away)}
-                    </div>
 
-                    <div class="team-identity">
-                        ${escapeHtml(awayIdentity)}
+                        ${escapeHtml(away)}
+
                     </div>
 
                 </div>
 
+
+            </div>
+
+
+            <div class="fixture-meta">
+
+                🆔
+
+                ${escapeHtml(homeIdentity)}
+
+                vs
+
+                ${escapeHtml(awayIdentity)}
+
             </div>
 
 
-            <div class="fixture-actions">
+            ${
+                fixtureId
+                ? `
+                    <div class="fixture-meta">
 
-                <button
-                    type="button"
-                    class="analyze-button"
-                    id="analyze-button-${index}"
-                    onclick="runMatchAnalysis(
-                        ${index},
-                        ${escapeJs(home)},
-                        ${escapeJs(away)},
-                        ${escapeJs(homeIdentity)},
-                        ${escapeJs(awayIdentity)},
-                        ${escapeJs(selectedDate)}
-                    )"
-                >
-                    ANALYZE MATCH
-                </button>
+                        Fixture ID:
+                        <strong>
+                            ${escapeHtml(
+                                fixtureId
+                            )}
+                        </strong>
 
-            </div>
+                    </div>
+                `
+                : ""
+            }
+
+
+            ${
+                identitiesValid
+                ? `
+
+                    <button
+                        class="analyze-button"
+                        id="analyze-button-${index}"
+                        onclick="runMatchAnalysis(
+                            ${index},
+                            '${escapeJs(home)}',
+                            '${escapeJs(away)}',
+                            '${escapeJs(homeIdentity)}',
+                            '${escapeJs(awayIdentity)}',
+                            '${escapeJs(matchDate)}',
+                            ${fixtureId || "null"}
+                        )"
+                    >
+
+                        🔍 ANALYZE MATCH
+
+                    </button>
+
+                `
+                : `
+
+                    <div class="status status-error">
+
+                        ❌ Unable to create valid
+                        team identities.
+
+                    </div>
+
+                `
+            }
 
 
             <div
@@ -1360,13 +1373,16 @@ function buildFixtureCard(
                 class="analysis hidden"
             ></div>
 
-        </article>
+
+        </div>
+
     `;
+
 }
 
 
 /* =========================================================
-   RUN INDIVIDUAL MATCH ANALYSIS
+   MATCH ANALYSIS
 ========================================================= */
 
 async function runMatchAnalysis(
@@ -1375,1339 +1391,828 @@ async function runMatchAnalysis(
     away,
     homeIdentity,
     awayIdentity,
-    date
+    date,
+    fixtureId
 ) {
 
-    if (appState.analyzing[index]) {
-        return;
-    }
-
-    appState.analyzing[index] =
-        true;
-
-    const analysisBox =
+    const box =
         document.getElementById(
             `analysis-${index}`
         );
 
-    const analyzeButton =
+
+    const button =
         document.getElementById(
             `analyze-button-${index}`
         );
 
-    if (!analysisBox) {
+
+    if (!box || !button) {
+
         return;
+
     }
 
-    if (analyzeButton) {
-        analyzeButton.disabled =
-            true;
 
-        analyzeButton.textContent =
-            "ANALYZING...";
-    }
-
-    analysisBox.classList.remove(
+    box.classList.remove(
         "hidden"
     );
 
-    analysisBox.innerHTML =
-        `
-        <div class="analysis-loading">
+
+    button.disabled = true;
+
+
+    box.innerHTML = `
+
+        <div class="status status-warning">
+
+            🔎 Searching evidence for
+
             <strong>
                 ${escapeHtml(home)}
-                vs
+            </strong>
+
+            vs
+
+            <strong>
                 ${escapeHtml(away)}
             </strong>
-            <br><br>
-            Step 1/3 — Searching for
-            web evidence, recent form,
-            xG, BTTS, totals, H2H,
-            injuries and market information...
-        </div>
-        `;
 
-    /*
-     * This is the exact match object expected by
-     * your /api/predict backend.
-     */
+            ...
+
+        </div>
+
+    `;
+
 
     const MATCH = {
-        home,
-        homeIdentity,
-        away,
-        awayIdentity,
-        date
+
+        home:
+            home,
+
+        homeIdentity:
+            homeIdentity,
+
+        away:
+            away,
+
+        awayIdentity:
+            awayIdentity,
+
+        date:
+            date,
+
+        fixtureId:
+            fixtureId || null
+
     };
+
 
     try {
 
-        /* ==========================================
+
+        /* =================================================
            STEP 1 — WEB DATA
-        ========================================== */
+        ================================================= */
 
-        const webQuery =
-            new URLSearchParams({
-                home,
-                homeIdentity,
-                away,
-                awayIdentity,
-                date
-            });
+        const webUrl =
+            "/api/web-data" +
 
-        const webURL =
-            `/api/web-data?${webQuery.toString()}`;
+            "?home=" +
+            encodeURIComponent(home) +
 
-        console.log(
-            "[TomsonStakes] Web-data request:",
-            webURL
-        );
+            "&homeIdentity=" +
+            encodeURIComponent(homeIdentity) +
 
-        analysisBox.innerHTML =
-            `
-            <div class="analysis-loading">
-                <strong>
-                    ${escapeHtml(home)}
-                    vs
-                    ${escapeHtml(away)}
-                </strong>
-                <br><br>
-                Step 1/3 — Searching web evidence...
-            </div>
-            `;
+            "&away=" +
+            encodeURIComponent(away) +
+
+            "&awayIdentity=" +
+            encodeURIComponent(awayIdentity) +
+
+            "&date=" +
+            encodeURIComponent(date);
+
+
+        const webResponse =
+            await fetch(
+                webUrl
+            );
+
 
         const webData =
-            await fetchJSON(webURL);
-
-        console.log(
-            "[TomsonStakes] Web data:",
-            webData
-        );
+            await readJsonResponse(
+                webResponse
+            );
 
 
-        /* ==========================================
-           STEP 2 — NORMALIZE WEB DATA
-        ========================================== */
+        if (!webResponse.ok) {
 
-        analysisBox.innerHTML =
-            `
-            <div class="analysis-loading">
-                <strong>
-                    ${escapeHtml(home)}
-                    vs
-                    ${escapeHtml(away)}
-                </strong>
-                <br><br>
-                Step 2/3 — Normalizing evidence...
+            throw new Error(
+                webData.error ||
+                webData.message ||
+                "Web data request failed."
+            );
+
+        }
+
+
+        box.innerHTML = `
+
+            <div class="status status-warning">
+
+                ⚙️ Normalizing collected sources...
+
             </div>
-            `;
 
-        const normalizedResponse =
-            await fetchJSON(
+        `;
+
+
+        /* =================================================
+           STEP 2 — NORMALIZE
+        ================================================= */
+
+        const normalizeResponse =
+            await fetch(
                 "/api/normalize-web",
                 {
-                    method: "POST",
+
+                    method:
+                        "POST",
+
                     headers: {
+
                         "Content-Type":
                             "application/json"
+
                     },
-                    body: JSON.stringify({
-                        ...webData,
-                        match: MATCH
-                    })
+
+                    body:
+                        JSON.stringify({
+
+                            ...webData,
+
+                            match:
+                                MATCH
+
+                        })
+
                 }
             );
 
-        /*
-         * Some normalize endpoints return the normalized
-         * object directly, while others return:
-         *
-         * {
-         *   normalized: {...}
-         * }
-         *
-         * Support both.
-         */
 
         const normalized =
-            normalizedResponse?.normalized ||
-            normalizedResponse?.data?.normalized ||
-            normalizedResponse;
-
-        console.log(
-            "[TomsonStakes] Normalized data:",
-            normalized
-        );
+            await readJsonResponse(
+                normalizeResponse
+            );
 
 
-        /* ==========================================
-           STEP 3 — PREDICTION
-        ========================================== */
+        if (!normalizeResponse.ok) {
 
-        analysisBox.innerHTML =
-            `
-            <div class="analysis-loading">
-                <strong>
-                    ${escapeHtml(home)}
-                    vs
-                    ${escapeHtml(away)}
-                </strong>
-                <br><br>
-                Step 3/3 — Running prediction engine...
+            throw new Error(
+                normalized.error ||
+                normalized.message ||
+                "Normalization failed."
+            );
+
+        }
+
+
+        box.innerHTML = `
+
+            <div class="status status-warning">
+
+                🧠 Running prediction engine...
+
             </div>
-            `;
+
+        `;
+
+
+        /* =================================================
+           STEP 3 — PREDICTION
+        ================================================= */
 
         const predictionResponse =
-            await fetchJSON(
+            await fetch(
                 "/api/predict",
                 {
-                    method: "POST",
+
+                    method:
+                        "POST",
+
                     headers: {
+
                         "Content-Type":
                             "application/json"
+
                     },
-                    body: JSON.stringify({
-                        match: MATCH,
-                        normalized: normalized
-                    })
+
+                    body:
+                        JSON.stringify({
+
+                            match:
+                                MATCH,
+
+                            normalized:
+                                normalized
+
+                        })
+
                 }
             );
 
-        console.log(
-            "[TomsonStakes] Prediction:",
-            predictionResponse
-        );
+
+        const prediction =
+            await readJsonResponse(
+                predictionResponse
+            );
+
+
+        if (!predictionResponse.ok) {
+
+            throw new Error(
+                prediction.error ||
+                prediction.message ||
+                "Prediction failed."
+            );
+
+        }
+
+
+        /* =================================================
+           DISPLAY
+        ================================================= */
+
+        box.innerHTML =
+            buildAnalysisHTML(
+                normalized,
+                prediction
+            );
+
+
+        button.textContent =
+            "✓ ANALYSIS COMPLETE";
 
 
         /*
-         * Your backend currently returns:
-         *
-         * {
-         *   success: true,
-         *   prediction: ...,
-         *   probability: ...,
-         *   internalAnalysis: {...}
-         * }
+         * Keep button enabled so user can
+         * rerun the analysis if desired.
          */
 
-        analysisBox.innerHTML =
-            buildAnalysisHTML(
-                normalized,
-                predictionResponse,
-                MATCH
-            );
+        button.disabled = false;
 
-        analysisBox.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest"
-        });
 
     } catch (error) {
 
         console.error(
-            `[TomsonStakes] Match ${index} failed:`,
+            "MATCH ANALYSIS ERROR:",
             error
         );
 
-        analysisBox.innerHTML =
-            createErrorHTML(
-                "Match analysis failed",
-                error
-            );
 
-    } finally {
+        box.innerHTML = `
 
-        appState.analyzing[index] =
+            <div class="status status-error">
+
+                ❌ Analysis failed.
+
+                <br><br>
+
+                <strong>
+                    ${escapeHtml(
+                        error.message
+                    )}
+                </strong>
+
+                <details>
+
+                    <summary>
+                        Technical details
+                    </summary>
+
+                    <pre>
+${escapeHtml(
+    error.stack ||
+    String(error)
+)}
+                    </pre>
+
+                </details>
+
+            </div>
+
+        `;
+
+
+        button.disabled =
             false;
 
-        if (analyzeButton) {
-
-            analyzeButton.disabled =
-                false;
-
-            analyzeButton.textContent =
-                "ANALYZE MATCH";
-        }
     }
+
 }
 
 
 /* =========================================================
-   BUILD ANALYSIS HTML
+   BUILD ANALYSIS
 ========================================================= */
 
 function buildAnalysisHTML(
     normalized,
-    predictionResponse,
-    MATCH
+    prediction
 ) {
 
-    const prediction =
-        predictionResponse?.prediction ??
-        predictionResponse?.internalAnalysis?.market ??
-        "NO FINAL PREDICTION";
+    if (
+        !prediction ||
+        !prediction.success
+    ) {
 
-    const probability =
-        predictionResponse?.probability ??
-        predictionResponse?.internalAnalysis?.modelProbability ??
-        null;
+        return `
 
-    const status =
-        predictionResponse?.status ??
-        "UNKNOWN";
+            <div class="status status-warning">
+
+                ⚠️ Prediction engine did not
+                return a successful result.
+
+                <details>
+
+                    <summary>
+                        Prediction response
+                    </summary>
+
+                    <pre>
+${escapeHtml(
+    JSON.stringify(
+        prediction,
+        null,
+        2
+    )
+)}
+                    </pre>
+
+                </details>
+
+            </div>
+
+        `;
+
+    }
+
 
     const internal =
-        predictionResponse?.internalAnalysis ??
+        prediction.internalAnalysis ||
         {};
 
-    const confidence =
-        internal?.confidence ??
-        0;
-
-    const modelMethod =
-        internal?.modelMethod ??
-        "UNKNOWN";
-
-    const marketProbability =
-        internal?.marketProbability;
-
-    const modelProbability =
-        internal?.modelProbability ??
-        probability;
-
-    const xg =
-        internal?.xg ??
-        {};
-
-    const btts =
-        internal?.btts ??
-        {};
-
-    const overUnder =
-        internal?.overUnder ??
-        [];
-
-    const doubleChance =
-        internal?.doubleChance ??
-        {};
-
-    const drawNoBet =
-        internal?.drawNoBet ??
-        {};
-
-    const candidates =
-        internal?.candidates ??
-        internal?.allCandidates ??
-        [];
-
-    const readiness =
-        internal?.readiness ??
-        {};
-
-    const normalizedForm =
-        normalized?.form ??
-        {};
-
-    const evidenceHTML =
-        buildEvidence(
-            normalized
-        );
-
-    const warningsHTML =
-        buildWarnings(
-            normalized
-        );
-
-    const formHTML =
-        buildForm(
-            normalizedForm,
-            MATCH
-        );
-
-    const candidateHTML =
-        buildCandidateMarkets(
-            candidates
-        );
-
-    const overUnderHTML =
-        buildOverUnder(
-            overUnder
-        );
-
-    const bttsHTML =
-        buildBTTS(
-            btts
-        );
-
-    const doubleChanceHTML =
-        buildDoubleChance(
-            doubleChance,
-            drawNoBet
-        );
-
-    return `
-        <div class="prediction-result">
-
-            <div class="prediction-label">
-                FINAL PREDICTION
-            </div>
-
-            <div class="prediction-value">
-                ${escapeHtml(
-                    formatMarket(prediction)
-                )}
-            </div>
-
-            <div class="probability-label">
-                MODEL PROBABILITY
-            </div>
-
-            <div class="probability-value">
-                ${formatPredictionProbability(
-                    probability
-                )}
-            </div>
-
-
-            <div class="prediction-meta">
-
-                <div class="meta-box">
-
-                    <div class="meta-label">
-                        Confidence
-                    </div>
-
-                    <div class="meta-value">
-                        ${formatPercentValue(
-                            confidence
-                        )}
-                    </div>
-
-                </div>
-
-
-                <div class="meta-box">
-
-                    <div class="meta-label">
-                        Status
-                    </div>
-
-                    <div class="meta-value">
-                        ${escapeHtml(
-                            status
-                        )}
-                    </div>
-
-                </div>
-
-
-                <div class="meta-box">
-
-                    <div class="meta-label">
-                        Model
-                    </div>
-
-                    <div class="meta-value">
-                        ${escapeHtml(
-                            modelMethod
-                        )}
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="analysis-grid">
-
-            <!-- MATCH -->
-
-            <div class="info-card">
-
-                <h3 class="info-title">
-                    Match
-                </h3>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        Home
-                    </span>
-
-                    <span class="info-value">
-                        ${escapeHtml(
-                            MATCH.home
-                        )}
-                    </span>
-
-                </div>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        Away
-                    </span>
-
-                    <span class="info-value">
-                        ${escapeHtml(
-                            MATCH.away
-                        )}
-                    </span>
-
-                </div>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        Date
-                    </span>
-
-                    <span class="info-value">
-                        ${escapeHtml(
-                            MATCH.date || "-"
-                        )}
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <!-- MODEL -->
-
-            <div class="info-card">
-
-                <h3 class="info-title">
-                    Model Metrics
-                </h3>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        Model probability
-                    </span>
-
-                    <span class="info-value">
-                        ${formatPredictionProbability(
-                            modelProbability
-                        )}
-                    </span>
-
-                </div>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        Market probability
-                    </span>
-
-                    <span class="info-value">
-                        ${formatPredictionProbability(
-                            marketProbability
-                        )}
-                    </span>
-
-                </div>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        Method
-                    </span>
-
-                    <span class="info-value">
-                        ${escapeHtml(
-                            modelMethod
-                        )}
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <!-- XG -->
-
-            <div class="info-card">
-
-                <h3 class="info-title">
-                    Expected Goals
-                </h3>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        ${escapeHtml(
-                            MATCH.home
-                        )}
-                    </span>
-
-                    <span class="info-value">
-                        ${formatNumber(
-                            xg?.home
-                        )}
-                    </span>
-
-                </div>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        ${escapeHtml(
-                            MATCH.away
-                        )}
-                    </span>
-
-                    <span class="info-value">
-                        ${formatNumber(
-                            xg?.away
-                        )}
-                    </span>
-
-                </div>
-
-                <div class="info-row">
-
-                    <span class="info-key">
-                        Total xG
-                    </span>
-
-                    <span class="info-value">
-                        ${formatNumber(
-                            xg?.total
-                        )}
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <!-- READINESS -->
-
-            <div class="info-card">
-
-                <h3 class="info-title">
-                    Data Readiness
-                </h3>
-
-                ${buildReadiness(
-                    readiness
-                )}
-
-            </div>
-
-
-            <!-- FORM -->
-
-            <div class="info-card full">
-
-                <h3 class="info-title">
-                    Recent Form
-                </h3>
-
-                ${formHTML}
-
-            </div>
-
-
-            <!-- CANDIDATE MARKETS -->
-
-            <div class="info-card full">
-
-                <h3 class="info-title">
-                    Candidate Markets
-                </h3>
-
-                ${candidateHTML}
-
-            </div>
-
-
-            <!-- BTTS -->
-
-            <div class="info-card">
-
-                <h3 class="info-title">
-                    BTTS
-                </h3>
-
-                ${bttsHTML}
-
-            </div>
-
-
-            <!-- OVER / UNDER -->
-
-            <div class="info-card">
-
-                <h3 class="info-title">
-                    Over / Under
-                </h3>
-
-                ${overUnderHTML}
-
-            </div>
-
-
-            <!-- DOUBLE CHANCE / DNB -->
-
-            <div class="info-card full">
-
-                <h3 class="info-title">
-                    Alternative Markets
-                </h3>
-
-                ${doubleChanceHTML}
-
-            </div>
-
-
-            <!-- EVIDENCE -->
-
-            <div class="info-card">
-
-                <h3 class="info-title">
-                    Evidence
-                </h3>
-
-                ${evidenceHTML}
-
-            </div>
-
-
-            <!-- WARNINGS -->
-
-            <div class="info-card">
-
-                <h3 class="info-title">
-                    Warnings
-                </h3>
-
-                ${warningsHTML}
-
-            </div>
-
-        </div>
-    `;
-}
-
-
-/* =========================================================
-   READINESS
-========================================================= */
-
-function buildReadiness(
-    readiness
-) {
-
-    if (
-        !readiness ||
-        Object.keys(readiness).length === 0
-    ) {
-        return `
-            <div class="no-data">
-                Readiness information unavailable.
-            </div>
-        `;
-    }
-
-    return Object.entries(
-        readiness
-    )
-        .map(
-            ([key, value]) => {
-
-                return `
-                    <div class="info-row">
-
-                        <span class="info-key">
-                            ${escapeHtml(
-                                prettifyKey(key)
-                            )}
-                        </span>
-
-                        <span class="info-value">
-                            ${value
-                                ? "READY"
-                                : "NOT READY"}
-                        </span>
-
-                    </div>
-                `;
-            }
-        )
-        .join("");
-}
-
-
-/* =========================================================
-   CANDIDATE MARKETS
-========================================================= */
-
-function buildCandidateMarkets(
-    candidates
-) {
-
-    if (!Array.isArray(candidates)) {
-
-        return `
-            <div class="no-data">
-                No candidate market data available.
-            </div>
-        `;
-    }
-
-    if (!candidates.length) {
-
-        return `
-            <div class="no-data">
-                No qualifying candidate markets.
-            </div>
-        `;
-    }
-
-    return `
-        <div class="market-list">
-
-            ${candidates
-                .map(
-                    candidate => {
-
-                        const probability =
-                            candidate?.probability ??
-                            candidate?.modelProbability ??
-                            null;
-
-                        const strength =
-                            candidate?.strength;
-
-                        const score =
-                            candidate?.score;
-
-                        return `
-                            <div class="market-item">
-
-                                <div class="market-item-top">
-
-                                    <div class="market-name">
-                                        ${escapeHtml(
-                                            formatMarket(
-                                                candidate?.market ||
-                                                candidate?.selection ||
-                                                "Market"
-                                            )
-                                        )}
-                                    </div>
-
-                                    <div class="market-probability">
-                                        ${formatPredictionProbability(
-                                            probability
-                                        )}
-                                    </div>
-
-                                </div>
-
-                                <div class="market-details">
-
-                                    ${
-                                        strength !== undefined
-                                        ? `
-                                            <span class="tag">
-                                                Strength:
-                                                ${formatNumber(
-                                                    strength
-                                                )}
-                                            </span>
-                                        `
-                                        : ""
-                                    }
-
-                                    ${
-                                        score !== undefined
-                                        ? `
-                                            <span class="tag">
-                                                Score:
-                                                ${formatNumber(
-                                                    score
-                                                )}
-                                            </span>
-                                        `
-                                        : ""
-                                    }
-
-                                </div>
-
-                            </div>
-                        `;
-                    }
-                )
-                .join("")}
-
-        </div>
-    `;
-}
-
-
-/* =========================================================
-   BTTS
-========================================================= */
-
-function buildBTTS(
-    btts
-) {
-
-    if (!btts) {
-
-        return `
-            <div class="no-data">
-                No BTTS data available.
-            </div>
-        `;
-    }
 
     const probability =
-        btts?.probability;
-
-    const assessments =
-        Array.isArray(
-            btts?.assessments
-        )
-            ? btts.assessments
-            : [];
-
-    let html = `
-        <div class="info-row">
-
-            <span class="info-key">
-                BTTS probability
-            </span>
-
-            <span class="info-value">
-                ${formatPredictionProbability(
-                    probability
-                )}
-            </span>
-
-        </div>
-    `;
-
-    if (assessments.length) {
-
-        html += assessments
-            .map(
-                item => {
-
-                    return `
-                        <div class="info-row">
-
-                            <span class="info-key">
-                                ${escapeHtml(
-                                    item?.selection ||
-                                    item?.market ||
-                                    "Selection"
-                                )}
-                            </span>
-
-                            <span class="info-value">
-                                ${formatPredictionProbability(
-                                    item?.probability ??
-                                    item?.sourceProbability
-                                )}
-                            </span>
-
-                        </div>
-                    `;
-                }
-            )
-            .join("");
-    }
-
-    return html;
-}
+        Number(
+            prediction.probability
+        );
 
 
-/* =========================================================
-   OVER / UNDER
-========================================================= */
+    const confidence =
+        Number(
+            internal.confidence
+        );
 
-function buildOverUnder(
-    overUnder
-) {
 
-    if (!Array.isArray(overUnder)) {
+    const modelMethod =
+        internal.modelMethod ||
+        "—";
 
-        return `
-            <div class="no-data">
-                No totals data available.
-            </div>
-        `;
-    }
 
-    if (!overUnder.length) {
+    const status =
+        prediction.status ||
+        "—";
 
-        return `
-            <div class="no-data">
-                No Over/Under assessment available.
-            </div>
-        `;
-    }
+
+    const xg =
+        internal.xg ||
+        {};
+
+
+    const modelProbability =
+        internal.modelProbability ||
+        {};
+
+
+    const doubleChance =
+        internal.doubleChance ||
+        {};
+
 
     return `
-        <div class="market-list">
 
-            ${overUnder
-                .map(
-                    item => {
-
-                        const selection =
-                            item?.selection ||
-                            item?.market ||
-                            "Total";
-
-                        const probability =
-                            item?.probability ??
-                            item?.sourceProbability;
-
-                        const implied =
-                            item?.impliedProbability;
-
-                        const edge =
-                            item?.edge;
-
-                        const value =
-                            item?.value;
-
-                        return `
-                            <div class="market-item">
-
-                                <div class="market-item-top">
-
-                                    <div class="market-name">
-                                        ${escapeHtml(
-                                            formatMarket(
-                                                selection
-                                            )
-                                        )}
-                                    </div>
-
-                                    <div class="market-probability">
-                                        ${formatPredictionProbability(
-                                            probability
-                                        )}
-                                    </div>
-
-                                </div>
-
-                                <div class="market-details">
-
-                                    ${
-                                        implied !== undefined
-                                        ? `
-                                            <span class="tag">
-                                                Implied:
-                                                ${formatPredictionProbability(
-                                                    implied
-                                                )}
-                                            </span>
-                                        `
-                                        : ""
-                                    }
-
-                                    ${
-                                        edge !== undefined
-                                        ? `
-                                            <span class="tag">
-                                                Edge:
-                                                ${formatPredictionProbability(
-                                                    edge
-                                                )}
-                                            </span>
-                                        `
-                                        : ""
-                                    }
-
-                                    ${
-                                        value !== undefined
-                                        ? `
-                                            <span class="tag ${
-                                                value
-                                                ? "positive"
-                                                : "negative"
-                                            }">
-                                                ${
-                                                    value
-                                                    ? "VALUE"
-                                                    : "NO VALUE"
-                                                }
-                                            </span>
-                                        `
-                                        : ""
-                                    }
-
-                                </div>
-
-                            </div>
-                        `;
-                    }
-                )
-                .join("")}
-
-        </div>
-    `;
-}
+        <h2>
+            📊 Match Analysis
+        </h2>
 
 
-/* =========================================================
-   DOUBLE CHANCE / DNB
-========================================================= */
+        <!-- FINAL PREDICTION -->
 
-function buildDoubleChance(
-    doubleChance,
-    drawNoBet
-) {
+        ${
+            prediction.prediction
+            ? `
 
-    const items = [];
+                <div class="prediction-result">
 
-    if (
-        doubleChance &&
-        typeof doubleChance === "object"
-    ) {
+                    <div class="prediction-label">
 
-        Object.entries(
-            doubleChance
-        ).forEach(
-            ([key, value]) => {
+                        FINAL PREDICTION
 
-                if (
-                    value !== null &&
-                    value !== undefined
-                ) {
+                    </div>
 
-                    items.push(`
-                        <div class="info-row">
+                    <div class="prediction-value">
 
-                            <span class="info-key">
-                                ${escapeHtml(
-                                    prettifyKey(key)
-                                )}
-                            </span>
+                        ${escapeHtml(
+                            prediction.prediction
+                        )}
 
-                            <span class="info-value">
-                                ${formatPredictionProbability(
-                                    value
-                                )}
-                            </span>
-
-                        </div>
-                    `);
-                }
-            }
-        );
-    }
-
-    if (
-        drawNoBet &&
-        typeof drawNoBet === "object"
-    ) {
-
-        Object.entries(
-            drawNoBet
-        ).forEach(
-            ([key, value]) => {
-
-                if (
-                    value !== null &&
-                    value !== undefined
-                ) {
-
-                    items.push(`
-                        <div class="info-row">
-
-                            <span class="info-key">
-                                DNB ${escapeHtml(
-                                    prettifyKey(key)
-                                )}
-                            </span>
-
-                            <span class="info-value">
-                                ${formatPredictionProbability(
-                                    value
-                                )}
-                            </span>
-
-                        </div>
-                    `);
-                }
-            }
-        );
-    }
-
-    if (!items.length) {
-
-        return `
-            <div class="no-data">
-                No alternative-market data available.
-            </div>
-        `;
-    }
-
-    return items.join("");
-}
+                    </div>
 
 
-/* =========================================================
-   FORM
-========================================================= */
+                    <div class="probability-label">
 
-function buildForm(
-    form,
-    MATCH
-) {
+                        PROBABILITY
 
-    if (!form) {
+                    </div>
 
-        return `
-            <div class="no-data">
-                No recent-form data available.
-            </div>
-        `;
-    }
+                    <div class="probability-value">
 
-    const homeForm =
-        getFormArray(
-            form,
-            "home"
-        );
-
-    const awayForm =
-        getFormArray(
-            form,
-            "away"
-        );
-
-    if (
-        !homeForm.length &&
-        !awayForm.length
-    ) {
-
-        return `
-            <div class="no-data">
-                Recent form data unavailable.
-            </div>
-        `;
-    }
-
-    return `
-        <div>
-
-            ${
-                homeForm.length
-                ? buildFormTeamRow(
-                    MATCH.home,
-                    homeForm
-                )
-                : ""
-            }
-
-            ${
-                awayForm.length
-                ? buildFormTeamRow(
-                    MATCH.away,
-                    awayForm
-                )
-                : ""
-            }
-
-        </div>
-    `;
-}
-
-
-function buildFormTeamRow(
-    team,
-    values
-) {
-
-    return `
-        <div class="form-row">
-
-            <div class="form-team">
-                ${escapeHtml(team)}
-            </div>
-
-            <div class="form-sequence">
-
-                ${values
-                    .map(
-                        value => {
-
-                            const result =
-                                String(value)
-                                    .trim()
-                                    .toUpperCase();
-
-                            const className =
-                                result === "W"
-                                    ? "win"
-                                    : result === "D"
-                                        ? "draw"
-                                        : result === "L"
-                                            ? "loss"
-                                            : "";
-
-                            return `
-                                <span
-                                    class="form-badge ${className}"
-                                >
-                                    ${escapeHtml(
-                                        result
-                                    )}
-                                </span>
-                            `;
+                        ${
+                            Number.isFinite(
+                                probability
+                            )
+                            ? probability.toFixed(0) + "%"
+                            : "—"
                         }
-                    )
-                    .join("")}
+
+                    </div>
+
+                </div>
+
+            `
+            : `
+
+                <div class="status status-warning">
+
+                    ⚠️ No sufficiently supported
+                    prediction was produced.
+
+                </div>
+
+            `
+        }
+
+
+        <!-- STATUS -->
+
+        <h3>
+            Analysis Status
+        </h3>
+
+
+        <div class="grid">
+
+
+            <div class="stat">
+
+                <div class="stat-title">
+                    Overall Status
+                </div>
+
+                <div class="stat-value">
+
+                    ${escapeHtml(
+                        String(status)
+                    )}
+
+                </div>
 
             </div>
 
+
+            <div class="stat">
+
+                <div class="stat-title">
+                    Confidence
+                </div>
+
+                <div class="stat-value">
+
+                    ${formatPercentValue(
+                        confidence
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="stat-title">
+                    Model Method
+                </div>
+
+                <div class="stat-value">
+
+                    ${escapeHtml(
+                        String(modelMethod)
+                    )}
+
+                </div>
+
+            </div>
+
+
         </div>
+
+
+        <!-- FORM -->
+
+        <h3>
+            Recent Form
+        </h3>
+
+
+        <div class="grid">
+
+
+            <div class="stat">
+
+                <div class="stat-title">
+                    Home
+                </div>
+
+                <div>
+
+                    ${buildForm(
+                        normalized.form?.home
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="stat-title">
+                    Away
+                </div>
+
+                <div>
+
+                    ${buildForm(
+                        normalized.form?.away
+                    )}
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- 1X2 -->
+
+        <h3>
+            1X2 Model Probability
+        </h3>
+
+
+        <div class="market-grid">
+
+
+            <div class="market">
+
+                <div class="market-title">
+                    HOME
+                </div>
+
+                <div class="market-value">
+
+                    ${formatPercentValue(
+                        modelProbability.home
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="market">
+
+                <div class="market-title">
+                    DRAW
+                </div>
+
+                <div class="market-value">
+
+                    ${formatPercentValue(
+                        modelProbability.draw
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="market">
+
+                <div class="market-title">
+                    AWAY
+                </div>
+
+                <div class="market-value">
+
+                    ${formatPercentValue(
+                        modelProbability.away
+                    )}
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- xG -->
+
+        <h3>
+            Expected Goals
+        </h3>
+
+
+        <div class="grid">
+
+
+            <div class="stat">
+
+                <div class="stat-title">
+                    Home xG
+                </div>
+
+                <div class="stat-value">
+
+                    ${formatNumber(
+                        xg.home
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="stat-title">
+                    Away xG
+                </div>
+
+                <div class="stat-value">
+
+                    ${formatNumber(
+                        xg.away
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="stat-title">
+                    Total xG
+                </div>
+
+                <div class="stat-value">
+
+                    ${formatNumber(
+                        xg.total
+                    )}
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- DOUBLE CHANCE -->
+
+        <h3>
+            Double Chance
+        </h3>
+
+
+        <div class="market-grid">
+
+
+            <div class="market">
+
+                <div class="market-title">
+                    HOME OR DRAW
+                </div>
+
+                <div class="market-value">
+
+                    ${formatPercentValue(
+                        doubleChance.homeOrDraw
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="market">
+
+                <div class="market-title">
+                    AWAY OR DRAW
+                </div>
+
+                <div class="market-value">
+
+                    ${formatPercentValue(
+                        doubleChance.awayOrDraw
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="market">
+
+                <div class="market-title">
+                    HOME OR AWAY
+                </div>
+
+                <div class="market-value">
+
+                    ${formatPercentValue(
+                        doubleChance.homeOrAway
+                    )}
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- EVIDENCE -->
+
+        <h3>
+            Data Evidence
+        </h3>
+
+        ${buildEvidence(
+            normalized,
+            internal
+        )}
+
+
+        <!-- WARNINGS -->
+
+        <h3>
+            Warnings
+        </h3>
+
+        ${buildWarnings(
+            normalized
+        )}
+
+
+        <!-- DEBUG -->
+
+        <details>
+
+            <summary>
+                🔧 Technical Analysis Data
+            </summary>
+
+            <pre>
+${escapeHtml(
+    JSON.stringify(
+        prediction,
+        null,
+        2
+    )
+)}
+            </pre>
+
+        </details>
+
     `;
-}
 
-
-function getFormArray(
-    form,
-    side
-) {
-
-    const possible =
-        form?.[side];
-
-    if (Array.isArray(possible)) {
-        return possible;
-    }
-
-    /*
-     * Some normalizers may return:
-     *
-     * home: {
-     *   results: [...]
-     * }
-     */
-
-    if (
-        possible &&
-        Array.isArray(
-            possible.results
-        )
-    ) {
-        return possible.results;
-    }
-
-    return [];
 }
 
 
@@ -2716,90 +2221,165 @@ function getFormArray(
 ========================================================= */
 
 function buildEvidence(
-    normalized
+    normalized,
+    internal
 ) {
 
-    if (!normalized) {
+    const readiness =
+        internal.readiness ||
+        normalized.availability ||
+        normalized.readiness ||
+        {};
 
-        return `
-            <div class="no-data">
-                No normalized evidence available.
-            </div>
-        `;
-    }
 
-    const evidence = [];
-
-    if (
-        normalized.form
-    ) {
-        evidence.push(
-            "Recent form data processed."
+    const formReady =
+        Boolean(
+            readiness.formReady
         );
-    }
 
-    if (
-        normalized.h2h
-    ) {
-        evidence.push(
-            "H2H data processed."
+
+    const xGReady =
+        Boolean(
+            readiness.xGReady
         );
-    }
 
-    if (
-        normalized.xG ||
-        normalized.xg
-    ) {
-        evidence.push(
-            "Expected-goals data processed."
+
+    const bttsReady =
+        Boolean(
+            readiness.bttsReady
         );
-    }
 
-    if (
-        normalized.btts
-    ) {
-        evidence.push(
-            "BTTS data processed."
+
+    const overUnderReady =
+        Boolean(
+            readiness.overUnderReady
         );
-    }
 
-    if (
-        normalized.overUnder
-    ) {
-        evidence.push(
-            "Over/Under market data processed."
+
+    const independentReady =
+        Boolean(
+            readiness.independentModelReady
         );
-    }
 
-    if (
-        normalized.odds
-    ) {
-        evidence.push(
-            "Market odds processed."
-        );
-    }
 
-    if (!evidence.length) {
+    const hasInjuries =
+        Array.isArray(
+            normalized.injuries
+        )
+        ? normalized.injuries.length > 0
+        : Array.isArray(
+            normalized.injuries?.evidence
+        )
+        ? normalized.injuries.evidence.length > 0
+        : false;
 
-        return `
-            <div class="no-data">
-                No evidence sections were detected.
-            </div>
-        `;
-    }
+
+    const hasLineups =
+        Array.isArray(
+            normalized.lineups
+        ) &&
+        normalized.lineups.length > 0;
+
+
+    const hasH2H =
+        Array.isArray(
+            normalized.h2h?.evidence
+        ) &&
+        normalized.h2h.evidence.length > 0;
+
+
+    const items = [
+
+        [
+            "Form",
+            formReady
+        ],
+
+        [
+            "xG",
+            xGReady
+        ],
+
+        [
+            "BTTS",
+            bttsReady
+        ],
+
+        [
+            "Over / Under",
+            overUnderReady
+        ],
+
+        [
+            "H2H",
+            hasH2H
+        ],
+
+        [
+            "Injuries",
+            hasInjuries
+        ],
+
+        [
+            "Lineups",
+            hasLineups
+        ],
+
+        [
+            "Independent Model",
+            independentReady
+        ]
+
+    ];
+
 
     return `
-        <ul class="evidence-list">
 
-            ${evidence
-                .map(
-                    item =>
-                        `<li>${escapeHtml(item)}</li>`
-                )
-                .join("")}
+        <div class="evidence">
 
-        </ul>
+            ${
+                items
+                    .map(
+                        function (
+                            item
+                        ) {
+
+                            return `
+
+                                <div class="
+                                    evidence-item
+                                    ${
+                                        item[1]
+                                        ? "available"
+                                        : "missing"
+                                    }
+                                ">
+
+                                    ${escapeHtml(
+                                        item[0]
+                                    )}
+
+                                    <br>
+
+                                    ${
+                                        item[1]
+                                        ? "✓ Available"
+                                        : "— Missing"
+                                    }
+
+                                </div>
+
+                            `;
+
+                        }
+                    )
+                    .join("")
+            }
+
+        </div>
+
     `;
+
 }
 
 
@@ -2811,633 +2391,469 @@ function buildWarnings(
     normalized
 ) {
 
-    const warnings = [];
+    const warnings =
+        Array.isArray(
+            normalized.warnings
+        )
+        ? normalized.warnings
+        : [];
 
-    if (!normalized) {
 
-        warnings.push(
-            "Normalized data was not returned."
-        );
-
-    } else {
-
-        if (
-            !normalized.form
-        ) {
-            warnings.push(
-                "Recent form data is missing."
-            );
-        }
-
-        if (
-            !normalized.xG &&
-            !normalized.xg
-        ) {
-            warnings.push(
-                "xG data is missing."
-            );
-        }
-
-        if (
-            !normalized.btts
-        ) {
-            warnings.push(
-                "BTTS data is missing."
-            );
-        }
-
-        if (
-            !normalized.overUnder
-        ) {
-            warnings.push(
-                "Over/Under data is missing."
-            );
-        }
-
-        if (
-            !normalized.odds
-        ) {
-            warnings.push(
-                "Odds data is missing."
-            );
-        }
-
-        if (
-            !normalized.h2h
-        ) {
-            warnings.push(
-                "H2H data is missing."
-            );
-        }
-    }
-
-    if (!warnings.length) {
+    if (
+        warnings.length === 0
+    ) {
 
         return `
-            <div class="no-data">
-                No major frontend data warnings detected.
+
+            <div class="status status-ready">
+
+                ✓ No warnings reported.
+
             </div>
+
         `;
+
     }
 
-    return `
-        <ul class="warning-list">
 
-            ${warnings
-                .map(
-                    warning =>
-                        `<li>${escapeHtml(
-                            warning
-                        )}</li>`
-                )
-                .join("")}
+    return warnings
+        .map(
+            function (
+                warning
+            ) {
 
-        </ul>
-    `;
-}
+                return `
 
+                    <div class="warning">
 
-/* =========================================================
-   FETCH JSON
-========================================================= */
+                        ⚠️
+                        ${escapeHtml(
+                            String(warning)
+                        )}
 
-async function fetchJSON(
-    url,
-    options = {}
-) {
+                    </div>
 
-    const response =
-        await fetch(
-            url,
-            {
-                ...options,
-                headers: {
-                    Accept:
-                        "application/json",
-                    ...(options.headers || {})
-                }
+                `;
+
             }
-        );
-
-    /*
-     * fetch() does not automatically reject on
-     * HTTP 4xx/5xx responses, so explicitly check
-     * response.ok before reading JSON.
-     */
-
-    if (!response.ok) {
-
-        let errorBody = "";
-
-        try {
-            errorBody =
-                await response.text();
-        } catch (_) {
-            errorBody =
-                "";
-        }
-
-        throw new Error(
-            `HTTP ${response.status} ${response.statusText}` +
-            (
-                errorBody
-                    ? ` — ${truncate(
-                        errorBody,
-                        800
-                    )}`
-                    : ""
-            )
-        );
-    }
-
-    const contentType =
-        response.headers.get(
-            "content-type"
-        ) || "";
-
-    if (
-        !contentType.includes(
-            "application/json"
         )
-    ) {
+        .join("");
 
-        const text =
-            await response.text();
-
-        throw new Error(
-            `Expected JSON but received ${contentType || "unknown content type"}: ` +
-            truncate(text, 500)
-        );
-    }
-
-    return response.json();
 }
 
 
 /* =========================================================
-   TEAM NAME
+   FORM
 ========================================================= */
 
-function getTeamName(
-    match,
-    side
+function buildForm(
+    form
 ) {
 
-    return (
-        match?.teams?.[side]?.name ||
-        match?.[side]?.name ||
-        match?.[side] ||
-        `Unknown ${side} team`
-    );
+    if (
+        !Array.isArray(form) ||
+        form.length === 0
+    ) {
+
+        return `
+
+            <span>
+                No reliable recent form found.
+            </span>
+
+        `;
+
+    }
+
+
+    return form
+        .map(
+            function (
+                match
+            ) {
+
+                const result =
+                    String(
+                        match.result ||
+                        match.outcome ||
+                        "?"
+                    )
+                    .toUpperCase();
+
+
+                let css =
+                    "draw";
+
+
+                if (
+                    result === "W"
+                ) {
+
+                    css =
+                        "win";
+
+                }
+
+
+                if (
+                    result === "L"
+                ) {
+
+                    css =
+                        "loss";
+
+                }
+
+
+                return `
+
+                    <span
+                        class="form-item ${css}"
+                        title="${escapeHtml(
+                            String(
+                                match.opponent ||
+                                ""
+                            )
+                        )}"
+                    >
+
+                        ${escapeHtml(
+                            result
+                        )}
+
+                    </span>
+
+                `;
+
+            }
+        )
+        .join("");
+
 }
 
 
 /* =========================================================
-   TEAM IDENTITY
+   FORMAT KICKOFF
 ========================================================= */
 
-function createIdentity(
-    name
+function formatKickoff(
+    utcDate
 ) {
 
-    if (!name) {
-        return "";
+    if (!utcDate) {
+
+        return "Time unavailable";
+
     }
 
-    return String(name)
-        .normalize("NFD")
-        .replace(
-            /[\u0300-\u036f]/g,
-            ""
-        )
-        .replace(
-            /&/g,
-            " AND "
-        )
-        .replace(
-            /[^a-zA-Z0-9]+/g,
-            "_"
-        )
-        .replace(
-            /^_+|_+$/g,
-            ""
-        )
-        .replace(
-            /_+/g,
-            "_"
-        )
-        .toUpperCase();
-}
-
-
-/* =========================================================
-   DATE HELPERS
-========================================================= */
-
-function getDateFromFixture(
-    value
-) {
-
-    if (!value) {
-        return "";
-    }
-
-    const date =
-        new Date(value);
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return "";
-    }
-
-    return [
-        date.getFullYear(),
-        String(
-            date.getMonth() + 1
-        ).padStart(2, "0"),
-        String(
-            date.getDate()
-        ).padStart(2, "0")
-    ].join("-");
-}
-
-
-function formatDate(
-    value
-) {
-
-    if (!value) {
-        return "-";
-    }
-
-    const date =
-        new Date(
-            `${value}T00:00:00`
-        );
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return value;
-    }
-
-    return date.toLocaleDateString(
-        "en-NG",
-        {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric"
-        }
-    );
-}
-
-
-function formatKickoffWAT(
-    value
-) {
-
-    if (!value) {
-        return "Kickoff unavailable";
-    }
-
-    const date =
-        new Date(value);
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return "Kickoff unavailable";
-    }
 
     try {
 
-        return new Intl.DateTimeFormat(
-            "en-NG",
-            {
-                timeZone:
-                    "Africa/Lagos",
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false
-            }
-        ).format(date) + " WAT";
+        const date =
+            new Date(
+                utcDate
+            );
 
-    } catch (_) {
 
-        return date.toLocaleString();
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+
+            return "Time unavailable";
+
+        }
+
+
+        return (
+
+            date.toLocaleDateString(
+                "en-NG",
+                {
+                    timeZone:
+                        "Africa/Lagos",
+
+                    day:
+                        "2-digit",
+
+                    month:
+                        "short"
+                }
+            )
+
+            +
+
+            " · "
+
+            +
+
+            date.toLocaleTimeString(
+                "en-NG",
+                {
+                    timeZone:
+                        "Africa/Lagos",
+
+                    hour:
+                        "2-digit",
+
+                    minute:
+                        "2-digit",
+
+                    hour12:
+                        false
+                }
+            )
+
+            +
+
+            " WAT"
+
+        );
+
+    } catch (error) {
+
+        return "Time unavailable";
+
     }
+
 }
 
 
 /* =========================================================
-   FORMATTING
+   FORMAT NUMBERS
 ========================================================= */
-
-function formatMarket(
-    market
-) {
-
-    if (
-        market === null ||
-        market === undefined
-    ) {
-        return "Unknown";
-    }
-
-    const text =
-        String(market);
-
-    const replacements = {
-        "HOME": "Home Win",
-        "DRAW": "Draw",
-        "AWAY": "Away Win",
-        "1": "Home Win",
-        "X": "Draw",
-        "2": "Away Win",
-        "OVER_2.5": "Over 2.5 Goals",
-        "UNDER_2.5": "Under 2.5 Goals",
-        "OVER 2.5": "Over 2.5 Goals",
-        "UNDER 2.5": "Under 2.5 Goals",
-        "BTTS_YES": "BTTS — Yes",
-        "BTTS_NO": "BTTS — No",
-        "BTTS YES": "BTTS — Yes",
-        "BTTS NO": "BTTS — No",
-        "HOME_OR_DRAW": "Home or Draw",
-        "AWAY_OR_DRAW": "Away or Draw",
-        "1X": "Home or Draw",
-        "X2": "Away or Draw"
-    };
-
-    const key =
-        text
-            .trim()
-            .toUpperCase();
-
-    if (
-        replacements[key]
-    ) {
-        return replacements[key];
-    }
-
-    return text
-        .replace(
-            /_/g,
-            " "
-        )
-        .replace(
-            /\b\w/g,
-            char =>
-                char.toUpperCase()
-        );
-}
-
 
 function formatNumber(
     value
 ) {
 
     if (
-        value === null ||
         value === undefined ||
+        value === null ||
         value === ""
     ) {
+
         return "—";
+
     }
+
 
     const number =
         Number(value);
 
+
     if (
         Number.isNaN(number)
     ) {
+
         return escapeHtml(
             String(value)
         );
+
     }
 
-    return number.toFixed(
-        2
-    );
+
+    return number.toFixed(2);
+
 }
 
 
-function formatPredictionProbability(
-    value
-) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ""
-    ) {
-        return "—";
-    }
-
-    let number =
-        Number(value);
-
-    if (
-        Number.isNaN(number)
-    ) {
-        return "—";
-    }
-
-    /*
-     * Support both:
-     *
-     * 0.62
-     *
-     * and
-     *
-     * 62
-     */
-
-    if (
-        Math.abs(number) <= 1
-    ) {
-        number *= 100;
-    }
-
-    return `${number.toFixed(1)}%`;
-}
-
+/* =========================================================
+   FORMAT PERCENT
+========================================================= */
 
 function formatPercentValue(
     value
 ) {
 
-    return formatPredictionProbability(
-        value
-    );
-}
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+
+        return "—";
+
+    }
 
 
-function prettifyKey(
-    value
-) {
+    const number =
+        Number(value);
 
-    return String(value)
-        .replace(
-            /([a-z])([A-Z])/g,
-            "$1 $2"
-        )
-        .replace(
-            /_/g,
-            " "
-        )
-        .replace(
-            /\b\w/g,
-            char =>
-                char.toUpperCase()
+
+    if (
+        Number.isNaN(number)
+    ) {
+
+        return escapeHtml(
+            String(value)
         );
+
+    }
+
+
+    const percent =
+        number > 0 &&
+        number <= 1
+            ? number * 100
+            : number;
+
+
+    return (
+        percent.toFixed(1) +
+        "%"
+    );
+
 }
 
 
 /* =========================================================
-   HTML SAFETY
+   CREATE TEAM IDENTITY
+========================================================= */
+
+function createIdentity(
+    name
+) {
+
+    const value =
+        String(
+            name || ""
+        )
+        .trim()
+        .normalize("NFD")
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .replace(
+            /[’']/g,
+            ""
+        )
+        .replace(
+            /&/g,
+            " AND "
+        )
+        .toUpperCase()
+        .replace(
+            /[^A-Z0-9]+/g,
+            "_"
+        )
+        .replace(
+            /^_+|_+$/g,
+            ""
+        );
+
+
+    return value || "";
+
+}
+
+
+/* =========================================================
+   SAFE JSON RESPONSE
+========================================================= */
+
+async function readJsonResponse(
+    response
+) {
+
+    const text =
+        await response.text();
+
+
+    if (!text) {
+
+        return {};
+
+    }
+
+
+    try {
+
+        return JSON.parse(
+            text
+        );
+
+    } catch (error) {
+
+        throw new Error(
+            "Server returned an invalid JSON response. HTTP " +
+            response.status
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   HTML ESCAPING
 ========================================================= */
 
 function escapeHtml(
     value
 ) {
 
-    if (
-        value === null ||
-        value === undefined
-    ) {
-        return "";
-    }
+    return String(
+        value ?? ""
+    )
+    .replace(
+        /&/g,
+        "&amp;"
+    )
+    .replace(
+        /</g,
+        "&lt;"
+    )
+    .replace(
+        />/g,
+        "&gt;"
+    )
+    .replace(
+        /"/g,
+        "&quot;"
+    )
+    .replace(
+        /'/g,
+        "&#039;"
+    );
 
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
 }
 
+
+/* =========================================================
+   JAVASCRIPT STRING ESCAPING
+========================================================= */
 
 function escapeJs(
     value
 ) {
 
-    return JSON.stringify(
+    return String(
         value ?? ""
     )
-        .replace(
-            /</g,
-            "\\u003C"
-        )
-        .replace(
-            />/g,
-            "\\u003E"
-        )
-        .replace(
-            /&/g,
-            "\\u0026"
-        );
-}
-
-
-/* =========================================================
-   ERROR DISPLAY
-========================================================= */
-
-function createErrorHTML(
-    title,
-    error
-) {
-
-    const message =
-        error?.message ||
-        String(error) ||
-        "Unknown error";
-
-    return `
-        <div class="analysis-error">
-
-            <strong>
-                ${escapeHtml(title)}
-            </strong>
-
-            <br><br>
-
-            ${escapeHtml(message)}
-
-            <pre>${escapeHtml(
-                error?.stack ||
-                message
-            )}</pre>
-
-        </div>
-    `;
-}
-
-
-/* =========================================================
-   SMALL UTILITY
-========================================================= */
-
-function truncate(
-    value,
-    maxLength
-) {
-
-    const text =
-        String(value || "");
-
-    if (
-        text.length <= maxLength
-    ) {
-        return text;
-    }
-
-    return (
-        text.substring(
-            0,
-            maxLength
-        ) + "..."
+    .replace(
+        /\\/g,
+        "\\\\"
+    )
+    .replace(
+        /'/g,
+        "\\'"
+    )
+    .replace(
+        /\r/g,
+        "\\r"
+    )
+    .replace(
+        /\n/g,
+        "\\n"
     );
+
 }
-
-
-/* =========================================================
-   EXPOSE FUNCTIONS FOR HTML
-========================================================= */
-
-window.analyzeMatches =
-    analyzeMatches;
-
-window.runMatchAnalysis =
-    runMatchAnalysis;
 
 </script>
 
 </body>
+
 </html>
