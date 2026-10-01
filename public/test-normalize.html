@@ -1256,21 +1256,12 @@ function displayForm(
    AVAILABILITY
 ===================================================== */
 
-
 function displayAvailability(normalized) {
+    const el = document.getElementById("availability");
+    if (!el) return;
 
-    const container =
-        document.getElementById("availability");
-
-    if (!container) {
-        return;
-    }
-
-    const availability =
-        normalized.availability || {};
-
-    const statistics =
-        normalized.statistics || {};
+    const statistics = normalized?.statistics || {};
+    const odds = normalized?.odds || {};
 
     const hasBTTS =
         Array.isArray(statistics.btts) &&
@@ -1285,111 +1276,43 @@ function displayAvailability(normalized) {
         statistics.xg.length > 0;
 
     const hasInjuries =
-        Array.isArray(normalized.injuries) &&
+        Array.isArray(normalized?.injuries) &&
         normalized.injuries.length > 0;
 
     const hasLineups =
-        Array.isArray(normalized.lineups) &&
+        Array.isArray(normalized?.lineups) &&
         normalized.lineups.length > 0;
 
     const hasOdds =
-        normalized.odds &&
+        odds &&
         (
-            normalized.odds.oneXtwo ||
-            normalized.odds.btts ||
-            normalized.odds.overUnder
+            odds.oneXtwo ||
+            odds.btts ||
+            odds.overUnder
         );
 
     const items = [
-
-        [
-            "Identity",
-            availability.identityReady
-        ],
-
-        [
-            "Form",
-            availability.formReady
-        ],
-
-        [
-            "Stats",
-            availability.statsReady
-        ],
-
-        [
-            "BTTS",
-            hasBTTS
-        ],
-
-        [
-            "Over / Under",
-            hasOverUnder
-        ],
-
-        [
-            "xG",
-            hasXG
-        ],
-
-        [
-            "Injuries",
-            hasInjuries
-        ],
-
-        [
-            "Lineups",
-            hasLineups
-        ],
-
-        [
-            "Odds",
-            hasOdds
-        ],
-
-        [
-            "Data Ready",
-            availability.dataReady
-        ],
-
-        [
-            "Analysis Ready",
-            availability.analysisReady
-        ]
-
+        ["Identity", normalized?.availability?.identityReady],
+        ["Form", normalized?.availability?.formReady],
+        ["Stats", normalized?.availability?.statsReady],
+        ["BTTS", hasBTTS],
+        ["Over / Under", hasOverUnder],
+        ["xG", hasXG],
+        ["Injuries", hasInjuries],
+        ["Lineups", hasLineups],
+        ["Odds", !!hasOdds],
+        ["Data Ready", normalized?.availability?.dataReady],
+        ["Analysis Ready", normalized?.availability?.analysisReady]
     ];
 
-    container.innerHTML =
-        items.map(
-            ([label, value]) => {
-
-                const available =
-                    value === true;
-
-                return `
-                    <div class="stat ${
-                        available
-                            ? "ready"
-                            : "not-ready"
-                    }">
-
-                        <div class="stat-title">
-                            ${escapeHtml(label)}
-                        </div>
-
-                        <div class="stat-value">
-                            ${
-                                available
-                                    ? "✓ Available"
-                                    : "— Missing"
-                            }
-                        </div>
-
-                    </div>
-                `;
-
-            }
-        ).join("");
+    el.innerHTML = items.map(([label, available]) => `
+        <div class="availability-item">
+            <strong>${escapeHtml(label)}</strong>
+            <span class="${available ? "available" : "missing"}">
+                ${available ? "✓ Available" : "— Missing"}
+            </span>
+        </div>
+    `).join("");
 }
 
 
