@@ -17,6 +17,10 @@ export default async function handler(req, res) {
             date
         } = req.query;
 
+        // =====================================================
+        // BASIC VALIDATION
+        // =====================================================
+
         if (
             !home ||
             !homeIdentity ||
@@ -32,26 +36,75 @@ export default async function handler(req, res) {
         }
 
         // =====================================================
-        // VALID IDENTITIES
+        // GLOBAL TEAM IDENTITY
         // =====================================================
 
-        const validIdentities = [
-            "DEPORTES_CONCEPCION",
-            "UNIVERSIDAD_DE_CONCEPCION",
-            "OHIGGINS"
-        ];
+        function createIdentity(name) {
+
+            return String(name || "")
+                .trim()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[’']/g, "")
+                .replace(/&/g, " AND ")
+                .toUpperCase()
+                .replace(/[^A-Z0-9]+/g, "_")
+                .replace(/^_+|_+$/g, "");
+        }
+
+        const expectedHomeIdentity =
+            createIdentity(home);
+
+        const expectedAwayIdentity =
+            createIdentity(away);
+
+        // =====================================================
+        // VERIFY IDENTITIES
+        // =====================================================
 
         if (
-            !validIdentities.includes(homeIdentity) ||
-            !validIdentities.includes(awayIdentity)
+            !expectedHomeIdentity ||
+            !expectedAwayIdentity
         ) {
             return res.status(400).json({
                 success: false,
-                error: "Invalid team identity."
+                error: "Unable to generate team identity."
             });
         }
 
-        if (homeIdentity === awayIdentity) {
+        if (
+            homeIdentity !== expectedHomeIdentity ||
+            awayIdentity !== expectedAwayIdentity
+        ) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid team identity.",
+
+                details: {
+                    home: {
+                        supplied:
+                            homeIdentity,
+                        expected:
+                            expectedHomeIdentity
+                    },
+
+                    away: {
+                        supplied:
+                            awayIdentity,
+                        expected:
+                            expectedAwayIdentity
+                    }
+                }
+            });
+        }
+
+        // =====================================================
+        // SAME TEAM PROTECTION
+        // =====================================================
+
+        if (
+            homeIdentity === awayIdentity
+        ) {
             return res.status(400).json({
                 success: false,
                 error:
@@ -60,55 +113,59 @@ export default async function handler(req, res) {
         }
 
         // =====================================================
-        // CANONICAL NAMES
+        // CANONICAL TEAM NAMES
+        //
+        // IMPORTANT:
+        // No hard-coded team list.
+        // The names supplied by API-Football are used.
         // =====================================================
 
-        const canonicalNames = {
-            DEPORTES_CONCEPCION: "Deportes Concepcion",
-            UNIVERSIDAD_DE_CONCEPCION: "Universidad de Concepcion",
-            OHIGGINS: "O'Higgins"
-        };
-
         const canonicalHome =
-            canonicalNames[homeIdentity];
+            String(home).trim();
 
         const canonicalAway =
-            canonicalNames[awayIdentity];
-
-        if (!canonicalHome || !canonicalAway) {
-            return res.status(400).json({
-                success: false,
-                error:
-                    "Could not resolve canonical team names."
-            });
-        }
+            String(away).trim();
 
         // =====================================================
         // SEARCH NAME VARIANTS
         // =====================================================
 
-        const searchNames = {
+        function getSearchNames(teamName) {
 
-            DEPORTES_CONCEPCION: [
-                "Deportes Concepcion"
-            ],
+            const original =
+                String(teamName || "").trim();
 
-            UNIVERSIDAD_DE_CONCEPCION: [
-                "Universidad de Concepcion"
-            ],
+            const withoutApostrophe =
+                original.replace(/[’']/g, "");
 
-            OHIGGINS: [
-                "O'Higgins",
-                "O Higgins",
-                "Club O'Higgins"
+            const normalized =
+                original
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[’']/g, "");
+
+            const compactSpaces =
+                original.replace(/\s+/g, " ");
+
+            return [
+                original,
+                withoutApostrophe,
+                normalized,
+                compactSpaces
             ]
-        };
+                .map(value => value.trim())
+                .filter(Boolean)
+                .filter(
+                    (value, index, array) =>
+                        array.indexOf(value) === index
+                );
+        }
 
         const homeNames =
-            searchNames[homeIdentity];
+            getSearchNames(canonicalHome);
 
         const awayNames =
-            searchNames[awayIdentity];
+            getSearchNames(canonicalAway);
 
         // =====================================================
         // API KEY
@@ -125,8 +182,27 @@ export default async function handler(req, res) {
             });
         }
 
+        // =====================================================
+        // DATE
+        // =====================================================
+
+        const parsedDate =
+            new Date(date);
+
+        if (
+            Number.isNaN(
+                parsedDate.getTime()
+            )
+        ) {
+            return res.status(400).json({
+                success: false,
+                error:
+                    "Invalid match date."
+            });
+        }
+
         const matchYear =
-            new Date(date).getUTCFullYear();
+            parsedDate.getUTCFullYear();
 
         // =====================================================
         // SEARCH DEFINITIONS
@@ -141,33 +217,57 @@ export default async function handler(req, res) {
         for (const teamName of homeNames) {
 
             searches.push(
+
                 {
                     type: "form_home",
-                    team: canonicalHome,
-                    teamIdentity: homeIdentity,
+
+                    team:
+                        canonicalHome,
+
+                    teamIdentity:
+                        homeIdentity,
+
                     query:
-                        `"${teamName}" results 2026 football recent`
+                        `"${teamName}" results ${matchYear} football recent`
                 },
+
                 {
                     type: "form_home_recent",
-                    team: canonicalHome,
-                    teamIdentity: homeIdentity,
+
+                    team:
+                        canonicalHome,
+
+                    teamIdentity:
+                        homeIdentity,
+
                     query:
-                        `"${teamName}" recent results 2026 football`
+                        `"${teamName}" recent results ${matchYear} football`
                 },
+
                 {
                     type: "form_home_fixtures",
-                    team: canonicalHome,
-                    teamIdentity: homeIdentity,
+
+                    team:
+                        canonicalHome,
+
+                    teamIdentity:
+                        homeIdentity,
+
                     query:
-                        `"${teamName}" fixtures results 2026 FotMob`
+                        `"${teamName}" fixtures results ${matchYear} FotMob`
                 },
+
                 {
                     type: "form_home_soccerway",
-                    team: canonicalHome,
-                    teamIdentity: homeIdentity,
+
+                    team:
+                        canonicalHome,
+
+                    teamIdentity:
+                        homeIdentity,
+
                     query:
-                        `"${teamName}" Soccerway results 2026`
+                        `"${teamName}" Soccerway results ${matchYear}`
                 }
             );
         }
@@ -179,82 +279,148 @@ export default async function handler(req, res) {
         for (const teamName of awayNames) {
 
             searches.push(
+
                 {
                     type: "form_away",
-                    team: canonicalAway,
-                    teamIdentity: awayIdentity,
+
+                    team:
+                        canonicalAway,
+
+                    teamIdentity:
+                        awayIdentity,
+
                     query:
-                        `"${teamName}" results 2026 football recent`
+                        `"${teamName}" results ${matchYear} football recent`
                 },
+
                 {
                     type: "form_away_recent",
-                    team: canonicalAway,
-                    teamIdentity: awayIdentity,
+
+                    team:
+                        canonicalAway,
+
+                    teamIdentity:
+                        awayIdentity,
+
                     query:
-                        `"${teamName}" recent results 2026 football`
+                        `"${teamName}" recent results ${matchYear} football`
                 },
+
                 {
                     type: "form_away_fixtures",
-                    team: canonicalAway,
-                    teamIdentity: awayIdentity,
+
+                    team:
+                        canonicalAway,
+
+                    teamIdentity:
+                        awayIdentity,
+
                     query:
-                        `"${teamName}" fixtures results 2026 FotMob`
+                        `"${teamName}" fixtures results ${matchYear} FotMob`
                 },
+
                 {
                     type: "form_away_soccerway",
-                    team: canonicalAway,
-                    teamIdentity: awayIdentity,
+
+                    team:
+                        canonicalAway,
+
+                    teamIdentity:
+                        awayIdentity,
+
                     query:
-                        `"${teamName}" Soccerway results 2026`
+                        `"${teamName}" Soccerway results ${matchYear}`
                 }
             );
         }
 
         // =====================================================
-        // DIRECT TEAM RESULT SEARCHES
+        // DIRECT HOME RESULT SEARCH
         // =====================================================
 
-        searches.push(
+        searches.push({
 
-            {
-                type: "form_home_direct",
-                team: canonicalHome,
-                teamIdentity: homeIdentity,
-                query:
-                    `"${canonicalHome}" "2026" "W" "D" "L" football results`
-            },
+            type:
+                "form_home_direct",
 
-            {
-                type: "form_away_direct",
-                team: canonicalAway,
-                teamIdentity: awayIdentity,
-                query:
-                    `"O'Higgins" OR "O Higgins" "2026" football results`
-            },
+            team:
+                canonicalHome,
 
-            {
-                type: "form_away_matches",
-                team: canonicalAway,
-                teamIdentity: awayIdentity,
-                query:
-                    `"O'Higgins" football matches results 2026 Chile`
-            },
+            teamIdentity:
+                homeIdentity,
 
-            {
-                type: "form_away_recent_matches",
-                team: canonicalAway,
-                teamIdentity: awayIdentity,
-                query:
-                    `"O Higgins" recent matches results 2026 Chile`
-            }
-        );
+            query:
+                `"${canonicalHome}" "${matchYear}" football results W D L`
+        });
+
+        // =====================================================
+        // DIRECT AWAY RESULT SEARCH
+        // =====================================================
+
+        searches.push({
+
+            type:
+                "form_away_direct",
+
+            team:
+                canonicalAway,
+
+            teamIdentity:
+                awayIdentity,
+
+            query:
+                `"${canonicalAway}" "${matchYear}" football results W D L`
+        });
+
+        // =====================================================
+        // HOME + AWAY MATCH SEARCH
+        // =====================================================
+
+        searches.push({
+
+            type:
+                "form_home_matches",
+
+            team:
+                canonicalHome,
+
+            teamIdentity:
+                homeIdentity,
+
+            query:
+                `"${canonicalHome}" football matches results ${matchYear}`
+        });
+
+        searches.push({
+
+            type:
+                "form_away_matches",
+
+            team:
+                canonicalAway,
+
+            teamIdentity:
+                awayIdentity,
+
+            query:
+                `"${canonicalAway}" football matches results ${matchYear}`
+        });
 
         // =====================================================
         // H2H
         // =====================================================
 
         searches.push({
-            type: "h2h",
+
+            type:
+                "h2h",
+
+            team:
+                null,
+
+            teamIdentity:
+                null,
+
             query:
                 `"${canonicalHome}" "${canonicalAway}" head to head H2H results football`
         });
@@ -264,7 +430,16 @@ export default async function handler(req, res) {
         // =====================================================
 
         searches.push({
-            type: "stats",
+
+            type:
+                "stats",
+
+            team:
+                null,
+
+            teamIdentity:
+                null,
+
             query:
                 `"${canonicalHome}" "${canonicalAway}" statistics goals xG BTTS over under ${matchYear} football`
         });
@@ -274,7 +449,16 @@ export default async function handler(req, res) {
         // =====================================================
 
         searches.push({
-            type: "injuries",
+
+            type:
+                "injuries",
+
+            team:
+                null,
+
+            teamIdentity:
+                null,
+
             query:
                 `"${canonicalHome}" "${canonicalAway}" injuries suspended players team news ${matchYear} football`
         });
@@ -284,7 +468,16 @@ export default async function handler(req, res) {
         // =====================================================
 
         searches.push({
-            type: "lineups",
+
+            type:
+                "lineups",
+
+            team:
+                null,
+
+            teamIdentity:
+                null,
+
             query:
                 `"${canonicalHome}" "${canonicalAway}" predicted lineup starting XI ${matchYear} football`
         });
@@ -294,7 +487,16 @@ export default async function handler(req, res) {
         // =====================================================
 
         searches.push({
-            type: "odds",
+
+            type:
+                "odds",
+
+            team:
+                null,
+
+            teamIdentity:
+                null,
+
             query:
                 `"${canonicalHome}" "${canonicalAway}" odds 1X2 over under BTTS football ${matchYear}`
         });
@@ -316,15 +518,21 @@ export default async function handler(req, res) {
                             method: "POST",
 
                             headers: {
-                                "X-API-KEY": apiKey,
+                                "X-API-KEY":
+                                    apiKey,
+
                                 "Content-Type":
                                     "application/json"
                             },
 
-                            body: JSON.stringify({
-                                q: search.query,
-                                num: 8
-                            })
+                            body:
+                                JSON.stringify({
+                                    q:
+                                        search.query,
+
+                                    num:
+                                        8
+                                })
                         }
                     );
 
@@ -352,26 +560,38 @@ export default async function handler(req, res) {
                         response.ok,
 
                     results:
-                        (data.organic || []).map(item => ({
+                        Array.isArray(
+                            data.organic
+                        )
+                            ? data.organic.map(
+                                item => ({
 
-                            title:
-                                item.title || null,
+                                    title:
+                                        item.title ||
+                                        null,
 
-                            link:
-                                item.link || null,
+                                    link:
+                                        item.link ||
+                                        null,
 
-                            snippet:
-                                item.snippet || null,
+                                    snippet:
+                                        item.snippet ||
+                                        null,
 
-                            date:
-                                item.date || null,
+                                    date:
+                                        item.date ||
+                                        null,
 
-                            position:
-                                item.position || null
-                        })),
+                                    position:
+                                        item.position ||
+                                        null
+                                })
+                            )
+                            : [],
 
                     knowledgeGraph:
-                        data.knowledgeGraph || null
+                        data.knowledgeGraph ||
+                        null
                 });
 
             } catch (searchError) {
@@ -385,19 +605,23 @@ export default async function handler(req, res) {
                         search.team || null,
 
                     teamIdentity:
-                        search.teamIdentity || null,
+                        search.teamIdentity ||
+                        null,
 
                     query:
                         search.query,
 
-                    status: 500,
+                    status:
+                        500,
 
-                    success: false,
+                    success:
+                        false,
 
                     error:
                         searchError.message,
 
-                    results: []
+                    results:
+                        []
                 });
             }
         }
@@ -421,7 +645,8 @@ export default async function handler(req, res) {
                         search.team || null,
 
                     teamIdentity:
-                        search.teamIdentity || null,
+                        search.teamIdentity ||
+                        null,
 
                     title:
                         item.title,
@@ -447,14 +672,22 @@ export default async function handler(req, res) {
 
         const homeFormResults =
             allResults.filter(item =>
-                item.teamIdentity === homeIdentity &&
-                String(item.type).startsWith("form_home")
+
+                item.teamIdentity ===
+                    homeIdentity &&
+
+                String(item.type)
+                    .startsWith("form_home")
             );
 
         const awayFormResults =
             allResults.filter(item =>
-                item.teamIdentity === awayIdentity &&
-                String(item.type).startsWith("form_away")
+
+                item.teamIdentity ===
+                    awayIdentity &&
+
+                String(item.type)
+                    .startsWith("form_away")
             );
 
         // =====================================================
@@ -463,10 +696,11 @@ export default async function handler(req, res) {
 
         return res.status(200).json({
 
-            success: true,
+            success:
+                true,
 
             version:
-                "V3.14",
+                "V4.0-GLOBAL",
 
             match: {
 
@@ -476,7 +710,8 @@ export default async function handler(req, res) {
                 homeInput:
                     home,
 
-                homeIdentity,
+                homeIdentity:
+                    homeIdentity,
 
                 away:
                     canonicalAway,
@@ -484,9 +719,11 @@ export default async function handler(req, res) {
                 awayInput:
                     away,
 
-                awayIdentity,
+                awayIdentity:
+                    awayIdentity,
 
-                date,
+                date:
+                    date,
 
                 year:
                     matchYear
@@ -495,6 +732,7 @@ export default async function handler(req, res) {
             identityResolution: {
 
                 home: {
+
                     input:
                         home,
 
@@ -506,6 +744,7 @@ export default async function handler(req, res) {
                 },
 
                 away: {
+
                     input:
                         away,
 
@@ -523,7 +762,9 @@ export default async function handler(req, res) {
             searches:
                 results,
 
-            allResults,
+            allResults:
+
+                allResults,
 
             formSearchSummary: {
 
@@ -553,12 +794,14 @@ export default async function handler(req, res) {
 
                 successfulSearches:
                     results.filter(
-                        item => item.success
+                        item =>
+                            item.success
                     ).length,
 
                 failedSearches:
                     results.filter(
-                        item => !item.success
+                        item =>
+                            !item.success
                     ).length,
 
                 totalResults:
@@ -606,17 +849,17 @@ export default async function handler(req, res) {
 
                 "Web results are raw source information.",
 
-                "Form searches use multiple team-name variants.",
+                "Team identities are generated dynamically from the requested team names.",
 
-                "O'Higgins and unrelated clubs must not be conflated.",
+                "Form searches use multiple team-name variants.",
 
                 "Form must be extracted only from results belonging to the requested team.",
 
-                "Deportes Concepcion and Universidad de Concepcion are separate clubs.",
-
                 "Missing statistics must not be guessed.",
 
-                "Source URLs should be retained for verification."
+                "Source URLs should be retained for verification.",
+
+                "The home and away clubs are treated as separate identities."
             ]
         });
 
@@ -626,7 +869,8 @@ export default async function handler(req, res) {
 
         return res.status(500).json({
 
-            success: false,
+            success:
+                false,
 
             error:
                 "Web data search failed.",
