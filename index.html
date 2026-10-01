@@ -14,63 +14,64 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #f4f6f8;
-    color: #17202a;
+    background: #0b0f14;
+    color: #ffffff;
 }
 
 .container {
-    max-width: 1100px;
+    width: 100%;
+    max-width: 900px;
     margin: auto;
     padding: 20px;
 }
 
 .header {
-    background: #111827;
-    color: white;
-    padding: 24px;
-    border-radius: 14px;
-    margin-bottom: 18px;
+    text-align: center;
+    padding: 25px 10px;
 }
 
-.header h1 {
-    margin: 0 0 6px;
-    font-size: 28px;
-}
-
-.header p {
-    margin: 0;
-    color: #cbd5e1;
-}
-
-.search-box {
-    background: white;
-    padding: 20px;
-    border-radius: 14px;
-    margin-bottom: 18px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
-}
-
-.search-box label {
-    display: block;
+.logo {
+    font-size: 32px;
     font-weight: bold;
-    margin-bottom: 8px;
 }
 
-input[type="date"] {
+.subtitle {
+    color: #aeb7c2;
+    margin-top: 8px;
+}
+
+.card {
+    background: #151b23;
+    border-radius: 14px;
+    padding: 20px;
+    margin-top: 18px;
+    border: 1px solid #252d38;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #cbd5e1;
+    font-weight: bold;
+}
+
+input {
     width: 100%;
-    padding: 13px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+    padding: 14px;
+    border-radius: 9px;
+    border: 1px solid #374151;
+    background: #0f141b;
+    color: white;
     font-size: 16px;
 }
 
 button {
     width: 100%;
+    padding: 15px;
+    margin-top: 15px;
     border: none;
-    padding: 14px;
-    margin-top: 12px;
     border-radius: 9px;
-    background: #111827;
+    background: #16a34a;
     color: white;
     font-size: 16px;
     font-weight: bold;
@@ -78,50 +79,37 @@ button {
 }
 
 button:hover {
-    opacity: .9;
+    opacity: 0.9;
 }
 
 button:disabled {
-    opacity: .5;
-    cursor: not-allowed;
+    opacity: 0.6;
+    cursor: wait;
 }
 
 .status {
+    margin-top: 18px;
     padding: 14px;
-    border-radius: 10px;
-    margin-bottom: 18px;
-    background: #eef2ff;
-    color: #3730a3;
-    font-weight: bold;
+    border-radius: 9px;
+    background: #18202a;
+    color: #cbd5e1;
 }
 
 .success {
-    background: #dcfce7;
-    color: #166534;
+    border: 1px solid #166534;
 }
 
 .error {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.section {
-    background: white;
-    padding: 18px;
-    border-radius: 14px;
-    margin-bottom: 18px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.05);
-}
-
-.section h2 {
-    margin-top: 0;
+    border: 1px solid #991b1b;
+    color: #fecaca;
 }
 
 .fixture {
-    border: 1px solid #e5e7eb;
+    background: #111820;
+    border: 1px solid #293340;
     border-radius: 12px;
-    padding: 16px;
-    margin-top: 12px;
+    padding: 18px;
+    margin-top: 15px;
 }
 
 .fixture h3 {
@@ -129,53 +117,52 @@ button:disabled {
     font-size: 18px;
 }
 
-.fixture p {
-    margin: 7px 0;
-    color: #4b5563;
+.league {
+    color: #9ca3af;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.time {
+    color: #22c55e;
+    font-weight: bold;
 }
 
 .analyze-btn {
     background: #2563eb;
+    margin-top: 14px;
 }
 
 .empty {
     text-align: center;
-    padding: 25px;
-    color: #6b7280;
+    padding: 30px 10px;
+    color: #9ca3af;
+}
+
+.count {
+    color: #22c55e;
+    font-weight: bold;
 }
 
 .hidden {
     display: none;
 }
 
-.loading {
+.footer {
     text-align: center;
-    padding: 20px;
-}
-
-.spinner {
-    width: 28px;
-    height: 28px;
-    border: 4px solid #ddd;
-    border-top-color: #111827;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: auto;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    color: #6b7280;
+    font-size: 12px;
+    margin: 30px 0 10px;
 }
 
 @media (max-width: 600px) {
+
     .container {
-        padding: 12px;
+        padding: 15px;
     }
 
-    .header h1 {
-        font-size: 24px;
+    .logo {
+        font-size: 27px;
     }
 }
 </style>
@@ -185,15 +172,16 @@ button:disabled {
 
 <div class="container">
 
-    <!-- HEADER -->
     <div class="header">
-        <h1>🔥 TOMSONSTAKES</h1>
-        <p>Global Football Prediction Engine</p>
+        <div class="logo">🔥 TOMSONSTAKES</div>
+
+        <div class="subtitle">
+            GLOBAL FOOTBALL PREDICTION ENGINE
+        </div>
     </div>
 
 
-    <!-- DATE SEARCH -->
-    <div class="search-box">
+    <div class="card">
 
         <label for="matchDate">
             Select Match Date
@@ -205,40 +193,29 @@ button:disabled {
         >
 
         <button
-            id="searchButton"
+            id="analyzeButton"
             onclick="loadFixtures()"
         >
-            🔎 FIND FOOTBALL MATCHES
+            ANALYZE MATCHES
         </button>
 
     </div>
 
 
-    <!-- STATUS -->
     <div
         id="status"
-        class="status"
-    >
-        Select a date and search for football matches.
-    </div>
+        class="status hidden"
+    ></div>
 
 
-    <!-- RESULTS -->
     <div
         id="results"
-        class="hidden"
-    >
+        class="card hidden"
+    ></div>
 
-        <div class="section">
 
-            <h2>🌍 Global Football Fixtures</h2>
-
-            <div id="fixtureCount"></div>
-
-            <div id="fixtureList"></div>
-
-        </div>
-
+    <div class="footer">
+        TomsonStakes Football Analysis
     </div>
 
 </div>
@@ -246,37 +223,13 @@ button:disabled {
 
 <script>
 
-/* =====================================================
-   DEFAULT DATE
-===================================================== */
-
-const dateInput =
-    document.getElementById("matchDate");
-
-const today =
-    new Date();
-
-const year =
-    today.getFullYear();
-
-const month =
-    String(today.getMonth() + 1).padStart(2, "0");
-
-const day =
-    String(today.getDate()).padStart(2, "0");
-
-dateInput.value =
-    `${year}-${month}-${day}`;
-
-
-/* =====================================================
-   LOAD FIXTURES
-===================================================== */
-
 async function loadFixtures() {
 
-    const date =
-        document.getElementById("matchDate").value;
+    const dateInput =
+        document.getElementById("matchDate");
+
+    const button =
+        document.getElementById("analyzeButton");
 
     const status =
         document.getElementById("status");
@@ -284,58 +237,37 @@ async function loadFixtures() {
     const results =
         document.getElementById("results");
 
-    const fixtureList =
-        document.getElementById("fixtureList");
 
-    const fixtureCount =
-        document.getElementById("fixtureCount");
+    const date =
+        dateInput.value;
 
-    const button =
-        document.getElementById("searchButton");
-
-
-    /* VALIDATE DATE */
 
     if (!date) {
 
-        status.className =
-            "status error";
-
-        status.textContent =
-            "⚠️ Please select a match date.";
+        showStatus(
+            "Please select a match date.",
+            true
+        );
 
         return;
     }
 
 
-    /* LOADING */
-
     button.disabled = true;
 
     button.textContent =
-        "⏳ LOADING FIXTURES...";
+        "LOADING FIXTURES...";
 
-    results.classList.remove("hidden");
 
-    fixtureList.innerHTML = `
-        <div class="loading">
-            <div class="spinner"></div>
-            <p>Connecting to football data...</p>
-        </div>
-    `;
+    results.classList.add("hidden");
 
-    fixtureCount.textContent = "";
-
-    status.className =
-        "status";
-
-    status.textContent =
-        "🔎 Searching football fixtures for " + date + "...";
+    showStatus(
+        "🔎 Connecting to football data...",
+        false
+    );
 
 
     try {
-
-        /* CALL YOUR VERCEL API */
 
         const response =
             await fetch(
@@ -344,141 +276,119 @@ async function loadFixtures() {
             );
 
 
-        /* READ RESPONSE */
-
         const data =
             await response.json();
 
-
-        /* API ERROR */
 
         if (!response.ok) {
 
             throw new Error(
                 data.error ||
                 data.message ||
-                "The football API returned an error."
+                "Football API request failed."
             );
+
         }
 
 
-        /* CHECK RESPONSE */
+        /*
+         * API-Football normally returns
+         * the fixtures inside "response".
+         */
 
-        if (
-            !data.response ||
-            !Array.isArray(data.response)
-        ) {
-
-            throw new Error(
-                "Unexpected API response."
-            );
-        }
+        const fixtures =
+            Array.isArray(data.response)
+                ? data.response
+                : [];
 
 
-        /* NO FIXTURES */
+        if (fixtures.length === 0) {
 
-        if (data.response.length === 0) {
-
-            status.className =
-                "status";
-
-            status.textContent =
-                "No football fixtures were found for " +
-                date + ".";
-
-            fixtureCount.textContent =
-                "";
-
-            fixtureList.innerHTML = `
+            results.innerHTML = `
                 <div class="empty">
-                    ⚽ No fixtures available for this date.
+
+                    <h2>No Fixtures Found</h2>
+
+                    <p>
+                        No football fixtures were
+                        returned for
+                        <strong>${escapeHtml(date)}</strong>.
+                    </p>
+
                 </div>
             `;
+
+            results.classList.remove("hidden");
+
+            showStatus(
+                "Search completed.",
+                false
+            );
 
             return;
         }
 
 
-        /* SUCCESS */
+        let html = `
 
-        status.className =
-            "status success";
+            <h2>
+                ⚽ Football Fixtures
+            </h2>
 
-        status.textContent =
-            "✅ Fixtures successfully loaded.";
-
-
-        fixtureCount.innerHTML = `
             <p>
-                📅 Date:
+                Date:
                 <strong>${escapeHtml(date)}</strong>
             </p>
 
             <p>
-                ⚽ Fixtures found:
-                <strong>${data.response.length}</strong>
+                Fixtures found:
+                <span class="count">
+                    ${fixtures.length}
+                </span>
             </p>
         `;
 
 
-        /* BUILD FIXTURE LIST */
-
-        let html = "";
-
-
-        data.response.forEach(
+        fixtures.forEach(
             (match, index) => {
 
-                const league =
-                    match.league?.name ||
-                    "Unknown Competition";
-
-                const country =
-                    match.league?.country ||
-                    "";
-
                 const home =
-                    match.teams?.home?.name ||
-                    "Home Team";
+                    match.teams &&
+                    match.teams.home &&
+                    match.teams.home.name
+                        ? match.teams.home.name
+                        : "Home Team";
+
 
                 const away =
-                    match.teams?.away?.name ||
-                    "Away Team";
-
-                const fixtureDate =
-                    match.fixture?.date;
-
-                const fixtureId =
-                    match.fixture?.id ||
-                    "";
-
-                let kickoff =
-                    "Time unavailable";
+                    match.teams &&
+                    match.teams.away &&
+                    match.teams.away.name
+                        ? match.teams.away.name
+                        : "Away Team";
 
 
-                if (fixtureDate) {
+                const league =
+                    match.league &&
+                    match.league.name
+                        ? match.league.name
+                        : "Unknown Competition";
 
-                    const dateObject =
-                        new Date(fixtureDate);
 
-                    kickoff =
-                        dateObject.toLocaleTimeString(
-                            "en-NG",
-                            {
-                                timeZone:
-                                    "Africa/Lagos",
+                const country =
+                    match.league &&
+                    match.league.country
+                        ? match.league.country
+                        : "";
 
-                                hour:
-                                    "2-digit",
 
-                                minute:
-                                    "2-digit",
-
-                                hour12:
-                                    false
-                            }
-                        ) + " WAT";
-                }
+                const kickoff =
+                    match.fixture &&
+                    match.fixture.date
+                        ? formatNigeriaTime(
+                            match.fixture.date
+                        )
+                        : "Time unavailable";
 
 
                 html += `
@@ -492,54 +402,67 @@ async function loadFixtures() {
                             ${escapeHtml(away)}
                         </h3>
 
-                        <p>
+                        <div class="league">
+
                             🏆
-                            <strong>
-                                ${escapeHtml(league)}
-                            </strong>
+                            ${escapeHtml(league)}
 
                             ${
                                 country
-                                ? " — " +
-                                  escapeHtml(country)
-                                : ""
+                                    ? " — " +
+                                      escapeHtml(country)
+                                    : ""
                             }
-                        </p>
 
-                        <p>
-                            🕐 Kickoff:
-                            <strong>
-                                ${escapeHtml(kickoff)}
-                            </strong>
-                        </p>
+                        </div>
 
-                        <p>
-                            🆔 Fixture ID:
-                            ${escapeHtml(
-                                String(fixtureId)
-                            )}
-                        </p>
+                        <div class="time">
+
+                            🕐
+                            ${escapeHtml(kickoff)}
+
+                        </div>
+
 
                         <button
                             class="analyze-btn"
-                            onclick="analyzeMatch(
-                                '${escapeJs(home)}',
-                                '${escapeJs(away)}',
-                                '${escapeJs(date)}'
+                            onclick="openMatchAnalysis(
+                                ${index}
                             )"
                         >
-                            📊 ANALYZE THIS MATCH
+
+                            ANALYZE THIS MATCH
+
                         </button>
 
                     </div>
-
                 `;
             }
         );
 
 
-        fixtureList.innerHTML =
-            html;
+        results.innerHTML = html;
+
+        results.classList.remove(
+            "hidden"
+        );
+
+
+        /*
+         * Store fixtures so that
+         * the selected match can
+         * be used later by the
+         * prediction engine.
+         */
+
+        window.tomsonFixtures =
+            fixtures;
+
+
+        showStatus(
+            "✅ Fixtures loaded successfully.",
+            false
+        );
 
 
     } catch (error) {
@@ -547,111 +470,250 @@ async function loadFixtures() {
         console.error(error);
 
 
-        status.className =
-            "status error";
+        showStatus(
+            "❌ " + error.message,
+            true
+        );
 
-        status.textContent =
-            "❌ Unable to load fixtures.";
 
-
-        fixtureList.innerHTML = `
-
-            <div class="empty">
-
-                <h3>
-                    API Error
-                </h3>
-
-                <p>
-                    ${escapeHtml(
-                        error.message
-                    )}
-                </p>
-
-                <p>
-                    Check your Vercel deployment
-                    and API configuration.
-                </p>
-
-            </div>
-
-        `;
+        results.classList.add(
+            "hidden"
+        );
 
     } finally {
 
-        button.disabled =
-            false;
+        button.disabled = false;
 
         button.textContent =
-            "🔎 FIND FOOTBALL MATCHES";
+            "ANALYZE MATCHES";
 
     }
 
 }
 
 
-/* =====================================================
-   ANALYZE MATCH
-===================================================== */
+/* ============================
+   MATCH ANALYSIS
+============================ */
 
-function analyzeMatch(
-    home,
-    away,
-    date
+function openMatchAnalysis(index) {
+
+    const fixtures =
+        window.tomsonFixtures || [];
+
+
+    const match =
+        fixtures[index];
+
+
+    if (!match) {
+
+        showStatus(
+            "Unable to find selected match.",
+            true
+        );
+
+        return;
+    }
+
+
+    const home =
+        match.teams?.home?.name ||
+        "Home Team";
+
+
+    const away =
+        match.teams?.away?.name ||
+        "Away Team";
+
+
+    const date =
+        match.fixture?.date ||
+        "";
+
+
+    /*
+     * For now we display the
+     * selected match.
+
+     * Next stage:
+     * connect this button to
+     * /api/web-data
+     * /api/normalize-web
+     * /api/predict
+     */
+
+    const results =
+        document.getElementById(
+            "results"
+        );
+
+
+    results.innerHTML = `
+
+        <h2>
+            🔥 Match Selected
+        </h2>
+
+        <div class="fixture">
+
+            <h3>
+                ⚽
+                ${escapeHtml(home)}
+                vs
+                ${escapeHtml(away)}
+            </h3>
+
+            <div class="time">
+
+                🕐
+                ${escapeHtml(
+                    formatNigeriaTime(date)
+                )}
+
+            </div>
+
+            <div class="status success">
+
+                Match successfully selected.
+
+                <br><br>
+
+                Prediction analysis engine
+                will use this match.
+
+            </div>
+
+            <button
+                class="analyze-btn"
+                onclick="loadFixtures()"
+            >
+
+                ← BACK TO FIXTURES
+
+            </button>
+
+        </div>
+    `;
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+/* ============================
+   STATUS
+============================ */
+
+function showStatus(
+    message,
+    isError
 ) {
 
     const status =
-        document.getElementById("status");
+        document.getElementById(
+            "status"
+        );
 
-
-    status.className =
-        "status";
 
     status.textContent =
-        "📊 Match selected: " +
-        home +
-        " vs " +
-        away;
+        message;
 
 
-    alert(
-        "Match selected:\n\n" +
-        home +
-        " vs " +
-        away +
-        "\n\n" +
-        "Date: " +
-        date +
-        "\n\n" +
-        "The full TomsonStakes analysis engine will be connected here next."
+    status.classList.remove(
+        "hidden",
+        "error",
+        "success"
     );
 
+
+    if (isError) {
+
+        status.classList.add(
+            "error"
+        );
+
+    } else {
+
+        status.classList.add(
+            "success"
+        );
+
+    }
+
 }
 
 
-/* =====================================================
-   SECURITY HELPERS
-===================================================== */
+/* ============================
+   NIGERIA TIME
+============================ */
 
-function escapeHtml(value) {
+function formatNigeriaTime(
+    utcDate
+) {
 
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    try {
+
+        const date =
+            new Date(utcDate);
+
+
+        return date.toLocaleString(
+            "en-NG",
+            {
+                timeZone: "Africa/Lagos",
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false
+            }
+        ) + " WAT";
+
+
+    } catch (error) {
+
+        return "Time unavailable";
+
+    }
 
 }
 
 
-function escapeJs(value) {
+/* ============================
+   SECURITY
+============================ */
+
+function escapeHtml(
+    value
+) {
 
     return String(value)
-        .replace(/\\/g, "\\\\")
-        .replace(/'/g, "\\'")
-        .replace(/\n/g, "\\n")
-        .replace(/\r/g, "\\r");
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
 
