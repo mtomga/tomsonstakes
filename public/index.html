@@ -288,7 +288,39 @@ hr {
     .market-grid {
         grid-template-columns: 1fr;
     }
+/* =========================================================
+   FINAL PREDICTION DISPLAY
+========================================================= */
+
+.final-result {
+    background: #111827;
+    color: white;
+    border-radius: 14px;
+    padding: 22px;
+    margin-top: 10px;
+    text-align: center;
 }
+
+.final-title {
+    font-size: 14px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 8px;
+}
+
+.final-prediction {
+    font-size: 30px;
+    font-weight: bold;
+    margin: 8px 0 22px;
+}
+
+.final-probability {
+    font-size: 32px;
+    font-weight: bold;
+    margin-top: 8px;
+}
+}   
 </style>
 </head>
 
@@ -1026,66 +1058,7 @@ async function runMatchAnalysis(
 }
 
 
-/* =========================================================
-   BUILD ANALYSIS
-========================================================= */
 
-function buildAnalysisHTML(
-    normalized,
-    prediction
-) {
-
-    const status =
-        prediction.status ||
-        prediction.analysisStatus ||
-        normalized.readiness?.status ||
-        "READY";
-
-
-    const confidence =
-        prediction.confidence ??
-        normalized.quality ??
-        "-";
-
-
-    const modelMethod =
-        prediction.modelMethod ||
-        "MARKET_BASELINE";
-
-
-    const quality =
-        normalized.quality?.score ??
-        normalized.quality ??
-        "-";
-
-
-    const oneXtwo =
-        prediction.oneXtwo ||
-        prediction.markets?.oneXtwo ||
-        prediction.markets?.["1X2"] ||
-        normalized.odds?.oneXtwo ||
-        {};
-
-
-    const btts =
-        prediction.btts ||
-        normalized.statistics?.btts?.[0] ||
-        normalized.btts ||
-        null;
-
-
-    const ou =
-        prediction.overUnder ||
-        prediction.ou ||
-        normalized.statistics?.overUnder?.[0] ||
-        normalized.overUnder ||
-        normalized.ou ||
-        null;
-
-
-    const xgHome =
-        normalized.xG?.home ??
-        normalized.xg?.home;
 
 
     const xgAway =
@@ -1195,192 +1168,168 @@ function buildAnalysisHTML(
                     )}
                 </div>
 
+
+                    /* =========================================================
+   BUILD FINAL PREDICTION
+========================================================= */
+
+function buildAnalysisHTML(
+    normalized,
+    prediction
+) {
+
+    /*
+     * The prediction engine should return:
+     *
+     * prediction.prediction
+     * prediction.probability
+     *
+     * Example:
+     *
+     * {
+     *   prediction: "Over 2.5",
+     *   probability: 72
+     * }
+     *
+     * We also support a few fallback property names
+     * so the frontend is not fragile.
+     */
+
+
+    const finalPrediction =
+        prediction.prediction ??
+        prediction.selection ??
+        prediction.pick ??
+        prediction.recommendation ??
+        prediction.bestPrediction ??
+        null;
+
+
+    const finalProbability =
+        prediction.probability ??
+        prediction.predictionProbability ??
+        prediction.bestProbability ??
+        prediction.percentage ??
+        null;
+
+
+    /*
+     * If the backend has not yet been updated to return
+     * the final prediction, do not display random model
+     * information as the prediction.
+     */
+
+    if (
+        finalPrediction === null ||
+        finalProbability === null
+    ) {
+
+        return `
+
+            <div class="final-result">
+
+                <div class="final-title">
+                    Prediction
+                </div>
+
+                <div class="final-prediction">
+                    —
+                </div>
+
+                <div class="final-title">
+                    Probability
+                </div>
+
+                <div class="final-probability">
+                    —
+                </div>
+
+                <div class="status status-warning">
+                    Prediction result is not available from
+                    the prediction engine.
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    return `
+
+        <div class="final-result">
+
+            <div class="final-title">
+                Prediction
+            </div>
+
+            <div class="final-prediction">
+                ${escapeHtml(
+                    String(finalPrediction)
+                )}
+            </div>
+
+
+            <div class="final-title">
+                Probability
+            </div>
+
+            <div class="final-probability">
+                ${formatPredictionProbability(
+                    finalProbability
+                )}
             </div>
 
         </div>
-
-
-        <h3>1X2 Market</h3>
-
-        <div class="market-grid">
-
-            <div class="market">
-
-                <div class="market-title">
-                    Home
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        oneXtwo.home ??
-                        oneXtwo.homeProbability ??
-                        oneXtwo["1"]
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="market">
-
-                <div class="market-title">
-                    Draw
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        oneXtwo.draw ??
-                        oneXtwo.drawProbability ??
-                        oneXtwo.X
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="market">
-
-                <div class="market-title">
-                    Away
-                </div>
-
-                <div class="market-value">
-
-                    ${formatPercentValue(
-                        oneXtwo.away ??
-                        oneXtwo.awayProbability ??
-                        oneXtwo["2"]
-                    )}
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <h3>Goals Markets</h3>
-
-        <div class="grid">
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    BTTS
-                </div>
-
-                <div class="stat-value">
-                    ${formatMarket(btts)}
-                </div>
-
-            </div>
-
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Over / Under
-                </div>
-
-                <div class="stat-value">
-                    ${formatMarket(ou)}
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <h3>Expected Goals</h3>
-
-        <div class="grid">
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Home xG
-                </div>
-
-                <div class="stat-value">
-
-                    ${
-                        xgHome !== undefined &&
-                        xgHome !== null
-                        ? formatNumber(xgHome)
-                        : "— Missing"
-                    }
-
-                </div>
-
-            </div>
-
-
-            <div class="stat">
-
-                <div class="stat-title">
-                    Away xG
-                </div>
-
-                <div class="stat-value">
-
-                    ${
-                        xgAway !== undefined &&
-                        xgAway !== null
-                        ? formatNumber(xgAway)
-                        : "— Missing"
-                    }
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <h3>Evidence Availability</h3>
-
-        ${buildEvidence(normalized)}
-
-
-        <h3>Important Warnings</h3>
-
-        ${buildWarnings(normalized)}
-
-
-        <details>
-
-            <summary>
-                View Raw Analysis Data
-            </summary>
-
-            <h4>Normalized Data</h4>
-
-            <pre>${escapeHtml(
-                JSON.stringify(
-                    normalized,
-                    null,
-                    2
-                )
-            )}</pre>
-
-
-            <h4>Prediction</h4>
-
-            <pre>${escapeHtml(
-                JSON.stringify(
-                    prediction,
-                    null,
-                    2
-                )
-            )}</pre>
-
-        </details>
 
     `;
+
+}
+
+
+/* =========================================================
+   FINAL PROBABILITY FORMAT
+========================================================= */
+
+function formatPredictionProbability(
+    value
+) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+
+        return "—";
+
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (
+        Number.isNaN(number)
+    ) {
+
+        return escapeHtml(
+            String(value)
+        );
+
+    }
+
+
+    const percent =
+        number > 0 &&
+        number <= 1
+        ? number * 100
+        : number;
+
+
+    return Math.round(percent) + "%";
 
 }
 
