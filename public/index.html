@@ -495,16 +495,13 @@ async function loadFixtures() {
 /* ============================
    MATCH ANALYSIS
 ============================ */
-
-function openMatchAnalysis(index) {
+async function openMatchAnalysis(index) {
 
     const fixtures =
         window.tomsonFixtures || [];
 
-
     const match =
         fixtures[index];
-
 
     if (!match) {
 
@@ -516,44 +513,43 @@ function openMatchAnalysis(index) {
         return;
     }
 
-
     const home =
         match.teams?.home?.name ||
         "Home Team";
-
 
     const away =
         match.teams?.away?.name ||
         "Away Team";
 
-
     const date =
-        match.fixture?.date ||
-        "";
+        match.fixture?.date
+            ? match.fixture.date.substring(0, 10)
+            : "";
+
+    const homeTeamId =
+        match.teams?.home?.id || null;
+
+    const awayTeamId =
+        match.teams?.away?.id || null;
+
+    const results =
+        document.getElementById("results");
+
+    const status =
+        document.getElementById("status");
 
 
     /*
-     * For now we display the
-     * selected match.
-
-     * Next stage:
-     * connect this button to
-     * /api/web-data
-     * /api/normalize-web
-     * /api/predict
+     * =====================================================
+     * SHOW LOADING SCREEN
+     * =====================================================
      */
 
-    const results =
-        document.getElementById(
-            "results"
-        );
-
+    results.classList.remove("hidden");
 
     results.innerHTML = `
 
-        <h2>
-            🔥 Match Selected
-        </h2>
+        <h2>🔥 Analyzing Match</h2>
 
         <div class="fixture">
 
@@ -565,24 +561,713 @@ function openMatchAnalysis(index) {
             </h3>
 
             <div class="time">
-
                 🕐
                 ${escapeHtml(
-                    formatNigeriaTime(date)
+                    formatNigeriaTime(
+                        match.fixture?.date || ""
+                    )
                 )}
-
             </div>
 
             <div class="status success">
 
-                Match successfully selected.
+                🔎 Collecting football data...<br><br>
+
+                Please wait while TomsonStakes
+                processes the match.
+
+            </div>
+
+        </div>
+    `;
+
+    showStatus(
+        "🔎 Collecting match analysis data...",
+        false
+    );
+
+
+    try {
+
+        /*
+         * =====================================================
+         * STEP 1 — WEB DATA
+         * =====================================================
+         */
+
+        const webResponse =
+            await fetch(
+                "/api/web-data",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        match: {
+
+                            home,
+
+                            away,
+
+                            date,
+
+                            homeTeamId,
+
+                            awayTeamId
+
+                        }
+
+                    })
+                }
+            );
+
+
+        const webData =
+            await webResponse.json();
+
+
+        if (!webResponse.ok) {
+
+            throw new Error(
+                webData.error ||
+                "Unable to collect web data."
+            );
+
+        }
+
+
+        showStatus(
+            "✅ Web data collected. Normalizing evidence...",
+            false
+        );
+
+
+        /*
+         * =====================================================
+         * STEP 2 — NORMALIZE WEB DATA
+         * =====================================================
+         */
+
+        const normalizeResponse =
+            await fetch(
+                "/api/normalize-web",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        match: {
+
+                            home,
+
+                            away,
+
+                            date,
+
+                            homeIdentity:
+                                webData.match?.homeIdentity ||
+                                match.homeIdentity ||
+                                "",
+
+                            awayIdentity:
+                                webData.match?.awayIdentity ||
+                                match.awayIdentity ||
+                                ""
+
+                        },
+
+                        searches:
+                            webData.searches || [],
+
+                        allResults:
+                            webData.allResults || []
+
+                    })
+                }
+            );
+
+
+        const normalized =
+            await normalizeResponse.json();
+
+
+        if (!normalizeResponse.ok) {
+
+            throw new Error(
+                normalized.error ||
+                "Web normalization failed."
+            );
+
+        }
+
+
+        showStatus(
+            "✅ Data normalized. Running prediction engine...",
+            false
+        );
+
+
+        /*
+         * =====================================================
+         * STEP 3 — PREDICTION ENGINE
+         * =====================================================
+         */
+
+        const predictionResponse =
+            await fetch(
+                "/api/predict",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        match: {
+
+                            home:
+                                normalized.match?.home ||
+                                home,
+
+                            away:
+                                normalized.match?.away ||
+                                away,
+
+                            date
+
+                        },
+
+                        normalized: {
+
+                            form:
+                                normalized.form || {},
+
+                            h2h:
+                                normalized.h2h || {},
+
+                            btts: {
+
+                                probability:
+                                    normalized.statistics?.btts?.[0]
+                                        ?.percentage ??
+                                    null,
+
+                                odds:
+                                    normalized.statistics?.btts ||
+                                    [],
+
+                                evidence:
+                                    normalized.statistics?.btts ||
+                                    []
+
+                            },
+
+                            overUnder: {
+
+                                odds:
+                                    normalized.statistics?.overUnder ||
+                                    [],
+
+                                evidence:
+                                    normalized.statistics?.overUnder ||
+                                    []
+
+                            },
+
+                            xg: {
+
+                                home:
+                                    normalized.statistics?.xg
+                                        ?.map(item => ({
+                                            value:
+                                                item.home
+                                        })) || [],
+
+                                away:
+                                    normalized.statistics?.xg
+                                        ?.map(item => ({
+                                            value:
+                                                item.away
+                                        })) || []
+
+                            },
+
+                            odds: {
+
+                                home:
+                                    normalized.odds?.oneXtwo?.home ??
+                                    null,
+
+                                draw:
+                                    normalized.odds?.oneXtwo?.draw ??
+                                    null,
+
+                                away:
+                                    normalized.odds?.oneXtwo?.away ??
+                                    null,
+
+                                evidence:
+                                    normalized.odds?.oneXtwo
+                                        ? [normalized.odds.oneXtwo]
+                                        : []
+
+                            },
+
+                            injuries: {
+
+                                evidence:
+                                    normalized.injuries || []
+
+                            },
+
+                            lineups: {
+
+                                evidence:
+                                    normalized.lineups || []
+
+                            }
+
+                        },
+
+                        readiness: {
+
+                            identityReady:
+                                normalized.availability
+                                    ?.identityReady === true,
+
+                            formReady:
+                                normalized.availability
+                                    ?.formReady === true,
+
+                            statsReady:
+                                normalized.availability
+                                    ?.statsReady === true
+
+                        },
+
+                        availability:
+                            normalized.availability || {}
+
+                    })
+                }
+            );
+
+
+        const prediction =
+            await predictionResponse.json();
+
+
+        if (!predictionResponse.ok) {
+
+            throw new Error(
+                prediction.error ||
+                "Prediction engine failed."
+            );
+
+        }
+
+
+        /*
+         * =====================================================
+         * STEP 4 — DISPLAY RESULTS
+         * =====================================================
+         */
+
+        displayPredictionResults(
+            prediction
+        );
+
+
+        showStatus(
+            "✅ Match analysis completed.",
+            false
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "MATCH ANALYSIS ERROR:",
+            error
+        );
+
+
+        showStatus(
+            "❌ " + error.message,
+            true
+        );
+
+
+        results.innerHTML = `
+
+            <div class="empty">
+
+                <h2>⚠️ Analysis Failed</h2>
+
+                <p>
+                    ${escapeHtml(
+                        error.message
+                    )}
+                </p>
+
+                <button
+                    class="analyze-btn"
+                    onclick="openMatchAnalysis(${index})"
+                >
+                    🔄 TRY AGAIN
+                </button>
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+    function displayPredictionResults(prediction) {
+
+    const results =
+        document.getElementById("results");
+
+    const model =
+        prediction.model || {};
+
+    const oneXTwo =
+        model.oneXTwo || {};
+
+    const doubleChance =
+        model.doubleChance || {};
+
+    const drawNoBet =
+        model.drawNoBet || {};
+
+    const btts =
+        model.btts || {};
+
+    const overUnder =
+        model.overUnder || {};
+
+    const xg =
+        model.xg || {};
+
+    const market =
+        prediction.market || {};
+
+    const confidence =
+        prediction.confidence ?? 0;
+
+    const status =
+        prediction.status ||
+        "UNKNOWN";
+
+
+    results.innerHTML = `
+
+        <h2>
+            🔥 TOMSONSTAKES ANALYSIS
+        </h2>
+
+
+        <div class="fixture">
+
+            <h3>
+                ⚽
+                ${escapeHtml(
+                    prediction.match?.home ||
+                    "Home"
+                )}
+                vs
+                ${escapeHtml(
+                    prediction.match?.away ||
+                    "Away"
+                )}
+            </h3>
+
+
+            <div class="status success">
+
+                Status:
+                <strong>
+                    ${escapeHtml(status)}
+                </strong>
 
                 <br><br>
 
-                Prediction analysis engine
-                will use this match.
+                Confidence:
+                <strong>
+                    ${confidence}%
+                </strong>
+
+                <br><br>
+
+                Model:
+                <strong>
+                    ${escapeHtml(
+                        prediction.modelMethod ||
+                        "N/A"
+                    )}
+                </strong>
 
             </div>
+
+
+            <h3>
+                📊 1X2 Probability
+            </h3>
+
+            <p>
+                🏠 Home:
+                <strong>
+                    ${formatPercent(
+                        oneXTwo.home
+                    )}
+                </strong>
+            </p>
+
+            <p>
+                🤝 Draw:
+                <strong>
+                    ${formatPercent(
+                        oneXTwo.draw
+                    )}
+                </strong>
+            </p>
+
+            <p>
+                ✈️ Away:
+                <strong>
+                    ${formatPercent(
+                        oneXTwo.away
+                    )}
+                </strong>
+            </p>
+
+
+            <h3>
+                🔄 Double Chance
+            </h3>
+
+            <p>
+                1X:
+                <strong>
+                    ${formatPercent(
+                        doubleChance.homeOrDraw
+                    )}
+                </strong>
+            </p>
+
+            <p>
+                X2:
+                <strong>
+                    ${formatPercent(
+                        doubleChance.awayOrDraw
+                    )}
+                </strong>
+            </p>
+
+            <p>
+                12:
+                <strong>
+                    ${formatPercent(
+                        doubleChance.homeOrAway
+                    )}
+                </strong>
+            </p>
+
+
+            <h3>
+                🛡️ Draw No Bet
+            </h3>
+
+            <p>
+                Home:
+                <strong>
+                    ${formatPercent(
+                        drawNoBet.home
+                    )}
+                </strong>
+            </p>
+
+            <p>
+                Away:
+                <strong>
+                    ${formatPercent(
+                        drawNoBet.away
+                    )}
+                </strong>
+            </p>
+
+
+            <h3>
+                ⚽ BTTS
+            </h3>
+
+            <p>
+                Probability:
+                <strong>
+                    ${formatPercent(
+                        btts.probability
+                    )}
+                </strong>
+            </p>
+
+
+            <h3>
+                📈 Over / Under
+            </h3>
+
+            ${
+                Array.isArray(
+                    overUnder.assessment
+                ) &&
+                overUnder.assessment.length
+                    ? overUnder.assessment
+                        .map(item => `
+
+                            <p>
+                                <strong>
+                                    ${escapeHtml(
+                                        item.selection ||
+                                        ""
+                                    )}
+                                </strong>
+
+                                ${
+                                    item.line !== null &&
+                                    item.line !== undefined
+                                        ? escapeHtml(
+                                            String(
+                                                item.line
+                                            )
+                                        )
+                                        : ""
+                                }
+
+                                —
+                                Odds:
+                                ${formatNumber(
+                                    item.odds
+                                )}
+
+                                —
+                                Edge:
+                                ${formatPercent(
+                                    item.edge
+                                )}
+                            </p>
+
+                        `)
+                        .join("")
+                    : "<p>No reliable Over/Under data.</p>"
+            }
+
+
+            <h3>
+                📐 Expected Goals
+            </h3>
+
+            <p>
+                Home xG:
+                <strong>
+                    ${formatNumber(
+                        xg.home
+                    )}
+                </strong>
+            </p>
+
+            <p>
+                Away xG:
+                <strong>
+                    ${formatNumber(
+                        xg.away
+                    )}
+                </strong>
+            </p>
+
+
+            <h3>
+                💰 Market Odds
+            </h3>
+
+            <p>
+                Home:
+                <strong>
+                    ${formatNumber(
+                        market.odds?.home
+                    )}
+                </strong>
+            </p>
+
+            <p>
+                Draw:
+                <strong>
+                    ${formatNumber(
+                        market.odds?.draw
+                    )}
+                </strong>
+            </p>
+
+            <p>
+                Away:
+                <strong>
+                    ${formatNumber(
+                        market.odds?.away
+                    )}
+                </strong>
+            </p>
+
+
+            ${
+                Array.isArray(
+                    prediction.evidence
+                )
+                    ? ""
+                    : ""
+            }
+
+
+            <h3>
+                ⚠️ Data Warnings
+            </h3>
+
+            ${
+                Array.isArray(
+                    prediction.warnings
+                ) &&
+                prediction.warnings.length
+                    ? `
+                        <ul>
+                            ${prediction.warnings
+                                .map(
+                                    warning => `
+                                        <li>
+                                            ${escapeHtml(
+                                                warning
+                                            )}
+                                        </li>
+                                    `
+                                )
+                                .join("")
+                            }
+                        </ul>
+                    `
+                    : "<p>No warnings.</p>"
+            }
+
 
             <button
                 class="analyze-btn"
@@ -595,16 +1280,33 @@ function openMatchAnalysis(index) {
 
         </div>
     `;
+    }      
+function formatPercent(value) {
 
+    if (
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(Number(value))
+    ) {
+        return "N/A";
+    }
 
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
+    return Number(value).toFixed(2) + "%";
 }
 
 
+function formatNumber(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(Number(value))
+    ) {
+        return "N/A";
+    }
+
+    return Number(value).toFixed(2);
+}
 /* ============================
    STATUS
 ============================ */
