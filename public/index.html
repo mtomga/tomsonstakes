@@ -1172,82 +1172,23 @@ async function runMatchAnalysis(
                     /* =========================================================
    BUILD FINAL PREDICTION
 ========================================================= */
-
 function buildAnalysisHTML(
     normalized,
     prediction
 ) {
 
-    /*
-     * The prediction engine should return:
-     *
-     * prediction.prediction
-     * prediction.probability
-     *
-     * Example:
-     *
-     * {
-     *   prediction: "Over 2.5",
-     *   probability: 72
-     * }
-     *
-     * We also support a few fallback property names
-     * so the frontend is not fragile.
-     */
-
-
-    const finalPrediction =
-        prediction.prediction ??
-        prediction.selection ??
-        prediction.pick ??
-        prediction.recommendation ??
-        prediction.bestPrediction ??
-        null;
-
-
-    const finalProbability =
-        prediction.probability ??
-        prediction.predictionProbability ??
-        prediction.bestProbability ??
-        prediction.percentage ??
-        null;
-
-
-    /*
-     * If the backend has not yet been updated to return
-     * the final prediction, do not display random model
-     * information as the prediction.
-     */
-
     if (
-        finalPrediction === null ||
-        finalProbability === null
+        !prediction ||
+        !prediction.success ||
+        !prediction.prediction
     ) {
 
         return `
 
-            <div class="final-result">
+            <div class="status status-warning">
 
-                <div class="final-title">
-                    Prediction
-                </div>
-
-                <div class="final-prediction">
-                    —
-                </div>
-
-                <div class="final-title">
-                    Probability
-                </div>
-
-                <div class="final-probability">
-                    —
-                </div>
-
-                <div class="status status-warning">
-                    Prediction result is not available from
-                    the prediction engine.
-                </div>
+                ⚠️ No sufficiently supported prediction
+                was produced for this fixture.
 
             </div>
 
@@ -1256,35 +1197,83 @@ function buildAnalysisHTML(
     }
 
 
+    const probability =
+        Number(
+            prediction.probability
+        );
+
+
     return `
 
-        <div class="final-result">
+        <div class="prediction-result">
 
-            <div class="final-title">
-                Prediction
+            <div class="prediction-label">
+                PREDICTION
             </div>
 
-            <div class="final-prediction">
+            <div class="prediction-value">
                 ${escapeHtml(
-                    String(finalPrediction)
+                    prediction.prediction
                 )}
             </div>
 
 
-            <div class="final-title">
-                Probability
+            <div class="probability-label">
+                PROBABILITY
             </div>
 
-            <div class="final-probability">
-                ${formatPredictionProbability(
-                    finalProbability
-                )}
+            <div class="probability-value">
+                ${
+                    Number.isFinite(
+                        probability
+                    )
+                    ? probability.toFixed(0) + "%"
+                    : "—"
+                }
             </div>
 
         </div>
 
     `;
 
+}
+
+.prediction-result {
+    margin-top: 15px;
+    background: #111827;
+    color: white;
+    border-radius: 14px;
+    padding: 25px 20px;
+    text-align: center;
+    border: 2px solid #2563eb;
+}
+
+.prediction-label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #9ca3af;
+    letter-spacing: 2px;
+}
+
+.prediction-value {
+    font-size: 30px;
+    font-weight: bold;
+    margin-top: 8px;
+    color: #22c55e;
+}
+
+.probability-label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #9ca3af;
+    letter-spacing: 2px;
+    margin-top: 20px;
+}
+
+.probability-value {
+    font-size: 26px;
+    font-weight: bold;
+    margin-top: 6px;
 }
 
 
