@@ -873,23 +873,23 @@ async function runMatchAnalysis(
          */
 
         const normalizeResponse =
-            await fetch(
-                "/api/normalize-web",
-                {
-                    method: "POST",
+    await fetch(
+        "/api/normalize-web",
+        {
+            method: "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
 
-                    body:
-                        JSON.stringify(
-                            webData
-                        )
-                }
-            );
-
+            body:
+                JSON.stringify({
+                    ...webData,
+                    match: MATCH
+                })
+        }
+    );
 
         const normalized =
             await normalizeResponse.json();
