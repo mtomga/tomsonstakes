@@ -1,500 +1,486 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  <title>TomsonStakes Global Football</title>  <style>  
+* {  
+    box-sizing: border-box;  
+}  
+  
+body {  
+    margin: 0;  
+    font-family: Arial, sans-serif;  
+    background: #0b0f14;  
+    color: #ffffff;  
+}  
+  
+.container {  
+    width: 100%;  
+    max-width: 900px;  
+    margin: auto;  
+    padding: 20px;  
+}  
+  
+.header {  
+    text-align: center;  
+    padding: 25px 10px;  
+}  
+  
+.logo {  
+    font-size: 32px;  
+    font-weight: bold;  
+}  
+  
+.subtitle {  
+    color: #aeb7c2;  
+    margin-top: 8px;  
+}  
+  
+.card {  
+    background: #151b23;  
+    border-radius: 14px;  
+    padding: 20px;  
+    margin-top: 18px;  
+    border: 1px solid #252d38;  
+}  
+  
+label {  
+    display: block;  
+    margin-bottom: 8px;  
+    color: #cbd5e1;  
+    font-weight: bold;  
+}  
+  
+input {  
+    width: 100%;  
+    padding: 14px;  
+    border-radius: 9px;  
+    border: 1px solid #374151;  
+    background: #0f141b;  
+    color: white;  
+    font-size: 16px;  
+}  
+  
+button {  
+    width: 100%;  
+    padding: 15px;  
+    margin-top: 15px;  
+    border: none;  
+    border-radius: 9px;  
+    background: #16a34a;  
+    color: white;  
+    font-size: 16px;  
+    font-weight: bold;  
+    cursor: pointer;  
+}  
+  
+button:hover {  
+    opacity: 0.9;  
+}  
+  
+button:disabled {  
+    opacity: 0.6;  
+    cursor: wait;  
+}  
+  
+.status {  
+    margin-top: 18px;  
+    padding: 14px;  
+    border-radius: 9px;  
+    background: #18202a;  
+    color: #cbd5e1;  
+}  
+  
+.success {  
+    border: 1px solid #166534;  
+}  
+  
+.error {  
+    border: 1px solid #991b1b;  
+    color: #fecaca;  
+}  
+  
+.fixture {  
+    background: #111820;  
+    border: 1px solid #293340;  
+    border-radius: 12px;  
+    padding: 18px;  
+    margin-top: 15px;  
+}  
+  
+.fixture h3 {  
+    margin: 0 0 10px;  
+    font-size: 18px;  
+}  
+  
+.league {  
+    color: #9ca3af;  
+    font-size: 14px;  
+    margin-bottom: 12px;  
+}  
+  
+.time {  
+    color: #22c55e;  
+    font-weight: bold;  
+}  
+  
+.analyze-btn {  
+    background: #2563eb;  
+    margin-top: 14px;  
+}  
+  
+.empty {  
+    text-align: center;  
+    padding: 30px 10px;  
+    color: #9ca3af;  
+}  
+  
+.count {  
+    color: #22c55e;  
+    font-weight: bold;  
+}  
+  
+.hidden {  
+    display: none;  
+}  
+  
+.footer {  
+    text-align: center;  
+    color: #6b7280;  
+    font-size: 12px;  
+    margin: 30px 0 10px;  
+}  
+  
+@media (max-width: 600px) {  
+  
+    .container {  
+        padding: 15px;  
+    }  
+  
+    .logo {  
+        font-size: 27px;  
+    }  
+}  
+</style>  </head>  <body>  <div class="container">  <div class="header">  
+    <div class="logo">🔥 TOMSONSTAKES</div>  
 
-<title>TomsonStakes Global Football</title>
-
-<style>
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #0b0f14;
-    color: #ffffff;
-}
-
-.container {
-    width: 100%;
-    max-width: 900px;
-    margin: auto;
-    padding: 20px;
-}
-
-.header {
-    text-align: center;
-    padding: 25px 10px;
-}
-
-.logo {
-    font-size: 32px;
-    font-weight: bold;
-}
-
-.subtitle {
-    color: #aeb7c2;
-    margin-top: 8px;
-}
-
-.card {
-    background: #151b23;
-    border-radius: 14px;
-    padding: 20px;
-    margin-top: 18px;
-    border: 1px solid #252d38;
-}
-
-label {
-    display: block;
-    margin-bottom: 8px;
-    color: #cbd5e1;
-    font-weight: bold;
-}
-
-input {
-    width: 100%;
-    padding: 14px;
-    border-radius: 9px;
-    border: 1px solid #374151;
-    background: #0f141b;
-    color: white;
-    font-size: 16px;
-}
-
-button {
-    width: 100%;
-    padding: 15px;
-    margin-top: 15px;
-    border: none;
-    border-radius: 9px;
-    background: #16a34a;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-button:hover {
-    opacity: 0.9;
-}
-
-button:disabled {
-    opacity: 0.6;
-    cursor: wait;
-}
-
-.status {
-    margin-top: 18px;
-    padding: 14px;
-    border-radius: 9px;
-    background: #18202a;
-    color: #cbd5e1;
-}
-
-.success {
-    border: 1px solid #166534;
-}
-
-.error {
-    border: 1px solid #991b1b;
-    color: #fecaca;
-}
-
-.fixture {
-    background: #111820;
-    border: 1px solid #293340;
-    border-radius: 12px;
-    padding: 18px;
-    margin-top: 15px;
-}
-
-.fixture h3 {
-    margin: 0 0 10px;
-    font-size: 18px;
-}
-
-.league {
-    color: #9ca3af;
-    font-size: 14px;
-    margin-bottom: 12px;
-}
-
-.time {
-    color: #22c55e;
-    font-weight: bold;
-}
-
-.analyze-btn {
-    background: #2563eb;
-    margin-top: 14px;
-}
-
-.empty {
-    text-align: center;
-    padding: 30px 10px;
-    color: #9ca3af;
-}
-
-.count {
-    color: #22c55e;
-    font-weight: bold;
-}
-
-.hidden {
-    display: none;
-}
-
-.footer {
-    text-align: center;
-    color: #6b7280;
-    font-size: 12px;
-    margin: 30px 0 10px;
-}
-
-@media (max-width: 600px) {
-
-    .container {
-        padding: 15px;
-    }
-
-    .logo {
-        font-size: 27px;
-    }
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-    <div class="header">
-        <div class="logo">🔥 TOMSONSTAKES</div>
-
-        <div class="subtitle">
-            GLOBAL FOOTBALL PREDICTION ENGINE
-        </div>
-    </div>
+    <div class="subtitle">  
+        GLOBAL FOOTBALL PREDICTION ENGINE  
+    </div>  
+</div>  
 
 
-    <div class="card">
+<div class="card">  
 
-        <label for="matchDate">
-            Select Match Date
-        </label>
+    <label for="matchDate">  
+        Select Match Date  
+    </label>  
 
-        <input
-            type="date"
-            id="matchDate"
-        >
+    <input  
+        type="date"  
+        id="matchDate"  
+    >  
 
-        <button
-            id="analyzeButton"
-            onclick="loadFixtures()"
-        >
-            ANALYZE MATCHES
-        </button>
+    <button  
+        id="analyzeButton"  
+        onclick="loadFixtures()"  
+    >  
+        ANALYZE MATCHES  
+    </button>  
 
-    </div>
-
-
-    <div
-        id="status"
-        class="status hidden"
-    ></div>
+</div>  
 
 
-    <div
-        id="results"
-        class="card hidden"
-    ></div>
+<div  
+    id="status"  
+    class="status hidden"  
+></div>  
 
 
-    <div class="footer">
-        TomsonStakes Football Analysis
-    </div>
+<div  
+    id="results"  
+    class="card hidden"  
+></div>  
 
+
+<div class="footer">  
+    TomsonStakes Football Analysis  
 </div>
 
-
-<script>
-
-async function loadFixtures() {
-
-    const dateInput =
-        document.getElementById("matchDate");
-
-    const button =
-        document.getElementById("analyzeButton");
-
-    const status =
-        document.getElementById("status");
-
-    const results =
-        document.getElementById("results");
-
-
-    const date =
-        dateInput.value;
-
-
-    if (!date) {
-
-        showStatus(
-            "Please select a match date.",
-            true
-        );
-
-        return;
-    }
-
-
-    button.disabled = true;
-
-    button.textContent =
-        "LOADING FIXTURES...";
-
-
-    results.classList.add("hidden");
-
-    showStatus(
-        "🔎 Connecting to football data...",
-        false
-    );
-
-
-    try {
-
-        const response =
-            await fetch(
-                "/api/fixtures?date=" +
-                encodeURIComponent(date)
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.error ||
-                data.message ||
-                "Football API request failed."
-            );
-
-        }
-
-
-        /*
-         * API-Football normally returns
-         * the fixtures inside "response".
-         */
-
-        const fixtures =
-            Array.isArray(data.response)
-                ? data.response
-                : [];
-
-
-        if (fixtures.length === 0) {
-
-            results.innerHTML = `
-                <div class="empty">
-
-                    <h2>No Fixtures Found</h2>
-
-                    <p>
-                        No football fixtures were
-                        returned for
-                        <strong>${escapeHtml(date)}</strong>.
-                    </p>
-
-                </div>
-            `;
-
-            results.classList.remove("hidden");
-
-            showStatus(
-                "Search completed.",
-                false
-            );
-
-            return;
-        }
-
-
-        let html = `
-
-            <h2>
-                ⚽ Football Fixtures
-            </h2>
-
-            <p>
-                Date:
-                <strong>${escapeHtml(date)}</strong>
-            </p>
-
-            <p>
-                Fixtures found:
-                <span class="count">
-                    ${fixtures.length}
-                </span>
-            </p>
-        `;
-
-
-        fixtures.forEach(
-            (match, index) => {
-
-                const home =
-                    match.teams &&
-                    match.teams.home &&
-                    match.teams.home.name
-                        ? match.teams.home.name
-                        : "Home Team";
-
-
-                const away =
-                    match.teams &&
-                    match.teams.away &&
-                    match.teams.away.name
-                        ? match.teams.away.name
-                        : "Away Team";
-
-
-                const league =
-                    match.league &&
-                    match.league.name
-                        ? match.league.name
-                        : "Unknown Competition";
-
-
-                const country =
-                    match.league &&
-                    match.league.country
-                        ? match.league.country
-                        : "";
-
-
-                const kickoff =
-                    match.fixture &&
-                    match.fixture.date
-                        ? formatNigeriaTime(
-                            match.fixture.date
-                        )
-                        : "Time unavailable";
-
-
-                html += `
-
-                    <div class="fixture">
-
-                        <h3>
-                            ⚽
-                            ${escapeHtml(home)}
-                            vs
-                            ${escapeHtml(away)}
-                        </h3>
-
-                        <div class="league">
-
-                            🏆
-                            ${escapeHtml(league)}
-
-                            ${
-                                country
-                                    ? " — " +
-                                      escapeHtml(country)
-                                    : ""
-                            }
-
-                        </div>
-
-                        <div class="time">
-
-                            🕐
-                            ${escapeHtml(kickoff)}
-
-                        </div>
-
-
-                        <button
-                            class="analyze-btn"
-                            onclick="openMatchAnalysis(
-                                ${index}
-                            )"
-                        >
-
-                            ANALYZE THIS MATCH
-
-                        </button>
-
-                    </div>
-                `;
-            }
-        );
-
-
-        results.innerHTML = html;
-
-        results.classList.remove(
-            "hidden"
-        );
-
-
-        /*
-         * Store fixtures so that
-         * the selected match can
-         * be used later by the
-         * prediction engine.
-         */
-
-        window.tomsonFixtures =
-            fixtures;
-
-
-        showStatus(
-            "✅ Fixtures loaded successfully.",
-            false
-        );
-
-
-    } catch (error) {
-
-        console.error(error);
-
-
-        showStatus(
-            "❌ " + error.message,
-            true
-        );
-
-
-        results.classList.add(
-            "hidden"
-        );
-
-    } finally {
-
-        button.disabled = false;
-
-        button.textContent =
-            "ANALYZE MATCHES";
-
-    }
-
-}
-
-
-/* ============================
-   MATCH ANALYSIS
-============================ */
+</div>  <script>  
+  
+async function loadFixtures() {  
+  
+    const dateInput =  
+        document.getElementById("matchDate");  
+  
+    const button =  
+        document.getElementById("analyzeButton");  
+  
+    const status =  
+        document.getElementById("status");  
+  
+    const results =  
+        document.getElementById("results");  
+  
+  
+    const date =  
+        dateInput.value;  
+  
+  
+    if (!date) {  
+  
+        showStatus(  
+            "Please select a match date.",  
+            true  
+        );  
+  
+        return;  
+    }  
+  
+  
+    button.disabled = true;  
+  
+    button.textContent =  
+        "LOADING FIXTURES...";  
+  
+  
+    results.classList.add("hidden");  
+  
+    showStatus(  
+        "🔎 Connecting to football data...",  
+        false  
+    );  
+  
+  
+    try {  
+  
+        const response =  
+            await fetch(  
+                "/api/fixtures?date=" +  
+                encodeURIComponent(date)  
+            );  
+  
+  
+        const data =  
+            await response.json();  
+  
+  
+        if (!response.ok) {  
+  
+            throw new Error(  
+                data.error ||  
+                data.message ||  
+                "Football API request failed."  
+            );  
+  
+        }  
+  
+  
+        /*  
+         * API-Football normally returns  
+         * the fixtures inside "response".  
+         */  
+  
+        const fixtures =  
+            Array.isArray(data.response)  
+                ? data.response  
+                : [];  
+  
+  
+        if (fixtures.length === 0) {  
+  
+            results.innerHTML = `  
+                <div class="empty">  
+  
+                    <h2>No Fixtures Found</h2>  
+  
+                    <p>  
+                        No football fixtures were  
+                        returned for  
+                        <strong>${escapeHtml(date)}</strong>.  
+                    </p>  
+  
+                </div>  
+            `;  
+  
+            results.classList.remove("hidden");  
+  
+            showStatus(  
+                "Search completed.",  
+                false  
+            );  
+  
+            return;  
+        }  
+  
+  
+        let html = `  
+  
+            <h2>  
+                ⚽ Football Fixtures  
+            </h2>  
+  
+            <p>  
+                Date:  
+                <strong>${escapeHtml(date)}</strong>  
+            </p>  
+  
+            <p>  
+                Fixtures found:  
+                <span class="count">  
+                    ${fixtures.length}  
+                </span>  
+            </p>  
+        `;  
+  
+  
+        fixtures.forEach(  
+            (match, index) => {  
+  
+                const home =  
+                    match.teams &&  
+                    match.teams.home &&  
+                    match.teams.home.name  
+                        ? match.teams.home.name  
+                        : "Home Team";  
+  
+  
+                const away =  
+                    match.teams &&  
+                    match.teams.away &&  
+                    match.teams.away.name  
+                        ? match.teams.away.name  
+                        : "Away Team";  
+  
+  
+                const league =  
+                    match.league &&  
+                    match.league.name  
+                        ? match.league.name  
+                        : "Unknown Competition";  
+  
+  
+                const country =  
+                    match.league &&  
+                    match.league.country  
+                        ? match.league.country  
+                        : "";  
+  
+  
+                const kickoff =  
+                    match.fixture &&  
+                    match.fixture.date  
+                        ? formatNigeriaTime(  
+                            match.fixture.date  
+                        )  
+                        : "Time unavailable";  
+  
+  
+                html += `  
+  
+                    <div class="fixture">  
+  
+                        <h3>  
+                            ⚽  
+                            ${escapeHtml(home)}  
+                            vs  
+                            ${escapeHtml(away)}  
+                        </h3>  
+  
+                        <div class="league">  
+  
+                            🏆  
+                            ${escapeHtml(league)}  
+  
+                            ${  
+                                country  
+                                    ? " — " +  
+                                      escapeHtml(country)  
+                                    : ""  
+                            }  
+  
+                        </div>  
+  
+                        <div class="time">  
+  
+                            🕐  
+                            ${escapeHtml(kickoff)}  
+  
+                        </div>  
+  
+  
+                        <button  
+                            class="analyze-btn"  
+                            onclick="openMatchAnalysis(  
+                                ${index}  
+                            )"  
+                        >  
+  
+                            ANALYZE THIS MATCH  
+  
+                        </button>  
+  
+                    </div>  
+                `;  
+            }  
+        );  
+  
+  
+        results.innerHTML = html;  
+  
+        results.classList.remove(  
+            "hidden"  
+        );  
+  
+  
+        /*  
+         * Store fixtures so that  
+         * the selected match can  
+         * be used later by the  
+         * prediction engine.  
+         */  
+  
+        window.tomsonFixtures =  
+            fixtures;  
+  
+  
+        showStatus(  
+            "✅ Fixtures loaded successfully.",  
+            false  
+        );  
+  
+  
+    } catch (error) {  
+  
+        console.error(error);  
+  
+  
+        showStatus(  
+            "❌ " + error.message,  
+            true  
+        );  
+  
+  
+        results.classList.add(  
+            "hidden"  
+        );  
+  
+    } finally {  
+  
+        button.disabled = false;  
+  
+        button.textContent =  
+            "ANALYZE MATCHES";  
+  
+    }  
+  
+}  
+  
+  
+/* ============================  
+   MATCH ANALYSIS  
+============================ */  
+  
 async function openMatchAnalysis(index) {
 
     const fixtures =
@@ -504,12 +490,10 @@ async function openMatchAnalysis(index) {
         fixtures[index];
 
     if (!match) {
-
         showStatus(
             "Unable to find selected match.",
             true
         );
-
         return;
     }
 
@@ -521,137 +505,116 @@ async function openMatchAnalysis(index) {
         match.teams?.away?.name ||
         "Away Team";
 
-    const date =
+    const matchDate =
         match.fixture?.date
-            ? match.fixture.date.substring(0, 10)
+            ? new Date(match.fixture.date)
+                .toISOString()
+                .slice(0, 10)
             : "";
-
-    const homeTeamId =
-        match.teams?.home?.id || null;
-
-    const awayTeamId =
-        match.teams?.away?.id || null;
 
     const results =
         document.getElementById("results");
 
-    const status =
-        document.getElementById("status");
-
-
-    /*
-     * =====================================================
-     * SHOW LOADING SCREEN
-     * =====================================================
-     */
-
     results.classList.remove("hidden");
 
     results.innerHTML = `
-
-        <h2>🔥 Analyzing Match</h2>
-
-        <div class="fixture">
-
-            <h3>
-                ⚽
+        <div class="empty">
+            <h2>🔎 Analyzing Match...</h2>
+            <p>
                 ${escapeHtml(home)}
                 vs
                 ${escapeHtml(away)}
-            </h3>
-
-            <div class="time">
-                🕐
-                ${escapeHtml(
-                    formatNigeriaTime(
-                        match.fixture?.date || ""
-                    )
-                )}
-            </div>
-
-            <div class="status success">
-
-                🔎 Collecting football data...<br><br>
-
-                Please wait while TomsonStakes
-                processes the match.
-
-            </div>
-
+            </p>
+            <p>
+                Collecting form, H2H, statistics,
+                injuries, lineups and odds...
+            </p>
         </div>
     `;
 
     showStatus(
-        "🔎 Collecting match analysis data...",
+        "🔎 Running full football analysis...",
         false
     );
-
 
     try {
 
         /*
          * =====================================================
-         * STEP 1 — WEB DATA
+         * 1. RESOLVE TEAM IDENTITIES
          * =====================================================
          */
 
-        const webResponse =
-            await fetch(
-                "/api/web-data",
-                {
-                    method: "POST",
+        const homeIdentity =
+            resolveTeamIdentity(home);
 
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
+        const awayIdentity =
+            resolveTeamIdentity(away);
 
-                    body: JSON.stringify({
+        if (!homeIdentity || !awayIdentity) {
 
-                        match: {
-
-                            home,
-
-                            away,
-
-                            date,
-
-                            homeTeamId,
-
-                            awayTeamId
-
-                        }
-
-                    })
-                }
+            throw new Error(
+                "Unable to resolve team identity for " +
+                home + " or " + away
             );
+        }
 
+        /*
+         * =====================================================
+         * 2. GET WEB DATA
+         * =====================================================
+         */
+
+        showStatus(
+            "🌐 Collecting football data...",
+            false
+        );
+
+        const webUrl =
+            "/api/web-data?" +
+            new URLSearchParams({
+
+                home:
+                    home,
+
+                homeIdentity:
+                    homeIdentity,
+
+                away:
+                    away,
+
+                awayIdentity:
+                    awayIdentity,
+
+                date:
+                    matchDate
+
+            }).toString();
+
+        const webResponse =
+            await fetch(webUrl);
 
         const webData =
             await webResponse.json();
-
 
         if (!webResponse.ok) {
 
             throw new Error(
                 webData.error ||
-                "Unable to collect web data."
+                "Web data collection failed."
             );
-
         }
-
-
-        showStatus(
-            "✅ Web data collected. Normalizing evidence...",
-            false
-        );
-
 
         /*
          * =====================================================
-         * STEP 2 — NORMALIZE WEB DATA
+         * 3. NORMALIZE WEB DATA
          * =====================================================
          */
+
+        showStatus(
+            "🧠 Processing football data...",
+            false
+        );
 
         const normalizeResponse =
             await fetch(
@@ -668,22 +631,20 @@ async function openMatchAnalysis(index) {
 
                         match: {
 
-                            home,
+                            home:
+                                home,
 
-                            away,
-
-                            date,
+                            away:
+                                away,
 
                             homeIdentity:
-                                webData.match?.homeIdentity ||
-                                match.homeIdentity ||
-                                "",
+                                homeIdentity,
 
                             awayIdentity:
-                                webData.match?.awayIdentity ||
-                                match.awayIdentity ||
-                                ""
+                                awayIdentity,
 
+                            date:
+                                matchDate
                         },
 
                         searches:
@@ -696,10 +657,8 @@ async function openMatchAnalysis(index) {
                 }
             );
 
-
         const normalized =
             await normalizeResponse.json();
-
 
         if (!normalizeResponse.ok) {
 
@@ -707,21 +666,18 @@ async function openMatchAnalysis(index) {
                 normalized.error ||
                 "Web normalization failed."
             );
-
         }
-
-
-        showStatus(
-            "✅ Data normalized. Running prediction engine...",
-            false
-        );
-
 
         /*
          * =====================================================
-         * STEP 3 — PREDICTION ENGINE
+         * 4. RUN PREDICTION ENGINE
          * =====================================================
          */
+
+        showStatus(
+            "⚽ Running prediction engine...",
+            false
+        );
 
         const predictionResponse =
             await fetch(
@@ -739,124 +695,115 @@ async function openMatchAnalysis(index) {
                         match: {
 
                             home:
-                                normalized.match?.home ||
                                 home,
 
                             away:
-                                normalized.match?.away ||
                                 away,
 
-                            date
-
+                            date:
+                                matchDate
                         },
 
                         normalized: {
 
                             form:
-                                normalized.form || {},
+                                {
+                                    home:
+                                        normalized.form?.home || [],
+
+                                    away:
+                                        normalized.form?.away || []
+                                },
 
                             h2h:
-                                normalized.h2h || {},
+                                {
+                                    evidence:
+                                        normalized.h2h || []
+                                },
 
-                            btts: {
+                            btts:
+                                {
+                                    probability:
+                                        normalized.statistics?.btts?.length
+                                            ? null
+                                            : null,
 
-                                probability:
-                                    normalized.statistics?.btts?.[0]
-                                        ?.percentage ??
-                                    null,
+                                    evidence:
+                                        normalized.statistics?.btts || [],
 
-                                odds:
-                                    normalized.statistics?.btts ||
-                                    [],
+                                    odds:
+                                        normalized.statistics?.btts || []
+                                },
 
-                                evidence:
-                                    normalized.statistics?.btts ||
-                                    []
+                            overUnder:
+                                {
+                                    evidence:
+                                        normalized.statistics?.overUnder || [],
 
-                            },
+                                    odds:
+                                        normalized.statistics?.overUnder || []
+                                },
 
-                            overUnder: {
+                            xg:
+                                {
+                                    home:
+                                        (normalized.statistics?.xg || [])
+                                            .map(item => ({
+                                                value:
+                                                    item.home
+                                            }))
+                                            .filter(
+                                                item =>
+                                                    item.value !== null &&
+                                                    item.value !== undefined
+                                            ),
 
-                                odds:
-                                    normalized.statistics?.overUnder ||
-                                    [],
+                                    away:
+                                        (normalized.statistics?.xg || [])
+                                            .map(item => ({
+                                                value:
+                                                    item.away
+                                            }))
+                                            .filter(
+                                                item =>
+                                                    item.value !== null &&
+                                                    item.value !== undefined
+                                            )
+                                },
 
-                                evidence:
-                                    normalized.statistics?.overUnder ||
-                                    []
+                            odds:
+                                {
+                                    home:
+                                        normalized.odds?.oneXtwo?.home ?? null,
 
-                            },
+                                    draw:
+                                        normalized.odds?.oneXtwo?.draw ?? null,
 
-                            xg: {
+                                    away:
+                                        normalized.odds?.oneXtwo?.away ?? null,
 
-                                home:
-                                    normalized.statistics?.xg
-                                        ?.map(item => ({
-                                            value:
-                                                item.home
-                                        })) || [],
+                                    evidence:
+                                        normalized.odds?.oneXtwo
+                                            ? [normalized.odds.oneXtwo]
+                                            : []
+                                },
 
-                                away:
-                                    normalized.statistics?.xg
-                                        ?.map(item => ({
-                                            value:
-                                                item.away
-                                        })) || []
+                            injuries:
+                                {
+                                    evidence:
+                                        normalized.injuries || []
+                                },
 
-                            },
-
-                            odds: {
-
-                                home:
-                                    normalized.odds?.oneXtwo?.home ??
-                                    null,
-
-                                draw:
-                                    normalized.odds?.oneXtwo?.draw ??
-                                    null,
-
-                                away:
-                                    normalized.odds?.oneXtwo?.away ??
-                                    null,
-
-                                evidence:
-                                    normalized.odds?.oneXtwo
-                                        ? [normalized.odds.oneXtwo]
-                                        : []
-
-                            },
-
-                            injuries: {
-
-                                evidence:
-                                    normalized.injuries || []
-
-                            },
-
-                            lineups: {
-
-                                evidence:
-                                    normalized.lineups || []
-
-                            }
-
-                        },
-
-                        readiness: {
-
-                            identityReady:
-                                normalized.availability
-                                    ?.identityReady === true,
-
-                            formReady:
-                                normalized.availability
-                                    ?.formReady === true,
-
-                            statsReady:
-                                normalized.availability
-                                    ?.statsReady === true
+                            lineups:
+                                {
+                                    evidence:
+                                        normalized.lineups || []
+                                }
 
                         },
+
+                        readiness:
+                            normalized.availability || {},
 
                         availability:
                             normalized.availability || {}
@@ -865,10 +812,8 @@ async function openMatchAnalysis(index) {
                 }
             );
 
-
         const prediction =
             await predictionResponse.json();
-
 
         if (!predictionResponse.ok) {
 
@@ -876,26 +821,22 @@ async function openMatchAnalysis(index) {
                 prediction.error ||
                 "Prediction engine failed."
             );
-
         }
-
 
         /*
          * =====================================================
-         * STEP 4 — DISPLAY RESULTS
+         * 5. DISPLAY RESULT
          * =====================================================
          */
 
-        displayPredictionResults(
+        displayPrediction(
             prediction
         );
 
-
         showStatus(
-            "✅ Match analysis completed.",
+            "✅ Analysis completed successfully.",
             false
         );
-
 
     } catch (error) {
 
@@ -904,15 +845,12 @@ async function openMatchAnalysis(index) {
             error
         );
 
-
         showStatus(
             "❌ " + error.message,
             true
         );
 
-
         results.innerHTML = `
-
             <div class="empty">
 
                 <h2>⚠️ Analysis Failed</h2>
@@ -931,17 +869,53 @@ async function openMatchAnalysis(index) {
                 </button>
 
             </div>
-
         `;
-
     }
-
 }
 
-    function displayPredictionResults(prediction) {
+    function resolveTeamIdentity(teamName) {
+
+    const name =
+        String(teamName || "")
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+
+    if (
+        name.includes("deportes concepcion") ||
+        name === "d. concepcion" ||
+        name === "d concepcion"
+    ) {
+        return "DEPORTES_CONCEPCION";
+    }
+
+    if (
+        name.includes("universidad de concepcion") ||
+        name === "u. de concepcion" ||
+        name === "u de concepcion"
+    ) {
+        return "UNIVERSIDAD_DE_CONCEPCION";
+    }
+
+    if (
+        name.includes("o'higgins") ||
+        name.includes("o higgins") ||
+        name.includes("o'higgins")
+    ) {
+        return "OHIGGINS";
+    }
+
+    return null;
+}
+
+    function displayPrediction(prediction) {
 
     const results =
         document.getElementById("results");
+
+    const match =
+        prediction.match || {};
 
     const model =
         prediction.model || {};
@@ -955,17 +929,17 @@ async function openMatchAnalysis(index) {
     const drawNoBet =
         model.drawNoBet || {};
 
-    const btts =
-        model.btts || {};
+    const form =
+        prediction.form || {};
 
-    const overUnder =
-        model.overUnder || {};
+    const homeForm =
+        form.home || {};
+
+    const awayForm =
+        form.away || {};
 
     const xg =
         model.xg || {};
-
-    const market =
-        prediction.market || {};
 
     const confidence =
         prediction.confidence ?? 0;
@@ -974,92 +948,62 @@ async function openMatchAnalysis(index) {
         prediction.status ||
         "UNKNOWN";
 
-
     results.innerHTML = `
 
         <h2>
-            🔥 TOMSONSTAKES ANALYSIS
+            🔥 TomsonStakes Analysis
         </h2>
-
 
         <div class="fixture">
 
             <h3>
                 ⚽
-                ${escapeHtml(
-                    prediction.match?.home ||
-                    "Home"
-                )}
+                ${escapeHtml(match.home || "")}
                 vs
-                ${escapeHtml(
-                    prediction.match?.away ||
-                    "Away"
-                )}
+                ${escapeHtml(match.away || "")}
             </h3>
 
-
-            <div class="status success">
-
-                Status:
+            <div class="league">
+                Analysis Status:
                 <strong>
                     ${escapeHtml(status)}
                 </strong>
-
-                <br><br>
-
-                Confidence:
-                <strong>
-                    ${confidence}%
-                </strong>
-
-                <br><br>
-
-                Model:
-                <strong>
-                    ${escapeHtml(
-                        prediction.modelMethod ||
-                        "N/A"
-                    )}
-                </strong>
-
             </div>
 
+        </div>
 
-            <h3>
-                📊 1X2 Probability
-            </h3>
+
+        <div class="card">
+
+            <h3>📊 1X2 Model Probability</h3>
 
             <p>
                 🏠 Home:
                 <strong>
-                    ${formatPercent(
-                        oneXTwo.home
-                    )}
+                    ${formatPercent(oneXTwo.home)}
                 </strong>
             </p>
 
             <p>
                 🤝 Draw:
                 <strong>
-                    ${formatPercent(
-                        oneXTwo.draw
-                    )}
+                    ${formatPercent(oneXTwo.draw)}
                 </strong>
             </p>
 
             <p>
                 ✈️ Away:
                 <strong>
-                    ${formatPercent(
-                        oneXTwo.away
-                    )}
+                    ${formatPercent(oneXTwo.away)}
                 </strong>
             </p>
 
+        </div>
 
-            <h3>
-                🔄 Double Chance
-            </h3>
+
+        <div class="card">
+
+            <h3>🔄 Double Chance</h3>
 
             <p>
                 1X:
@@ -1088,210 +1032,147 @@ async function openMatchAnalysis(index) {
                 </strong>
             </p>
 
+        </div>
 
-            <h3>
-                🛡️ Draw No Bet
-            </h3>
+
+        <div class="card">
+
+            <h3>🛡️ Draw No Bet</h3>
 
             <p>
-                Home:
+                ${escapeHtml(match.home || "Home")}:
                 <strong>
-                    ${formatPercent(
-                        drawNoBet.home
-                    )}
+                    ${formatPercent(drawNoBet.home)}
                 </strong>
             </p>
 
             <p>
-                Away:
+                ${escapeHtml(match.away || "Away")}:
                 <strong>
-                    ${formatPercent(
-                        drawNoBet.away
-                    )}
+                    ${formatPercent(drawNoBet.away)}
                 </strong>
             </p>
-
-
-            <h3>
-                ⚽ BTTS
-            </h3>
-
-            <p>
-                Probability:
-                <strong>
-                    ${formatPercent(
-                        btts.probability
-                    )}
-                </strong>
-            </p>
-
-
-            <h3>
-                📈 Over / Under
-            </h3>
-
-            ${
-                Array.isArray(
-                    overUnder.assessment
-                ) &&
-                overUnder.assessment.length
-                    ? overUnder.assessment
-                        .map(item => `
-
-                            <p>
-                                <strong>
-                                    ${escapeHtml(
-                                        item.selection ||
-                                        ""
-                                    )}
-                                </strong>
-
-                                ${
-                                    item.line !== null &&
-                                    item.line !== undefined
-                                        ? escapeHtml(
-                                            String(
-                                                item.line
-                                            )
-                                        )
-                                        : ""
-                                }
-
-                                —
-                                Odds:
-                                ${formatNumber(
-                                    item.odds
-                                )}
-
-                                —
-                                Edge:
-                                ${formatPercent(
-                                    item.edge
-                                )}
-                            </p>
-
-                        `)
-                        .join("")
-                    : "<p>No reliable Over/Under data.</p>"
-            }
-
-
-            <h3>
-                📐 Expected Goals
-            </h3>
-
-            <p>
-                Home xG:
-                <strong>
-                    ${formatNumber(
-                        xg.home
-                    )}
-                </strong>
-            </p>
-
-            <p>
-                Away xG:
-                <strong>
-                    ${formatNumber(
-                        xg.away
-                    )}
-                </strong>
-            </p>
-
-
-            <h3>
-                💰 Market Odds
-            </h3>
-
-            <p>
-                Home:
-                <strong>
-                    ${formatNumber(
-                        market.odds?.home
-                    )}
-                </strong>
-            </p>
-
-            <p>
-                Draw:
-                <strong>
-                    ${formatNumber(
-                        market.odds?.draw
-                    )}
-                </strong>
-            </p>
-
-            <p>
-                Away:
-                <strong>
-                    ${formatNumber(
-                        market.odds?.away
-                    )}
-                </strong>
-            </p>
-
-
-            ${
-                Array.isArray(
-                    prediction.evidence
-                )
-                    ? ""
-                    : ""
-            }
-
-
-            <h3>
-                ⚠️ Data Warnings
-            </h3>
-
-            ${
-                Array.isArray(
-                    prediction.warnings
-                ) &&
-                prediction.warnings.length
-                    ? `
-                        <ul>
-                            ${prediction.warnings
-                                .map(
-                                    warning => `
-                                        <li>
-                                            ${escapeHtml(
-                                                warning
-                                            )}
-                                        </li>
-                                    `
-                                )
-                                .join("")
-                            }
-                        </ul>
-                    `
-                    : "<p>No warnings.</p>"
-            }
-
-
-            <button
-                class="analyze-btn"
-                onclick="loadFixtures()"
-            >
-
-                ← BACK TO FIXTURES
-
-            </button>
 
         </div>
+
+
+        <div class="card">
+
+            <h3>📈 Recent Form</h3>
+
+            <p>
+                ${escapeHtml(match.home || "Home")}:
+                <strong>
+                    ${formatPercent(homeForm.score)}
+                </strong>
+            </p>
+
+            <p>
+                ${escapeHtml(match.away || "Away")}:
+                <strong>
+                    ${formatPercent(awayForm.score)}
+                </strong>
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>⚽ Expected Goals</h3>
+
+            <p>
+                ${escapeHtml(match.home || "Home")}:
+                <strong>
+                    ${formatNumber(xg.home)}
+                </strong>
+            </p>
+
+            <p>
+                ${escapeHtml(match.away || "Away")}:
+                <strong>
+                    ${formatNumber(xg.away)}
+                </strong>
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>🎯 Analysis Confidence</h3>
+
+            <p>
+                <strong>
+                    ${confidence}%
+                </strong>
+            </p>
+
+            <p class="league">
+                Method:
+                ${escapeHtml(
+                    prediction.modelMethod ||
+                    "Not specified"
+                )}
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>📋 Evidence</h3>
+
+            <p>
+                Home form:
+                ${prediction.evidence?.homeFormMatches || 0}
+                matches
+            </p>
+
+            <p>
+                Away form:
+                ${prediction.evidence?.awayFormMatches || 0}
+                matches
+            </p>
+
+            <p>
+                H2H sources:
+                ${prediction.evidence?.h2hSources || 0}
+            </p>
+
+            <p>
+                Injury sources:
+                ${prediction.evidence?.injuryEvidence || 0}
+            </p>
+
+            <p>
+                Lineup sources:
+                ${prediction.evidence?.lineupEvidence || 0}
+            </p>
+
+        </div>
+
+
+        <button
+            class="analyze-btn"
+            onclick="loadFixtures()"
+        >
+            ← BACK TO FIXTURES
+        </button>
     `;
-    }      
-function formatPercent(value) {
+}
+
+    function formatPercent(value) {
 
     if (
         value === null ||
         value === undefined ||
-        !Number.isFinite(Number(value))
+        Number.isNaN(Number(value))
     ) {
         return "N/A";
     }
 
-    return Number(value).toFixed(2) + "%";
+    return Number(value).toFixed(1) + "%";
 }
 
 
@@ -1300,126 +1181,125 @@ function formatNumber(value) {
     if (
         value === null ||
         value === undefined ||
-        !Number.isFinite(Number(value))
+        Number.isNaN(Number(value))
     ) {
         return "N/A";
     }
 
     return Number(value).toFixed(2);
 }
-/* ============================
-   STATUS
-============================ */
-
-function showStatus(
-    message,
-    isError
-) {
-
-    const status =
-        document.getElementById(
-            "status"
-        );
-
-
-    status.textContent =
-        message;
-
-
-    status.classList.remove(
-        "hidden",
-        "error",
-        "success"
-    );
-
-
-    if (isError) {
-
-        status.classList.add(
-            "error"
-        );
-
-    } else {
-
-        status.classList.add(
-            "success"
-        );
-
-    }
-
-}
-
-
-/* ============================
-   NIGERIA TIME
-============================ */
-
-function formatNigeriaTime(
-    utcDate
-) {
-
-    try {
-
-        const date =
-            new Date(utcDate);
-
-
-        return date.toLocaleString(
-            "en-NG",
-            {
-                timeZone: "Africa/Lagos",
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false
-            }
-        ) + " WAT";
-
-
-    } catch (error) {
-
-        return "Time unavailable";
-
-    }
-
-}
-
-
-/* ============================
-   SECURITY
-============================ */
-
-function escapeHtml(
-    value
-) {
-
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-</script>
-
-</body>
+  
+/* ============================  
+   STATUS  
+============================ */  
+  
+function showStatus(  
+    message,  
+    isError  
+) {  
+  
+    const status =  
+        document.getElementById(  
+            "status"  
+        );  
+  
+  
+    status.textContent =  
+        message;  
+  
+  
+    status.classList.remove(  
+        "hidden",  
+        "error",  
+        "success"  
+    );  
+  
+  
+    if (isError) {  
+  
+        status.classList.add(  
+            "error"  
+        );  
+  
+    } else {  
+  
+        status.classList.add(  
+            "success"  
+        );  
+  
+    }  
+  
+}  
+  
+  
+/* ============================  
+   NIGERIA TIME  
+============================ */  
+  
+function formatNigeriaTime(  
+    utcDate  
+) {  
+  
+    try {  
+  
+        const date =  
+            new Date(utcDate);  
+  
+  
+        return date.toLocaleString(  
+            "en-NG",  
+            {  
+                timeZone: "Africa/Lagos",  
+                day: "2-digit",  
+                month: "short",  
+                year: "numeric",  
+                hour: "2-digit",  
+                minute: "2-digit",  
+                hour12: false  
+            }  
+        ) + " WAT";  
+  
+  
+    } catch (error) {  
+  
+        return "Time unavailable";  
+  
+    }  
+  
+}  
+  
+  
+/* ============================  
+   SECURITY  
+============================ */  
+  
+function escapeHtml(  
+    value  
+) {  
+  
+    return String(value)  
+        .replace(  
+            /&/g,  
+            "&amp;"  
+        )  
+        .replace(  
+            /</g,  
+            "&lt;"  
+        )  
+        .replace(  
+            />/g,  
+            "&gt;"  
+        )  
+        .replace(  
+            /"/g,  
+            "&quot;"  
+        )  
+        .replace(  
+            /'/g,  
+            "&#039;"  
+        );  
+  
+}  
+  
+</script>  </body>  
 </html>
