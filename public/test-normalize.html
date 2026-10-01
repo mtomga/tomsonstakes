@@ -1256,39 +1256,49 @@ function displayForm(
    AVAILABILITY
 ===================================================== */
 
-function displayAvailability(
-    normalized
-) {
+
+function displayAvailability(normalized) {
 
     const container =
-        document.getElementById(
-            "availability"
-        );
-
-
-    /*
-     * Safety check.
-     *
-     * This prevents:
-     * Cannot set properties of null
-     */
+        document.getElementById("availability");
 
     if (!container) {
-
-        console.error(
-            "Availability container not found."
-        );
-
         return;
-
     }
 
-
     const availability =
-        normalized.availability ||
-        normalized.readiness ||
-        {};
+        normalized.availability || {};
 
+    const statistics =
+        normalized.statistics || {};
+
+    const hasBTTS =
+        Array.isArray(statistics.btts) &&
+        statistics.btts.length > 0;
+
+    const hasOverUnder =
+        Array.isArray(statistics.overUnder) &&
+        statistics.overUnder.length > 0;
+
+    const hasXG =
+        Array.isArray(statistics.xg) &&
+        statistics.xg.length > 0;
+
+    const hasInjuries =
+        Array.isArray(normalized.injuries) &&
+        normalized.injuries.length > 0;
+
+    const hasLineups =
+        Array.isArray(normalized.lineups) &&
+        normalized.lineups.length > 0;
+
+    const hasOdds =
+        normalized.odds &&
+        (
+            normalized.odds.oneXtwo ||
+            normalized.odds.btts ||
+            normalized.odds.overUnder
+        );
 
     const items = [
 
@@ -1309,32 +1319,32 @@ function displayAvailability(
 
         [
             "BTTS",
-            availability.btts
+            hasBTTS
         ],
 
         [
             "Over / Under",
-            availability.overUnder
+            hasOverUnder
         ],
 
         [
             "xG",
-            availability.xG
+            hasXG
         ],
 
         [
             "Injuries",
-            availability.injuries
+            hasInjuries
         ],
 
         [
             "Lineups",
-            availability.lineups
+            hasLineups
         ],
 
         [
             "Odds",
-            availability.odds
+            hasOdds
         ],
 
         [
@@ -1349,59 +1359,30 @@ function displayAvailability(
 
     ];
 
-
     container.innerHTML =
         items.map(
-            item => {
+            ([label, value]) => {
 
-                const label =
-                    item[0];
-
-                const value =
-                    item[1];
-
-
-                let text =
-                    "— Missing";
-
-                let css =
-                    "not-ready";
-
-
-                if (value === true) {
-
-                    text =
-                        "✓ Available";
-
-                    css =
-                        "ready";
-
-                }
-
-                else if (
-                    value !== false &&
-                    value !== undefined &&
-                    value !== null
-                ) {
-
-                    text =
-                        String(value);
-
-                    css =
-                        "partial";
-
-                }
-
+                const available =
+                    value === true;
 
                 return `
-                    <div class="stat ${css}">
+                    <div class="stat ${
+                        available
+                            ? "ready"
+                            : "not-ready"
+                    }">
 
                         <div class="stat-title">
                             ${escapeHtml(label)}
                         </div>
 
                         <div class="stat-value">
-                            ${escapeHtml(text)}
+                            ${
+                                available
+                                    ? "✓ Available"
+                                    : "— Missing"
+                            }
                         </div>
 
                     </div>
@@ -1409,7 +1390,6 @@ function displayAvailability(
 
             }
         ).join("");
-
 }
 
 
