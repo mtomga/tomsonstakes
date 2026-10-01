@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+
     try {
 
         if (req.method !== "POST") {
@@ -27,54 +28,99 @@ export default async function handler(req, res) {
         // =====================================================
 
         function number(value) {
+
             const n = Number(value);
-            return Number.isFinite(n) ? n : null;
+
+            return Number.isFinite(n)
+                ? n
+                : null;
         }
 
         function clamp(value, min, max) {
-            return Math.max(min, Math.min(max, value));
+
+            return Math.max(
+                min,
+                Math.min(max, value)
+            );
         }
 
         function average(values) {
+
             const valid = values
                 .map(number)
                 .filter(v => v !== null);
 
-            if (!valid.length) return null;
-
-            return valid.reduce((a, b) => a + b, 0) / valid.length;
-        }
-
-        function round(value, decimals = 2) {
-            if (value === null || value === undefined) {
+            if (!valid.length) {
                 return null;
             }
 
-            const factor = Math.pow(10, decimals);
-
-            return Math.round(value * factor) / factor;
+            return (
+                valid.reduce(
+                    (a, b) => a + b,
+                    0
+                ) / valid.length
+            );
         }
 
-        function impliedProbability(odds) {
+        function round(
+            value,
+            decimals = 2
+        ) {
 
-            const value = number(odds);
+            if (
+                value === null ||
+                value === undefined
+            ) {
+                return null;
+            }
 
-            if (value === null || value <= 1) {
+            const factor =
+                Math.pow(
+                    10,
+                    decimals
+                );
+
+            return (
+                Math.round(
+                    value * factor
+                ) / factor
+            );
+        }
+
+        function impliedProbability(
+            odds
+        ) {
+
+            const value =
+                number(odds);
+
+            if (
+                value === null ||
+                value <= 1
+            ) {
                 return null;
             }
 
             return 1 / value;
         }
 
-        function normalizeProbabilities(values) {
+        function normalizeProbabilities(
+            values
+        ) {
 
-            const entries = Object.entries(values)
-                .filter(([_, value]) => value !== null);
+            const entries =
+                Object.entries(values)
+                    .filter(
+                        ([_, value]) =>
+                            value !== null
+                    );
 
-            const total = entries.reduce(
-                (sum, [_, value]) => sum + value,
-                0
-            );
+            const total =
+                entries.reduce(
+                    (sum, [_, value]) =>
+                        sum + value,
+                    0
+                );
 
             if (!total) {
                 return values;
@@ -82,17 +128,28 @@ export default async function handler(req, res) {
 
             const result = {};
 
-            for (const [key, value] of entries) {
-                result[key] = (value / total) * 100;
+            for (
+                const [key, value]
+                of entries
+            ) {
+
+                result[key] =
+                    (value / total) * 100;
             }
 
             return result;
         }
 
-        function calculateValue(probability, odds) {
+        function calculateValue(
+            probability,
+            odds
+        ) {
 
-            const p = number(probability);
-            const o = number(odds);
+            const p =
+                number(probability);
+
+            const o =
+                number(odds);
 
             if (
                 p === null ||
@@ -102,13 +159,21 @@ export default async function handler(req, res) {
                 return null;
             }
 
-            return (p / 100) * o;
+            return (
+                (p / 100) * o
+            );
         }
 
-        function calculateEdge(probability, odds) {
+        function calculateEdge(
+            probability,
+            odds
+        ) {
 
-            const p = number(probability);
-            const o = number(odds);
+            const p =
+                number(probability);
+
+            const o =
+                number(odds);
 
             if (
                 p === null ||
@@ -118,9 +183,12 @@ export default async function handler(req, res) {
                 return null;
             }
 
-            const implied = (1 / o) * 100;
+            const implied =
+                (1 / o) * 100;
 
-            return p - implied;
+            return (
+                p - implied
+            );
         }
 
         // =====================================================
@@ -129,44 +197,86 @@ export default async function handler(req, res) {
 
         const data = normalized;
 
-        const form = data.form || {};
-        const h2h = data.h2h || {};
-        const btts = data.btts || {};
-        const overUnder = data.overUnder || {};
-        const xg = data.xg || {};
-        const oddsData = data.odds || {};
+        const form =
+            data.form || {};
+
+        const h2h =
+            data.h2h || {};
+
+        const btts =
+            data.btts || {};
+
+        const overUnder =
+            data.overUnder || {};
+
+        const xg =
+            data.xg || {};
+
+        const oddsData =
+            data.odds || {};
 
         // =====================================================
         // FORM
         // =====================================================
 
-        function formScore(matches) {
+        function formScore(
+            matches
+        ) {
 
-            if (!Array.isArray(matches) || !matches.length) {
+            if (
+                !Array.isArray(matches) ||
+                !matches.length
+            ) {
                 return null;
             }
 
-            const points = matches.map(match => {
+            const points =
+                matches
+                    .map(match => {
 
-                const result = String(
-                    match.result || ""
-                ).toUpperCase();
+                        const result =
+                            String(
+                                match.result || ""
+                            ).toUpperCase();
 
-                if (result === "W") return 3;
-                if (result === "D") return 1;
-                if (result === "L") return 0;
+                        if (
+                            result === "W"
+                        ) {
+                            return 3;
+                        }
 
-                return null;
+                        if (
+                            result === "D"
+                        ) {
+                            return 1;
+                        }
 
-            }).filter(v => v !== null);
+                        if (
+                            result === "L"
+                        ) {
+                            return 0;
+                        }
+
+                        return null;
+
+                    })
+                    .filter(
+                        v => v !== null
+                    );
 
             if (!points.length) {
                 return null;
             }
 
             return round(
-                (points.reduce((a, b) => a + b, 0) /
-                (points.length * 3)) * 100
+                (
+                    points.reduce(
+                        (a, b) =>
+                            a + b,
+                        0
+                    ) /
+                    (points.length * 3)
+                ) * 100
             );
         }
 
@@ -181,47 +291,86 @@ export default async function handler(req, res) {
                 : [];
 
         const homeFormScore =
-            formScore(homeFormMatches);
+            formScore(
+                homeFormMatches
+            );
 
         const awayFormScore =
-            formScore(awayFormMatches);
+            formScore(
+                awayFormMatches
+            );
 
         // =====================================================
         // 1X2 MARKET
         // =====================================================
 
         const marketOdds = {
-            home: number(oddsData.home),
-            draw: number(oddsData.draw),
-            away: number(oddsData.away)
+
+            home:
+                number(
+                    oddsData.home
+                ),
+
+            draw:
+                number(
+                    oddsData.draw
+                ),
+
+            away:
+                number(
+                    oddsData.away
+                )
         };
 
         const rawImplied = {
-            home: impliedProbability(marketOdds.home),
-            draw: impliedProbability(marketOdds.draw),
-            away: impliedProbability(marketOdds.away)
+
+            home:
+                impliedProbability(
+                    marketOdds.home
+                ),
+
+            draw:
+                impliedProbability(
+                    marketOdds.draw
+                ),
+
+            away:
+                impliedProbability(
+                    marketOdds.away
+                )
         };
 
         const marketProbability =
-            normalizeProbabilities(rawImplied);
+            normalizeProbabilities(
+                rawImplied
+            );
 
         // =====================================================
         // MODEL PROBABILITY
-        //
-        // V1.1:
-        // Market remains baseline.
-        //
-        // Form is only applied when BOTH teams have
-        // usable form data.
         // =====================================================
 
         let modelProbability = {
-            home: marketProbability.home ?? null,
-            draw: marketProbability.draw ?? null,
-            away: marketProbability.away ?? null
+
+            home:
+                marketProbability.home ??
+                null,
+
+            draw:
+                marketProbability.draw ??
+                null,
+
+            away:
+                marketProbability.away ??
+                null
         };
 
-        let modelMethod = "MARKET_BASELINE";
+        let modelMethod =
+            "MARKET_BASELINE";
+
+        /*
+         * Form is only applied when BOTH teams
+         * have usable form data.
+         */
 
         if (
             homeFormScore !== null &&
@@ -238,39 +387,76 @@ export default async function handler(req, res) {
                 awayFormScore;
 
             const adjustedHome =
-                (marketProbability.home * 0.75) +
-                (homeFormWeight * 0.25);
+                (
+                    marketProbability.home *
+                    0.75
+                ) +
+                (
+                    homeFormWeight *
+                    0.25
+                );
 
             const adjustedAway =
-                (marketProbability.away * 0.75) +
-                (awayFormWeight * 0.25);
+                (
+                    marketProbability.away *
+                    0.75
+                ) +
+                (
+                    awayFormWeight *
+                    0.25
+                );
 
             const adjustedDraw =
-                marketProbability.draw * 0.90;
+                marketProbability.draw *
+                0.90;
 
             const total =
                 adjustedHome +
                 adjustedDraw +
                 adjustedAway;
 
-            modelProbability = {
-                home: (adjustedHome / total) * 100,
-                draw: (adjustedDraw / total) * 100,
-                away: (adjustedAway / total) * 100
-            };
+            if (total > 0) {
 
-            modelMethod = "MARKET_PLUS_FORM";
+                modelProbability = {
 
+                    home:
+                        (
+                            adjustedHome /
+                            total
+                        ) * 100,
+
+                    draw:
+                        (
+                            adjustedDraw /
+                            total
+                        ) * 100,
+
+                    away:
+                        (
+                            adjustedAway /
+                            total
+                        ) * 100
+                };
+
+                modelMethod =
+                    "MARKET_PLUS_FORM";
+            }
         }
 
         modelProbability.home =
-            round(modelProbability.home);
+            round(
+                modelProbability.home
+            );
 
         modelProbability.draw =
-            round(modelProbability.draw);
+            round(
+                modelProbability.draw
+            );
 
         modelProbability.away =
-            round(modelProbability.away);
+            round(
+                modelProbability.away
+            );
 
         // =====================================================
         // DOUBLE CHANCE
@@ -311,7 +497,9 @@ export default async function handler(req, res) {
         // =====================================================
 
         let drawNoBet = {
+
             home: null,
+
             away: null
         };
 
@@ -324,18 +512,24 @@ export default async function handler(req, res) {
                 modelProbability.home +
                 modelProbability.away;
 
-            if (nonDraw > 0) {
+            if (
+                nonDraw > 0
+            ) {
 
                 drawNoBet.home =
                     round(
-                        (modelProbability.home /
-                        nonDraw) * 100
+                        (
+                            modelProbability.home /
+                            nonDraw
+                        ) * 100
                     );
 
                 drawNoBet.away =
                     round(
-                        (modelProbability.away /
-                        nonDraw) * 100
+                        (
+                            modelProbability.away /
+                            nonDraw
+                        ) * 100
                     );
             }
         }
@@ -345,7 +539,9 @@ export default async function handler(req, res) {
         // =====================================================
 
         const bttsProbability =
-            number(btts.probability);
+            number(
+                btts.probability
+            );
 
         const bttsOdds =
             Array.isArray(btts.odds)
@@ -356,14 +552,21 @@ export default async function handler(req, res) {
             bttsOdds.map(item => {
 
                 const odds =
-                    number(item.value);
+                    number(
+                        item.value
+                    );
 
                 const probability =
-                    number(item.percentage);
+                    number(
+                        item.percentage
+                    );
 
                 return {
+
                     answer:
-                        item.answer || null,
+                        item.answer ||
+                        item.selection ||
+                        null,
 
                     odds,
 
@@ -373,7 +576,9 @@ export default async function handler(req, res) {
                     impliedProbability:
                         odds !== null
                             ? round(
-                                (1 / odds) * 100
+                                (
+                                    1 / odds
+                                ) * 100
                             )
                             : null,
 
@@ -401,12 +606,13 @@ export default async function handler(req, res) {
                             : null,
 
                     source:
-                        item.source || null,
+                        item.source ||
+                        null,
 
                     title:
-                        item.title || null
+                        item.title ||
+                        null
                 };
-
             });
 
         // =====================================================
@@ -414,7 +620,9 @@ export default async function handler(req, res) {
         // =====================================================
 
         const overUnderOdds =
-            Array.isArray(overUnder.odds)
+            Array.isArray(
+                overUnder.odds
+            )
                 ? overUnder.odds
                 : [];
 
@@ -422,17 +630,25 @@ export default async function handler(req, res) {
             overUnderOdds.map(item => {
 
                 const odds =
-                    number(item.value);
+                    number(
+                        item.value
+                    );
 
                 const probability =
-                    number(item.percentage);
+                    number(
+                        item.percentage
+                    );
 
                 return {
+
                     selection:
-                        item.selection || null,
+                        item.selection ||
+                        null,
 
                     line:
-                        number(item.line),
+                        number(
+                            item.line
+                        ),
 
                     odds,
 
@@ -442,7 +658,9 @@ export default async function handler(req, res) {
                     impliedProbability:
                         odds !== null
                             ? round(
-                                (1 / odds) * 100
+                                (
+                                    1 / odds
+                                ) * 100
                             )
                             : null,
 
@@ -470,12 +688,13 @@ export default async function handler(req, res) {
                             : null,
 
                     source:
-                        item.source || null,
+                        item.source ||
+                        null,
 
                     title:
-                        item.title || null
+                        item.title ||
+                        null
                 };
-
             });
 
         // =====================================================
@@ -485,40 +704,43 @@ export default async function handler(req, res) {
         const homeXG =
             Array.isArray(xg.home)
                 ? average(
-                    xg.home.map(item => item.value)
+                    xg.home.map(
+                        item =>
+                            item.value
+                    )
                 )
                 : null;
 
         const awayXG =
             Array.isArray(xg.away)
                 ? average(
-                    xg.away.map(item => item.value)
+                    xg.away.map(
+                        item =>
+                            item.value
+                    )
                 )
                 : null;
 
         // =====================================================
         // 1X2 VALUE
-        //
-        // IMPORTANT:
-        // Do NOT calculate value from bookmaker's own
-        // implied probability.
-        //
-        // Value requires an independent model probability.
-        //
-        // Therefore:
-        // - with form/model: calculate value
-        // - market-only baseline: value = null
         // =====================================================
 
         let oneXTwoValue = {
+
             home: null,
+
             draw: null,
+
             away: null
         };
 
-        if (modelMethod !== "MARKET_BASELINE") {
+        if (
+            modelMethod !==
+            "MARKET_BASELINE"
+        ) {
 
             oneXTwoValue = {
+
                 home:
                     round(
                         calculateValue(
@@ -580,32 +802,44 @@ export default async function handler(req, res) {
                 awayFormMatches.length,
 
             h2hSources:
-                Array.isArray(h2h.evidence)
+                Array.isArray(
+                    h2h.evidence
+                )
                     ? h2h.evidence.length
                     : 0,
 
             bttsEvidence:
-                Array.isArray(btts.evidence)
+                Array.isArray(
+                    btts.evidence
+                )
                     ? btts.evidence.length
                     : 0,
 
             overUnderEvidence:
-                Array.isArray(overUnder.evidence)
+                Array.isArray(
+                    overUnder.evidence
+                )
                     ? overUnder.evidence.length
                     : 0,
 
             oneXTwoEvidence:
-                Array.isArray(oddsData.evidence)
+                Array.isArray(
+                    oddsData.evidence
+                )
                     ? oddsData.evidence.length
                     : 0,
 
             injuryEvidence:
-                Array.isArray(data.injuries?.evidence)
+                Array.isArray(
+                    data.injuries?.evidence
+                )
                     ? data.injuries.evidence.length
                     : 0,
 
             lineupEvidence:
-                Array.isArray(data.lineups?.evidence)
+                Array.isArray(
+                    data.lineups?.evidence
+                )
                     ? data.lineups.evidence.length
                     : 0
         };
@@ -644,7 +878,8 @@ export default async function handler(req, res) {
             statsReady
         ) {
 
-            status = "ANALYSIS_READY";
+            status =
+                "ANALYSIS_READY";
 
         } else if (
             identityReady &&
@@ -655,11 +890,13 @@ export default async function handler(req, res) {
             )
         ) {
 
-            status = "PARTIAL_ANALYSIS";
+            status =
+                "PARTIAL_ANALYSIS";
 
         } else {
 
-            status = "INSUFFICIENT_DATA";
+            status =
+                "INSUFFICIENT_DATA";
         }
 
         // =====================================================
@@ -688,27 +925,392 @@ export default async function handler(req, res) {
             confidence += 15;
         }
 
-        if (bttsProbability !== null) {
+        if (
+            bttsProbability !== null
+        ) {
             confidence += 5;
         }
 
-        if (overUnderOdds.length > 0) {
+        if (
+            overUnderOdds.length > 0
+        ) {
             confidence += 5;
         }
 
-        if (evidence.h2hSources > 0) {
+        if (
+            evidence.h2hSources > 0
+        ) {
             confidence += 5;
         }
 
-        if (evidence.injuryEvidence > 0) {
+        if (
+            evidence.injuryEvidence > 0
+        ) {
             confidence += 5;
         }
 
-        confidence = clamp(
-            confidence,
-            0,
-            100
+        confidence =
+            clamp(
+                confidence,
+                0,
+                100
+            );
+
+        // =====================================================
+        // HEADLINE PREDICTION ENGINE
+        //
+        // IMPORTANT:
+        // Double Chance and Draw No Bet are NOT allowed
+        // to automatically become the headline prediction.
+        //
+        // Eligible headline markets:
+        //
+        // Home
+        // Draw
+        // Away
+        // BTTS Yes
+        // BTTS No
+        // Over 2.5
+        // Under 2.5
+        // =====================================================
+
+        const MIN_PREDICTION_PROBABILITY =
+            55;
+
+        const predictionCandidates = [];
+
+        // =====================================================
+        // 1X2 CANDIDATES
+        // =====================================================
+
+        if (
+            modelProbability.home !== null &&
+            modelProbability.home >=
+                MIN_PREDICTION_PROBABILITY
+        ) {
+
+            predictionCandidates.push({
+
+                selection:
+                    "Home",
+
+                probability:
+                    modelProbability.home,
+
+                market:
+                    "1X2",
+
+                evidenceScore:
+                    formReady
+                        ? 100
+                        : 60
+            });
+        }
+
+        if (
+            modelProbability.draw !== null &&
+            modelProbability.draw >=
+                MIN_PREDICTION_PROBABILITY
+        ) {
+
+            predictionCandidates.push({
+
+                selection:
+                    "Draw",
+
+                probability:
+                    modelProbability.draw,
+
+                market:
+                    "1X2",
+
+                evidenceScore:
+                    formReady
+                        ? 100
+                        : 60
+            });
+        }
+
+        if (
+            modelProbability.away !== null &&
+            modelProbability.away >=
+                MIN_PREDICTION_PROBABILITY
+        ) {
+
+            predictionCandidates.push({
+
+                selection:
+                    "Away",
+
+                probability:
+                    modelProbability.away,
+
+                market:
+                    "1X2",
+
+                evidenceScore:
+                    formReady
+                        ? 100
+                        : 60
+            });
+        }
+
+        // =====================================================
+        // BTTS CANDIDATES
+        // =====================================================
+
+        if (
+            bttsProbability !== null
+        ) {
+
+            /*
+             * If btts.probability is supplied as the probability
+             * of BTTS Yes, use it directly.
+             */
+
+            if (
+                bttsProbability >=
+                MIN_PREDICTION_PROBABILITY
+            ) {
+
+                predictionCandidates.push({
+
+                    selection:
+                        "BTTS Yes",
+
+                    probability:
+                        round(
+                            bttsProbability
+                        ),
+
+                    market:
+                        "BTTS",
+
+                    evidenceScore:
+                        bttsOdds.length > 0
+                            ? 90
+                            : 70
+                });
+
+            }
+
+            /*
+             * BTTS No is the complement.
+             */
+
+            const bttsNoProbability =
+                100 -
+                bttsProbability;
+
+            if (
+                bttsNoProbability >=
+                MIN_PREDICTION_PROBABILITY
+            ) {
+
+                predictionCandidates.push({
+
+                    selection:
+                        "BTTS No",
+
+                    probability:
+                        round(
+                            bttsNoProbability
+                        ),
+
+                    market:
+                        "BTTS",
+
+                    evidenceScore:
+                        bttsOdds.length > 0
+                            ? 90
+                            : 70
+                });
+            }
+        }
+
+        // =====================================================
+        // OVER / UNDER 2.5 CANDIDATES
+        // =====================================================
+
+        for (
+            const item
+            of overUnderAssessments
+        ) {
+
+            const line =
+                number(
+                    item.line
+                );
+
+            const probability =
+                number(
+                    item.sourceProbability
+                );
+
+            if (
+                line !== 2.5 ||
+                probability === null
+            ) {
+                continue;
+            }
+
+            const selection =
+                String(
+                    item.selection ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+            if (
+                selection ===
+                "over"
+            ) {
+
+                if (
+                    probability >=
+                    MIN_PREDICTION_PROBABILITY
+                ) {
+
+                    predictionCandidates.push({
+
+                        selection:
+                            "Over 2.5",
+
+                        probability:
+                            round(
+                                probability
+                            ),
+
+                        market:
+                            "OVER_UNDER",
+
+                        evidenceScore:
+                            90
+                    });
+                }
+            }
+
+            if (
+                selection ===
+                "under"
+            ) {
+
+                if (
+                    probability >=
+                    MIN_PREDICTION_PROBABILITY
+                ) {
+
+                    predictionCandidates.push({
+
+                        selection:
+                            "Under 2.5",
+
+                        probability:
+                            round(
+                                probability
+                            ),
+
+                        market:
+                            "OVER_UNDER",
+
+                        evidenceScore:
+                            90
+                    });
+                }
+            }
+        }
+
+        // =====================================================
+        // REMOVE DUPLICATES
+        // =====================================================
+
+        const uniquePredictions = [];
+
+        const predictionKeys =
+            new Set();
+
+        for (
+            const candidate
+            of predictionCandidates
+        ) {
+
+            const key =
+                candidate.selection;
+
+            if (
+                predictionKeys.has(key)
+            ) {
+                continue;
+            }
+
+            predictionKeys.add(key);
+
+            uniquePredictions.push(
+                candidate
+            );
+        }
+
+        // =====================================================
+        // FINAL PREDICTION SELECTION
+        //
+        // Probability is the primary factor.
+        //
+        // Evidence quality is only used as a small
+        // tie-breaker so weak data cannot easily beat
+        // a properly supported prediction.
+        // =====================================================
+
+        uniquePredictions.sort(
+            (a, b) => {
+
+                const probabilityDifference =
+                    b.probability -
+                    a.probability;
+
+                /*
+                 * Only use evidence as a tie-breaker
+                 * when probabilities are very close.
+                 */
+
+                if (
+                    Math.abs(
+                        probabilityDifference
+                    ) <= 2
+                ) {
+
+                    return (
+                        b.evidenceScore -
+                        a.evidenceScore
+                    );
+                }
+
+                return probabilityDifference;
+            }
         );
+
+        const bestPrediction =
+            uniquePredictions.length > 0
+                ? uniquePredictions[0]
+                : null;
+
+        const prediction =
+            bestPrediction
+                ? {
+
+                    selection:
+                        bestPrediction.selection,
+
+                    probability:
+                        Math.round(
+                            bestPrediction.probability
+                        ),
+
+                    market:
+                        bestPrediction.market
+
+                }
+                : null;
 
         // =====================================================
         // RESPONSE
@@ -716,16 +1318,32 @@ export default async function handler(req, res) {
 
         return res.status(200).json({
 
-            success: true,
+            success:
+                true,
 
             version:
-                "Prediction Engine V1.1",
+                "Prediction Engine V1.2",
 
             match: {
-                home: match.home,
-                away: match.away,
-                date: match.date || null
+
+                home:
+                    match.home,
+
+                away:
+                    match.away,
+
+                date:
+                    match.date ||
+                    null
             },
+
+            // =================================================
+            // FINAL HEADLINE PREDICTION
+            //
+            // THIS IS WHAT THE FRONTEND SHOULD DISPLAY.
+            // =================================================
+
+            prediction,
 
             status,
 
@@ -733,28 +1351,17 @@ export default async function handler(req, res) {
 
             modelMethod,
 
-            form: {
-
-                home: {
-                    matches:
-                        homeFormMatches.length,
-
-                    score:
-                        homeFormScore
-                },
-
-                away: {
-                    matches:
-                        awayFormMatches.length,
-
-                    score:
-                        awayFormScore
-                }
-            },
+            // =================================================
+            // INTERNAL MODEL DATA
+            //
+            // Keep these for the engine/debugging.
+            // The frontend does not need to display them.
+            // =================================================
 
             model: {
 
                 oneXTwo: {
+
                     home:
                         modelProbability.home,
 
@@ -770,6 +1377,7 @@ export default async function handler(req, res) {
                 drawNoBet,
 
                 btts: {
+
                     probability:
                         bttsProbability,
 
@@ -781,6 +1389,7 @@ export default async function handler(req, res) {
                 },
 
                 overUnder: {
+
                     odds:
                         overUnderOdds,
 
@@ -789,6 +1398,7 @@ export default async function handler(req, res) {
                 },
 
                 xg: {
+
                     home:
                         round(homeXG),
 
@@ -799,7 +1409,8 @@ export default async function handler(req, res) {
 
             market: {
 
-                odds: marketOdds,
+                odds:
+                    marketOdds,
 
                 impliedProbability:
                     marketProbability,
@@ -822,10 +1433,40 @@ export default async function handler(req, res) {
 
             evidence,
 
-            rules: {
+            predictionCandidates:
+                uniquePredictions,
 
-                h2hWeight:
-                    "H2H is supporting evidence only and is not allowed to dominate the model.",
+            predictionRules: {
+
+                minimumProbability:
+                    MIN_PREDICTION_PROBABILITY,
+
+                eligibleMarkets: [
+
+                    "Home",
+
+                    "Draw",
+
+                    "Away",
+
+                    "BTTS Yes",
+
+                    "BTTS No",
+
+                    "Over 2.5",
+
+                    "Under 2.5"
+                ],
+
+                excludedFromHeadline: [
+
+                    "Double Chance",
+
+                    "Draw No Bet"
+                ],
+
+                selectionRule:
+                    "The highest qualifying probability among eligible headline markets is selected.",
 
                 missingData:
                     "Missing data is not guessed.",
@@ -839,29 +1480,28 @@ export default async function handler(req, res) {
                 lineupRule:
                     "Predicted lineups are not treated as confirmed.",
 
-                identityRule:
-                    "Deportes Concepcion and Universidad de Concepcion are separate clubs.",
-
-                oddsRule:
-                    "Probability and bookmaker odds are kept separate.",
-
-                bttsRule:
-                    "BTTS probability and BTTS bookmaker odds are kept separate.",
-
-                overUnderRule:
-                    "Over/Under probability and bookmaker odds are kept separate."
+                h2hRule:
+                    "H2H is supporting evidence only and does not dominate the model."
             }
 
         });
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         return res.status(500).json({
-            success: false,
-            error: "Prediction engine failed.",
-            details: error.message
+
+            success:
+                false,
+
+            error:
+                "Prediction engine failed.",
+
+            details:
+                error.message
         });
     }
 }
