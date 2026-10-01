@@ -3,737 +3,458 @@
 
 <head>
 
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<title>
-    TomsonStakes Global Football Predictions 
-</title>
+    <title>
+        TomsonStakes Global Football
+    </title>
 
 
-<style>
+    <style>
 
-/* =========================================================
-   GLOBAL
-========================================================= */
+        * {
+            box-sizing: border-box;
+        }
 
-* {
-    box-sizing: border-box;
-}
 
-body {
+        body {
 
-    margin: 0;
+            margin: 0;
 
-    font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
 
-    background: #111827;
+            background: #111827;
 
-    color: #ffffff;
-}
+            color: #ffffff;
 
-.container {
+        }
 
-    width: 100%;
 
-    max-width: 1100px;
+        .container {
 
-    margin: auto;
+            width: 100%;
 
-    padding: 20px;
-}
+            max-width: 1000px;
 
+            margin: 0 auto;
 
-/* =========================================================
-   HEADER
-========================================================= */
+            padding: 20px;
 
-.header {
+        }
 
-    text-align: center;
 
-    padding: 25px 10px 30px;
-}
+        /* =====================================================
+           HEADER
+        ===================================================== */
 
-.header h1 {
+        .header {
 
-    margin: 0;
+            text-align: center;
 
-    font-size: 34px;
+            padding: 25px 10px 20px;
 
-    font-weight: 800;
-}
+        }
 
-.subtitle {
 
-    color: #9ca3af;
+        .header h1 {
 
-    margin-top: 8px;
+            margin: 0;
 
-    font-size: 14px;
+            font-size: 32px;
 
-    letter-spacing: 1px;
-}
+            font-weight: 800;
 
+        }
 
-/* =========================================================
-   CONTROL
-========================================================= */
 
-.control-box {
+        .subtitle {
 
-    background: #1f2937;
+            color: #9ca3af;
 
-    padding: 22px;
+            margin-top: 8px;
 
-    border-radius: 14px;
+            font-size: 14px;
 
-    text-align: center;
+            letter-spacing: 1px;
 
-    margin-bottom: 20px;
+        }
 
-    box-shadow:
-        0 10px 30px
-        rgba(0,0,0,.20);
-}
 
-.control-box p {
+        /* =====================================================
+           CONTROL BOX
+        ===================================================== */
 
-    margin-top: 0;
+        .control-box {
 
-    color: #d1d5db;
-}
+            background: #1f2937;
 
-input[type="date"] {
+            padding: 22px;
 
-    width: 100%;
+            border-radius: 14px;
 
-    max-width: 400px;
+            text-align: center;
 
-    padding: 14px;
+            margin-bottom: 20px;
 
-    border: none;
+            box-shadow:
+                0 8px 20px
+                rgba(0, 0, 0, 0.18);
 
-    border-radius: 8px;
+        }
 
-    font-size: 16px;
 
-    background: #ffffff;
+        .control-box p {
 
-    color: #111827;
-}
+            margin-top: 0;
 
-button {
+            color: #d1d5db;
 
-    border: none;
+        }
 
-    border-radius: 8px;
 
-    padding: 13px 18px;
+        input[type="date"] {
 
-    font-size: 15px;
+            width: 100%;
 
-    font-weight: bold;
+            max-width: 400px;
 
-    cursor: pointer;
+            padding: 14px;
 
-    transition:
-        opacity .2s,
-        transform .1s;
-}
+            border: none;
 
-button:active {
+            border-radius: 8px;
 
-    transform: scale(.98);
-}
+            font-size: 16px;
 
-button:disabled {
+            background: #ffffff;
 
-    opacity: .6;
+            color: #111827;
 
-    cursor: wait;
-}
+        }
 
-.main-button {
 
-    background: #16a34a;
+        button {
 
-    color: white;
+            border: none;
 
-    width: 100%;
+            border-radius: 8px;
 
-    max-width: 400px;
+            padding: 13px 18px;
 
-    margin-top: 12px;
-}
+            font-size: 15px;
 
+            font-weight: bold;
 
-/* =========================================================
-   NOTICE / STATUS
-========================================================= */
+            cursor: pointer;
 
-.notice {
+        }
 
-    background: #1f2937;
 
-    padding: 18px;
+        button:disabled {
 
-    border-radius: 12px;
+            opacity: 0.6;
 
-    margin-top: 15px;
-}
+            cursor: wait;
 
-.status {
+        }
 
-    padding: 12px;
 
-    border-radius: 8px;
+        .main-button {
 
-    margin-top: 12px;
+            background: #16a34a;
 
-    font-weight: bold;
-}
+            color: white;
 
-.status-ready {
+            width: 100%;
 
-    background: #dcfce7;
+            max-width: 400px;
 
-    color: #166534;
-}
+            margin-top: 12px;
 
-.status-warning {
+        }
 
-    background: #fef3c7;
 
-    color: #92400e;
-}
+        .main-button:hover {
 
-.status-error {
+            background: #15803d;
 
-    background: #fee2e2;
+        }
 
-    color: #991b1b;
-}
 
+        .analyze-button {
 
-/* =========================================================
-   FIXTURE
-========================================================= */
+            background: #2563eb;
 
-.fixture {
+            color: white;
 
-    background: #ffffff;
+            width: 100%;
 
-    color: #111827;
+            margin-top: 15px;
 
-    border-radius: 14px;
+        }
 
-    padding: 18px;
 
-    margin-top: 15px;
+        .analyze-button:hover {
 
-    box-shadow:
-        0 8px 25px
-        rgba(0,0,0,.12);
-}
+            background: #1d4ed8;
 
-.fixture-header {
+        }
 
-    display: flex;
 
-    align-items: center;
+        /* =====================================================
+           NOTICES
+        ===================================================== */
 
-    justify-content: space-between;
+        .notice {
 
-    gap: 15px;
+            background: #1f2937;
 
-    margin-bottom: 15px;
-}
+            padding: 18px;
 
-.fixture-title {
+            border-radius: 12px;
 
-    font-size: 18px;
+            margin-top: 15px;
 
-    font-weight: 800;
+        }
 
-    margin: 0;
-}
 
-.fixture-meta {
+        .notice h2 {
 
-    color: #6b7280;
+            margin-top: 0;
 
-    font-size: 13px;
+        }
 
-    margin-top: 6px;
-}
 
+        .status {
 
-/* =========================================================
-   TEAMS
-========================================================= */
+            padding: 12px;
 
-.teams {
+            border-radius: 8px;
 
-    display: grid;
+            margin-top: 12px;
 
-    grid-template-columns:
-        1fr
-        auto
-        1fr;
+            font-weight: bold;
 
-    align-items: center;
+        }
 
-    gap: 12px;
 
-    margin: 18px 0;
-}
+        .status-ready {
 
-.team {
+            background: #dcfce7;
 
-    text-align: center;
-}
+            color: #166534;
 
-.team-logo {
+        }
 
-    width: 55px;
 
-    height: 55px;
+        .status-warning {
 
-    object-fit: contain;
+            background: #fef3c7;
 
-    display: block;
+            color: #92400e;
 
-    margin: 0 auto 8px;
-}
+        }
 
-.team-name {
 
-    font-size: 14px;
+        .status-error {
 
-    font-weight: bold;
-}
+            background: #fee2e2;
 
-.vs {
+            color: #991b1b;
 
-    font-size: 14px;
+        }
 
-    font-weight: bold;
 
-    color: #6b7280;
-}
+        /* =====================================================
+           FIXTURE
+        ===================================================== */
 
+        .fixture {
 
-/* =========================================================
-   ANALYZE BUTTON
-========================================================= */
+            background: #ffffff;
 
-.analyze-button {
+            color: #111827;
 
-    background: #2563eb;
+            border-radius: 14px;
 
-    color: white;
+            padding: 18px;
 
-    width: 100%;
+            margin-top: 15px;
 
-    margin-top: 12px;
-}
+            box-shadow:
+                0 5px 15px
+                rgba(0, 0, 0, 0.12);
 
+        }
 
-/* =========================================================
-   ANALYSIS
-========================================================= */
 
-.analysis {
+        .fixture h3 {
 
-    margin-top: 15px;
+            margin-top: 0;
 
-    background: #f3f4f6;
+            margin-bottom: 10px;
 
-    color: #111827;
+            font-size: 20px;
 
-    border-radius: 12px;
+        }
 
-    padding: 15px;
-}
 
-.hidden {
+        .fixture-meta {
 
-    display: none;
-}
+            color: #6b7280;
 
+            font-size: 14px;
 
-/* =========================================================
-   GRID
-========================================================= */
+            margin-top: 6px;
 
-.grid {
+        }
 
-    display: grid;
 
-    grid-template-columns:
-        repeat(
-            auto-fit,
-            minmax(180px, 1fr)
-        );
+        /* =====================================================
+           ANALYSIS BOX
+        ===================================================== */
 
-    gap: 10px;
+        .analysis {
 
-    margin-top: 12px;
-}
+            margin-top: 15px;
 
-.stat {
+            background: #f3f4f6;
 
-    background: #ffffff;
+            color: #111827;
 
-    border: 1px solid #e5e7eb;
+            border-radius: 12px;
 
-    border-radius: 9px;
+            padding: 15px;
 
-    padding: 12px;
-}
+        }
 
-.stat-title {
 
-    font-size: 12px;
+        .hidden {
 
-    color: #6b7280;
-}
+            display: none;
 
-.stat-value {
+        }
 
-    font-size: 18px;
 
-    font-weight: bold;
+        /* =====================================================
+           FINAL PREDICTION
+        ===================================================== */
 
-    margin-top: 5px;
-}
+        .final-result {
 
+            background: #111827;
 
-/* =========================================================
-   FORM
-========================================================= */
+            color: white;
 
-.form-item {
+            border-radius: 14px;
 
-    display: inline-block;
+            padding: 25px 20px;
 
-    padding: 6px 9px;
+            margin-top: 5px;
 
-    margin: 3px;
+            text-align: center;
 
-    border-radius: 6px;
+            border: 2px solid #2563eb;
 
-    font-weight: bold;
+            box-shadow:
+                0 8px 20px
+                rgba(0, 0, 0, 0.20);
 
-    font-size: 12px;
-}
+        }
 
-.win {
 
-    background: #dcfce7;
+        .final-title {
 
-    color: #166534;
-}
+            font-size: 13px;
 
-.draw {
+            font-weight: bold;
 
-    background: #fef3c7;
+            color: #9ca3af;
 
-    color: #92400e;
-}
+            letter-spacing: 2px;
 
-.loss {
+            text-transform: uppercase;
 
-    background: #fee2e2;
+        }
 
-    color: #991b1b;
-}
 
+        .final-prediction {
 
-/* =========================================================
-   MARKET
-========================================================= */
+            font-size: 30px;
 
-.market-grid {
+            font-weight: bold;
 
-    display: grid;
+            margin: 10px 0 25px;
 
-    grid-template-columns:
-        repeat(3, 1fr);
+            color: #22c55e;
 
-    gap: 8px;
+        }
 
-    margin-top: 10px;
-}
 
-.market {
+        .final-probability {
 
-    background: white;
+            font-size: 34px;
 
-    border: 1px solid #ddd;
+            font-weight: bold;
 
-    border-radius: 8px;
+            margin-top: 8px;
 
-    padding: 12px;
+            color: #ffffff;
 
-    text-align: center;
-}
+        }
 
-.market-title {
 
-    font-size: 12px;
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
 
-    color: #6b7280;
-}
+        @media (max-width: 600px) {
 
-.market-value {
+            .container {
 
-    font-size: 20px;
+                padding: 12px;
 
-    font-weight: bold;
+            }
 
-    margin-top: 4px;
-}
 
+            .header h1 {
 
-/* =========================================================
-   EVIDENCE
-========================================================= */
+                font-size: 27px;
 
-.evidence {
+            }
 
-    display: grid;
 
-    grid-template-columns:
-        repeat(
-            auto-fit,
-            minmax(140px, 1fr)
-        );
+            .fixture h3 {
 
-    gap: 8px;
-}
+                font-size: 18px;
 
-.evidence-item {
+            }
 
-    padding: 10px;
 
-    border-radius: 7px;
+            .final-prediction {
 
-    font-size: 13px;
+                font-size: 27px;
 
-    font-weight: bold;
-}
+            }
 
-.available {
 
-    background: #dcfce7;
+            .final-probability {
 
-    color: #166534;
-}
+                font-size: 32px;
 
-.missing {
+            }
 
-    background: #fee2e2;
+        }
 
-    color: #991b1b;
-}
-
-
-/* =========================================================
-   WARNING
-========================================================= */
-
-.warning {
-
-    background: #fff7ed;
-
-    border: 1px solid #fed7aa;
-
-    color: #9a3412;
-
-    padding: 10px;
-
-    border-radius: 7px;
-
-    margin-top: 7px;
-}
-
-
-/* =========================================================
-   FINAL PREDICTION
-========================================================= */
-
-.prediction-result {
-
-    margin-top: 15px;
-
-    background: #111827;
-
-    color: white;
-
-    border-radius: 14px;
-
-    padding: 25px 20px;
-
-    text-align: center;
-
-    border: 2px solid #2563eb;
-}
-
-.prediction-label {
-
-    font-size: 13px;
-
-    font-weight: bold;
-
-    color: #9ca3af;
-
-    letter-spacing: 2px;
-}
-
-.prediction-value {
-
-    font-size: 30px;
-
-    font-weight: bold;
-
-    margin-top: 8px;
-
-    color: #22c55e;
-}
-
-.probability-label {
-
-    font-size: 13px;
-
-    font-weight: bold;
-
-    color: #9ca3af;
-
-    letter-spacing: 2px;
-
-    margin-top: 20px;
-}
-
-.probability-value {
-
-    font-size: 26px;
-
-    font-weight: bold;
-
-    margin-top: 6px;
-}
-
-
-/* =========================================================
-   DETAILS
-========================================================= */
-
-details {
-
-    margin-top: 12px;
-}
-
-summary {
-
-    cursor: pointer;
-
-    font-weight: bold;
-}
-
-pre {
-
-    white-space: pre-wrap;
-
-    word-break: break-word;
-
-    background: #111827;
-
-    color: #e5e7eb;
-
-    padding: 12px;
-
-    border-radius: 8px;
-
-    font-size: 11px;
-
-    overflow-x: auto;
-}
-
-
-/* =========================================================
-   DIVIDER
-========================================================= */
-
-hr {
-
-    border: 0;
-
-    border-top:
-        1px solid #e5e7eb;
-
-    margin: 15px 0;
-}
-
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media(max-width:600px) {
-
-    .container {
-
-        padding: 12px;
-    }
-
-    .header h1 {
-
-        font-size: 27px;
-    }
-
-    .teams {
-
-        grid-template-columns:
-            1fr
-            auto
-            1fr;
-    }
-
-    .team-logo {
-
-        width: 45px;
-
-        height: 45px;
-    }
-
-    .market-grid {
-
-        grid-template-columns:
-            1fr;
-    }
-
-    .fixture-title {
-
-        font-size: 16px;
-    }
-
-    .prediction-value {
-
-        font-size: 25px;
-    }
-
-}
-
-</style>
+    </style>
 
 </head>
 
@@ -746,7 +467,7 @@ hr {
 
     <!-- =====================================================
          HEADER
-    ====================================================== -->
+    ===================================================== -->
 
     <div class="header">
 
@@ -762,8 +483,8 @@ hr {
 
 
     <!-- =====================================================
-         DATE CONTROL
-    ====================================================== -->
+         DATE SEARCH
+    ===================================================== -->
 
     <div class="control-box">
 
@@ -771,18 +492,22 @@ hr {
             Select a date to scan available football fixtures.
         </p>
 
+
         <input
             type="date"
             id="matchDate"
         >
 
+
         <br>
+
 
         <button
             class="main-button"
             id="scanButton"
+            onclick="analyzeMatches()"
         >
-            🔎 ANALYZE MATCHES
+            ANALYZE MATCHES
         </button>
 
     </div>
@@ -790,7 +515,7 @@ hr {
 
     <!-- =====================================================
          RESULTS
-    ====================================================== -->
+    ===================================================== -->
 
     <div id="results"></div>
 
@@ -801,55 +526,6 @@ hr {
 
 <script>
 
-/* =========================================================
-   INITIALIZATION
-========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        const dateInput =
-            document.getElementById(
-                "matchDate"
-            );
-
-        const scanButton =
-            document.getElementById(
-                "scanButton"
-            );
-
-
-        /*
-         * Date selection automatically scans.
-         */
-
-        dateInput.addEventListener(
-            "change",
-            function () {
-
-                if (this.value) {
-
-                    analyzeMatches();
-
-                }
-
-            }
-        );
-
-
-        /*
-         * Button also scans manually.
-         */
-
-        scanButton.addEventListener(
-            "click",
-            analyzeMatches
-        );
-
-    }
-);
-
 
 /* =========================================================
    GLOBAL FIXTURE SEARCH
@@ -857,15 +533,18 @@ document.addEventListener(
 
 async function analyzeMatches() {
 
+
     const date =
         document.getElementById(
             "matchDate"
         ).value;
 
+
     const results =
         document.getElementById(
             "results"
         );
+
 
     const scanButton =
         document.getElementById(
@@ -910,7 +589,7 @@ async function analyzeMatches() {
             </p>
 
             <p>
-                ⏳ Connecting to football data...
+                ⏳ Connecting to live football data...
             </p>
 
         </div>
@@ -920,17 +599,15 @@ async function analyzeMatches() {
 
     try {
 
+
         const response =
             await fetch(
-                "/api/fixtures?date=" +
-                encodeURIComponent(date)
+                `/api/fixtures?date=${encodeURIComponent(date)}`
             );
 
 
         const data =
-            await readJsonResponse(
-                response
-            );
+            await response.json();
 
 
         if (!response.ok) {
@@ -944,24 +621,10 @@ async function analyzeMatches() {
         }
 
 
-        /*
-         * API-Football normally returns:
-         *
-         * {
-         *     response: [...]
-         * }
-         */
-
-        const fixtures =
-            Array.isArray(
-                data.response
-            )
-                ? data.response
-                : [];
-
-
         if (
-            fixtures.length === 0
+            !data.response ||
+            !Array.isArray(data.response) ||
+            data.response.length === 0
         ) {
 
             results.innerHTML = `
@@ -988,6 +651,8 @@ async function analyzeMatches() {
 
             `;
 
+            scanButton.disabled = false;
+
             return;
 
         }
@@ -998,7 +663,7 @@ async function analyzeMatches() {
             <div class="notice">
 
                 <h2>
-                    🔥 GLOBAL FIXTURES
+                    🔥 TOMSONSTAKES GLOBAL FIXTURES
                 </h2>
 
                 <p>
@@ -1011,7 +676,7 @@ async function analyzeMatches() {
                 <p>
                     🌍 Fixtures found:
                     <strong>
-                        ${fixtures.length}
+                        ${data.response.length}
                     </strong>
                 </p>
 
@@ -1020,11 +685,8 @@ async function analyzeMatches() {
         `;
 
 
-        fixtures.forEach(
-            function (
-                match,
-                index
-            ) {
+        data.response.forEach(
+            (match, index) => {
 
                 html +=
                     buildFixtureCard(
@@ -1036,11 +698,11 @@ async function analyzeMatches() {
         );
 
 
-        results.innerHTML =
-            html;
+        results.innerHTML = html;
 
 
     } catch (error) {
+
 
         console.error(
             "FIXTURE SEARCH ERROR:",
@@ -1053,42 +715,37 @@ async function analyzeMatches() {
             <div class="notice status-error">
 
                 <h2>
-                    ❌ Fixture Search Failed
+                    🔥 TOMSONSTAKES
                 </h2>
 
                 <p>
+                    ❌ Unable to load football fixtures.
+                </p>
+
+                <p>
+                    <strong>
+                        Error:
+                    </strong>
+
                     ${escapeHtml(
                         error.message
                     )}
+
                 </p>
-
-                <details>
-
-                    <summary>
-                        Technical details
-                    </summary>
-
-                    <pre>
-${escapeHtml(
-    error.stack ||
-    String(error)
-)}
-                    </pre>
-
-                </details>
 
             </div>
 
         `;
 
+
     } finally {
 
-        scanButton.disabled =
-            false;
+        scanButton.disabled = false;
 
     }
 
 }
+
 
 
 /* =========================================================
@@ -1099,6 +756,7 @@ function buildFixtureCard(
     match,
     index
 ) {
+
 
     const league =
         match.league?.name ||
@@ -1120,21 +778,6 @@ function buildFixtureCard(
         "Away Team";
 
 
-    const homeLogo =
-        match.teams?.home?.logo ||
-        "";
-
-
-    const awayLogo =
-        match.teams?.away?.logo ||
-        "";
-
-
-    const fixtureId =
-        match.fixture?.id ||
-        null;
-
-
     const homeIdentity =
         createIdentity(home);
 
@@ -1144,33 +787,53 @@ function buildFixtureCard(
 
 
     const identitiesValid =
-        Boolean(
-            homeIdentity
-        ) &&
-        Boolean(
-            awayIdentity
-        ) &&
-        homeIdentity !==
-            awayIdentity;
+        Boolean(homeIdentity) &&
+        Boolean(awayIdentity) &&
+        homeIdentity !== awayIdentity;
 
 
     const kickoffUTC =
-        match.fixture?.date ||
-        null;
+        match.fixture?.date;
 
 
-    const kickoffWAT =
-        formatKickoff(
-            kickoffUTC
-        );
+    let kickoffWAT =
+        "Time unavailable";
+
+
+    if (kickoffUTC) {
+
+        try {
+
+            const dateObject =
+                new Date(kickoffUTC);
+
+
+            kickoffWAT =
+                dateObject.toLocaleTimeString(
+                    "en-NG",
+                    {
+                        timeZone: "Africa/Lagos",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false
+                    }
+                ) +
+                " WAT";
+
+
+        } catch (error) {
+
+            kickoffWAT =
+                "Time unavailable";
+
+        }
+
+    }
 
 
     const matchDate =
         kickoffUTC
-            ? kickoffUTC.substring(
-                0,
-                10
-            )
+            ? kickoffUTC.substring(0, 10)
             : document.getElementById(
                 "matchDate"
               ).value;
@@ -1183,120 +846,43 @@ function buildFixtureCard(
             id="fixture-${index}"
         >
 
-            <div class="fixture-header">
 
-                <div>
+            <h3>
 
-                    <h3 class="fixture-title">
+                ⚽
 
-                        ⚽
-                        ${escapeHtml(home)}
-                        vs
-                        ${escapeHtml(away)}
+                ${escapeHtml(home)}
 
-                    </h3>
+                vs
 
-                    <div class="fixture-meta">
+                ${escapeHtml(away)}
 
-                        🏆
-                        ${escapeHtml(league)}
+            </h3>
 
-                        ${
-                            country
-                            ? " — " +
-                              escapeHtml(country)
-                            : ""
-                        }
 
-                    </div>
+            <div class="fixture-meta">
 
-                    <div class="fixture-meta">
+                🏆
 
-                        🕐 Kickoff:
-                        <strong>
-                            ${escapeHtml(
-                                kickoffWAT
-                            )}
-                        </strong>
+                ${escapeHtml(league)}
 
-                    </div>
-
-                </div>
+                ${
+                    country
+                    ? " — " +
+                      escapeHtml(country)
+                    : ""
+                }
 
             </div>
 
 
-            <div class="teams">
+            <div class="fixture-meta">
 
+                🕐 Kickoff:
 
-                <div class="team">
-
-                    ${
-                        homeLogo
-                        ? `
-                            <img
-                                class="team-logo"
-                                src="${escapeHtml(
-                                    homeLogo
-                                )}"
-                                alt="${escapeHtml(
-                                    home
-                                )}"
-                                loading="lazy"
-                                onerror="
-                                    this.style.display='none'
-                                "
-                            >
-                        `
-                        : ""
-                    }
-
-                    <div class="team-name">
-
-                        ${escapeHtml(home)}
-
-                    </div>
-
-                </div>
-
-
-                <div class="vs">
-
-                    VS
-
-                </div>
-
-
-                <div class="team">
-
-                    ${
-                        awayLogo
-                        ? `
-                            <img
-                                class="team-logo"
-                                src="${escapeHtml(
-                                    awayLogo
-                                )}"
-                                alt="${escapeHtml(
-                                    away
-                                )}"
-                                loading="lazy"
-                                onerror="
-                                    this.style.display='none'
-                                "
-                            >
-                        `
-                        : ""
-                    }
-
-                    <div class="team-name">
-
-                        ${escapeHtml(away)}
-
-                    </div>
-
-                </div>
-
+                <strong>
+                    ${escapeHtml(kickoffWAT)}
+                </strong>
 
             </div>
 
@@ -1315,39 +901,25 @@ function buildFixtureCard(
 
 
             ${
-                fixtureId
-                ? `
-                    <div class="fixture-meta">
-
-                        Fixture ID:
-                        <strong>
-                            ${escapeHtml(
-                                fixtureId
-                            )}
-                        </strong>
-
-                    </div>
-                `
-                : ""
-            }
-
-
-            ${
                 identitiesValid
+
                 ? `
 
                     <button
+
                         class="analyze-button"
+
                         id="analyze-button-${index}"
+
                         onclick="runMatchAnalysis(
                             ${index},
                             '${escapeJs(home)}',
                             '${escapeJs(away)}',
                             '${escapeJs(homeIdentity)}',
                             '${escapeJs(awayIdentity)}',
-                            '${escapeJs(matchDate)}',
-                            ${fixtureId || "null"}
+                            '${escapeJs(matchDate)}'
                         )"
+
                     >
 
                         🔍 ANALYZE MATCH
@@ -1355,6 +927,7 @@ function buildFixtureCard(
                     </button>
 
                 `
+
                 : `
 
                     <div class="status status-error">
@@ -1369,8 +942,11 @@ function buildFixtureCard(
 
 
             <div
+
                 id="analysis-${index}"
+
                 class="analysis hidden"
+
             ></div>
 
 
@@ -1379,6 +955,7 @@ function buildFixtureCard(
     `;
 
 }
+
 
 
 /* =========================================================
@@ -1391,9 +968,9 @@ async function runMatchAnalysis(
     away,
     homeIdentity,
     awayIdentity,
-    date,
-    fixtureId
+    date
 ) {
+
 
     const box =
         document.getElementById(
@@ -1405,13 +982,6 @@ async function runMatchAnalysis(
         document.getElementById(
             `analyze-button-${index}`
         );
-
-
-    if (!box || !button) {
-
-        return;
-
-    }
 
 
     box.classList.remove(
@@ -1426,7 +996,7 @@ async function runMatchAnalysis(
 
         <div class="status status-warning">
 
-            🔎 Searching evidence for
+            🔎 Analyzing
 
             <strong>
                 ${escapeHtml(home)}
@@ -1460,10 +1030,7 @@ async function runMatchAnalysis(
             awayIdentity,
 
         date:
-            date,
-
-        fixtureId:
-            fixtureId || null
+            date
 
     };
 
@@ -1475,35 +1042,39 @@ async function runMatchAnalysis(
            STEP 1 — WEB DATA
         ================================================= */
 
+
+        box.innerHTML = `
+
+            <div class="status status-warning">
+
+                🔎 Collecting match evidence...
+
+            </div>
+
+        `;
+
+
         const webUrl =
-            "/api/web-data" +
 
-            "?home=" +
-            encodeURIComponent(home) +
+            `/api/web-data` +
 
-            "&homeIdentity=" +
-            encodeURIComponent(homeIdentity) +
+            `?home=${encodeURIComponent(home)}` +
 
-            "&away=" +
-            encodeURIComponent(away) +
+            `&homeIdentity=${encodeURIComponent(homeIdentity)}` +
 
-            "&awayIdentity=" +
-            encodeURIComponent(awayIdentity) +
+            `&away=${encodeURIComponent(away)}` +
 
-            "&date=" +
-            encodeURIComponent(date);
+            `&awayIdentity=${encodeURIComponent(awayIdentity)}` +
+
+            `&date=${encodeURIComponent(date)}`;
 
 
         const webResponse =
-            await fetch(
-                webUrl
-            );
+            await fetch(webUrl);
 
 
         const webData =
-            await readJsonResponse(
-                webResponse
-            );
+            await webResponse.json();
 
 
         if (!webResponse.ok) {
@@ -1517,28 +1088,30 @@ async function runMatchAnalysis(
         }
 
 
+
+        /* =================================================
+           STEP 2 — NORMALIZE
+        ================================================= */
+
+
         box.innerHTML = `
 
             <div class="status status-warning">
 
-                ⚙️ Normalizing collected sources...
+                ⚙️ Processing match data...
 
             </div>
 
         `;
 
 
-        /* =================================================
-           STEP 2 — NORMALIZE
-        ================================================= */
-
         const normalizeResponse =
+
             await fetch(
                 "/api/normalize-web",
                 {
 
-                    method:
-                        "POST",
+                    method: "POST",
 
                     headers: {
 
@@ -1548,6 +1121,7 @@ async function runMatchAnalysis(
                     },
 
                     body:
+
                         JSON.stringify({
 
                             ...webData,
@@ -1562,9 +1136,7 @@ async function runMatchAnalysis(
 
 
         const normalized =
-            await readJsonResponse(
-                normalizeResponse
-            );
+            await normalizeResponse.json();
 
 
         if (!normalizeResponse.ok) {
@@ -1578,6 +1150,12 @@ async function runMatchAnalysis(
         }
 
 
+
+        /* =================================================
+           STEP 3 — PREDICTION ENGINE
+        ================================================= */
+
+
         box.innerHTML = `
 
             <div class="status status-warning">
@@ -1589,17 +1167,13 @@ async function runMatchAnalysis(
         `;
 
 
-        /* =================================================
-           STEP 3 — PREDICTION
-        ================================================= */
-
         const predictionResponse =
+
             await fetch(
                 "/api/predict",
                 {
 
-                    method:
-                        "POST",
+                    method: "POST",
 
                     headers: {
 
@@ -1609,6 +1183,7 @@ async function runMatchAnalysis(
                     },
 
                     body:
+
                         JSON.stringify({
 
                             match:
@@ -1624,9 +1199,7 @@ async function runMatchAnalysis(
 
 
         const prediction =
-            await readJsonResponse(
-                predictionResponse
-            );
+            await predictionResponse.json();
 
 
         if (!predictionResponse.ok) {
@@ -1640,13 +1213,18 @@ async function runMatchAnalysis(
         }
 
 
+
         /* =================================================
-           DISPLAY
+           FINAL DISPLAY
+           
+           IMPORTANT:
+           ONLY prediction + probability
+           are displayed to the user.
         ================================================= */
 
+
         box.innerHTML =
-            buildAnalysisHTML(
-                normalized,
+            buildFinalPrediction(
                 prediction
             );
 
@@ -1655,15 +1233,11 @@ async function runMatchAnalysis(
             "✓ ANALYSIS COMPLETE";
 
 
-        /*
-         * Keep button enabled so user can
-         * rerun the analysis if desired.
-         */
-
         button.disabled = false;
 
 
     } catch (error) {
+
 
         console.error(
             "MATCH ANALYSIS ERROR:",
@@ -1685,249 +1259,97 @@ async function runMatchAnalysis(
                     )}
                 </strong>
 
-                <details>
-
-                    <summary>
-                        Technical details
-                    </summary>
-
-                    <pre>
-${escapeHtml(
-    error.stack ||
-    String(error)
-)}
-                    </pre>
-
-                </details>
-
             </div>
 
         `;
 
 
-        button.disabled =
-            false;
+        button.disabled = false;
 
     }
 
 }
 
 
+
 /* =========================================================
-   BUILD ANALYSIS
+   FINAL PREDICTION DISPLAY
 ========================================================= */
 
-function buildAnalysisHTML(
-    normalized,
+function buildFinalPrediction(
     prediction
 ) {
 
+
     if (
         !prediction ||
-        !prediction.success ||
+        prediction.success !== true ||
         !prediction.prediction
     ) {
 
         return `
+
             <div class="status status-warning">
+
                 ⚠️ No sufficiently supported prediction
                 was produced for this fixture.
+
             </div>
+
         `;
+
     }
 
+
     const probability =
-        Number(prediction.probability);
+        Number(
+            prediction.probability
+        );
+
+
+    const formattedProbability =
+
+        Number.isFinite(probability)
+
+            ? probability.toFixed(0) + "%"
+
+            : "—";
+
 
     return `
 
         <div class="final-result">
 
+
             <div class="final-title">
+
                 FINAL PREDICTION
+
             </div>
 
+
             <div class="final-prediction">
+
                 ${escapeHtml(
                     prediction.prediction
                 )}
+
             </div>
+
 
             <div class="final-title">
+
                 PROBABILITY
+
             </div>
+
 
             <div class="final-probability">
-                ${
-                    Number.isFinite(probability)
-                    ? probability.toFixed(0) + "%"
-                    : "—"
-                }
+
+                ${formattedProbability}
+
             </div>
 
-        </div>
-
-    `;
-}
-/* =========================================================
-   EVIDENCE
-========================================================= */
-
-function buildEvidence(
-    normalized,
-    internal
-) {
-
-    const readiness =
-        internal.readiness ||
-        normalized.availability ||
-        normalized.readiness ||
-        {};
-
-
-    const formReady =
-        Boolean(
-            readiness.formReady
-        );
-
-
-    const xGReady =
-        Boolean(
-            readiness.xGReady
-        );
-
-
-    const bttsReady =
-        Boolean(
-            readiness.bttsReady
-        );
-
-
-    const overUnderReady =
-        Boolean(
-            readiness.overUnderReady
-        );
-
-
-    const independentReady =
-        Boolean(
-            readiness.independentModelReady
-        );
-
-
-    const hasInjuries =
-        Array.isArray(
-            normalized.injuries
-        )
-        ? normalized.injuries.length > 0
-        : Array.isArray(
-            normalized.injuries?.evidence
-        )
-        ? normalized.injuries.evidence.length > 0
-        : false;
-
-
-    const hasLineups =
-        Array.isArray(
-            normalized.lineups
-        ) &&
-        normalized.lineups.length > 0;
-
-
-    const hasH2H =
-        Array.isArray(
-            normalized.h2h?.evidence
-        ) &&
-        normalized.h2h.evidence.length > 0;
-
-
-    const items = [
-
-        [
-            "Form",
-            formReady
-        ],
-
-        [
-            "xG",
-            xGReady
-        ],
-
-        [
-            "BTTS",
-            bttsReady
-        ],
-
-        [
-            "Over / Under",
-            overUnderReady
-        ],
-
-        [
-            "H2H",
-            hasH2H
-        ],
-
-        [
-            "Injuries",
-            hasInjuries
-        ],
-
-        [
-            "Lineups",
-            hasLineups
-        ],
-
-        [
-            "Independent Model",
-            independentReady
-        ]
-
-    ];
-
-
-    return `
-
-        <div class="evidence">
-
-            ${
-                items
-                    .map(
-                        function (
-                            item
-                        ) {
-
-                            return `
-
-                                <div class="
-                                    evidence-item
-                                    ${
-                                        item[1]
-                                        ? "available"
-                                        : "missing"
-                                    }
-                                ">
-
-                                    ${escapeHtml(
-                                        item[0]
-                                    )}
-
-                                    <br>
-
-                                    ${
-                                        item[1]
-                                        ? "✓ Available"
-                                        : "— Missing"
-                                    }
-
-                                </div>
-
-                            `;
-
-                        }
-                    )
-                    .join("")
-            }
 
         </div>
 
@@ -1936,366 +1358,50 @@ function buildEvidence(
 }
 
 
-/* =========================================================
-   WARNINGS
-========================================================= */
-
-function buildWarnings(
-    normalized
-) {
-
-    const warnings =
-        Array.isArray(
-            normalized.warnings
-        )
-        ? normalized.warnings
-        : [];
-
-
-    if (
-        warnings.length === 0
-    ) {
-
-        return `
-
-            <div class="status status-ready">
-
-                ✓ No warnings reported.
-
-            </div>
-
-        `;
-
-    }
-
-
-    return warnings
-        .map(
-            function (
-                warning
-            ) {
-
-                return `
-
-                    <div class="warning">
-
-                        ⚠️
-                        ${escapeHtml(
-                            String(warning)
-                        )}
-
-                    </div>
-
-                `;
-
-            }
-        )
-        .join("");
-
-}
-
 
 /* =========================================================
-   FORM
-========================================================= */
-
-function buildForm(
-    form
-) {
-
-    if (
-        !Array.isArray(form) ||
-        form.length === 0
-    ) {
-
-        return `
-
-            <span>
-                No reliable recent form found.
-            </span>
-
-        `;
-
-    }
-
-
-    return form
-        .map(
-            function (
-                match
-            ) {
-
-                const result =
-                    String(
-                        match.result ||
-                        match.outcome ||
-                        "?"
-                    )
-                    .toUpperCase();
-
-
-                let css =
-                    "draw";
-
-
-                if (
-                    result === "W"
-                ) {
-
-                    css =
-                        "win";
-
-                }
-
-
-                if (
-                    result === "L"
-                ) {
-
-                    css =
-                        "loss";
-
-                }
-
-
-                return `
-
-                    <span
-                        class="form-item ${css}"
-                        title="${escapeHtml(
-                            String(
-                                match.opponent ||
-                                ""
-                            )
-                        )}"
-                    >
-
-                        ${escapeHtml(
-                            result
-                        )}
-
-                    </span>
-
-                `;
-
-            }
-        )
-        .join("");
-
-}
-
-
-/* =========================================================
-   FORMAT KICKOFF
-========================================================= */
-
-function formatKickoff(
-    utcDate
-) {
-
-    if (!utcDate) {
-
-        return "Time unavailable";
-
-    }
-
-
-    try {
-
-        const date =
-            new Date(
-                utcDate
-            );
-
-
-        if (
-            Number.isNaN(
-                date.getTime()
-            )
-        ) {
-
-            return "Time unavailable";
-
-        }
-
-
-        return (
-
-            date.toLocaleDateString(
-                "en-NG",
-                {
-                    timeZone:
-                        "Africa/Lagos",
-
-                    day:
-                        "2-digit",
-
-                    month:
-                        "short"
-                }
-            )
-
-            +
-
-            " · "
-
-            +
-
-            date.toLocaleTimeString(
-                "en-NG",
-                {
-                    timeZone:
-                        "Africa/Lagos",
-
-                    hour:
-                        "2-digit",
-
-                    minute:
-                        "2-digit",
-
-                    hour12:
-                        false
-                }
-            )
-
-            +
-
-            " WAT"
-
-        );
-
-    } catch (error) {
-
-        return "Time unavailable";
-
-    }
-
-}
-
-
-/* =========================================================
-   FORMAT NUMBERS
-========================================================= */
-
-function formatNumber(
-    value
-) {
-
-    if (
-        value === undefined ||
-        value === null ||
-        value === ""
-    ) {
-
-        return "—";
-
-    }
-
-
-    const number =
-        Number(value);
-
-
-    if (
-        Number.isNaN(number)
-    ) {
-
-        return escapeHtml(
-            String(value)
-        );
-
-    }
-
-
-    return number.toFixed(2);
-
-}
-
-
-/* =========================================================
-   FORMAT PERCENT
-========================================================= */
-
-function formatPercentValue(
-    value
-) {
-
-    if (
-        value === undefined ||
-        value === null ||
-        value === ""
-    ) {
-
-        return "—";
-
-    }
-
-
-    const number =
-        Number(value);
-
-
-    if (
-        Number.isNaN(number)
-    ) {
-
-        return escapeHtml(
-            String(value)
-        );
-
-    }
-
-
-    const percent =
-        number > 0 &&
-        number <= 1
-            ? number * 100
-            : number;
-
-
-    return (
-        percent.toFixed(1) +
-        "%"
-    );
-
-}
-
-
-/* =========================================================
-   CREATE TEAM IDENTITY
+   TEAM IDENTITY
 ========================================================= */
 
 function createIdentity(
     name
 ) {
 
+
     const value =
-        String(
-            name || ""
-        )
-        .trim()
-        .normalize("NFD")
-        .replace(
-            /[\u0300-\u036f]/g,
-            ""
-        )
-        .replace(
-            /[’']/g,
-            ""
-        )
-        .replace(
-            /&/g,
-            " AND "
-        )
-        .toUpperCase()
-        .replace(
-            /[^A-Z0-9]+/g,
-            "_"
-        )
-        .replace(
-            /^_+|_+$/g,
-            ""
-        );
+
+        String(name || "")
+
+            .trim()
+
+            .normalize("NFD")
+
+            .replace(
+                /[\u0300-\u036f]/g,
+                ""
+            )
+
+            .replace(
+                /[’']/g,
+                ""
+            )
+
+            .replace(
+                /&/g,
+                " AND "
+            )
+
+            .toUpperCase()
+
+            .replace(
+                /[^A-Z0-9]+/g,
+                "_"
+            )
+
+            .replace(
+                /^_+|_+$/g,
+                ""
+            );
 
 
     return value || "";
@@ -2303,109 +1409,83 @@ function createIdentity(
 }
 
 
-/* =========================================================
-   SAFE JSON RESPONSE
-========================================================= */
-
-async function readJsonResponse(
-    response
-) {
-
-    const text =
-        await response.text();
-
-
-    if (!text) {
-
-        return {};
-
-    }
-
-
-    try {
-
-        return JSON.parse(
-            text
-        );
-
-    } catch (error) {
-
-        throw new Error(
-            "Server returned an invalid JSON response. HTTP " +
-            response.status
-        );
-
-    }
-
-}
-
 
 /* =========================================================
-   HTML ESCAPING
+   HTML SECURITY
 ========================================================= */
 
 function escapeHtml(
     value
 ) {
 
-    return String(
-        value ?? ""
-    )
-    .replace(
-        /&/g,
-        "&amp;"
-    )
-    .replace(
-        /</g,
-        "&lt;"
-    )
-    .replace(
-        />/g,
-        "&gt;"
-    )
-    .replace(
-        /"/g,
-        "&quot;"
-    )
-    .replace(
-        /'/g,
-        "&#039;"
-    );
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
 
 
+
 /* =========================================================
-   JAVASCRIPT STRING ESCAPING
+   JAVASCRIPT STRING SECURITY
 ========================================================= */
 
 function escapeJs(
     value
 ) {
 
-    return String(
-        value ?? ""
-    )
-    .replace(
-        /\\/g,
-        "\\\\"
-    )
-    .replace(
-        /'/g,
-        "\\'"
-    )
-    .replace(
-        /\r/g,
-        "\\r"
-    )
-    .replace(
-        /\n/g,
-        "\\n"
-    );
+
+    return String(value)
+
+        .replace(
+            /\\/g,
+            "\\\\"
+        )
+
+        .replace(
+            /'/g,
+            "\\'"
+        )
+
+        .replace(
+            /\r/g,
+            "\\r"
+        )
+
+        .replace(
+            /\n/g,
+            "\\n"
+        );
 
 }
 
+
 </script>
+
 
 </body>
 
