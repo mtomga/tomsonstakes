@@ -297,10 +297,13 @@ hr {
 <div class="container">
 
     <div class="header">
+
         <h1>🔥 TOMSONSTAKES</h1>
+
         <div class="subtitle">
             GLOBAL FOOTBALL PREDICTION ENGINE
         </div>
+
     </div>
 
 
@@ -321,6 +324,7 @@ hr {
 
         <button
             class="main-button"
+            id="scanButton"
             onclick="analyzeMatches()"
         >
             ANALYZE MATCHES
@@ -350,12 +354,17 @@ async function analyzeMatches() {
     const results =
         document.getElementById("results");
 
+    const scanButton =
+        document.getElementById("scanButton");
+
 
     if (!date) {
 
         results.innerHTML = `
             <div class="notice status-warning">
+
                 ⚠️ Please select a match date.
+
             </div>
         `;
 
@@ -363,8 +372,12 @@ async function analyzeMatches() {
     }
 
 
+    scanButton.disabled = true;
+
+
     results.innerHTML = `
         <div class="notice">
+
             <h2>🔥 TOMSONSTAKES</h2>
 
             <p>
@@ -375,6 +388,7 @@ async function analyzeMatches() {
             <p>
                 ⏳ Connecting to live football data...
             </p>
+
         </div>
     `;
 
@@ -415,7 +429,9 @@ async function analyzeMatches() {
 
                     <p>
                         📅 Date:
-                        <strong>${escapeHtml(date)}</strong>
+                        <strong>
+                            ${escapeHtml(date)}
+                        </strong>
                     </p>
 
                     <p>
@@ -424,6 +440,8 @@ async function analyzeMatches() {
 
                 </div>
             `;
+
+            scanButton.disabled = false;
 
             return;
         }
@@ -439,12 +457,16 @@ async function analyzeMatches() {
 
                 <p>
                     📅 Date:
-                    <strong>${escapeHtml(date)}</strong>
+                    <strong>
+                        ${escapeHtml(date)}
+                    </strong>
                 </p>
 
                 <p>
                     🌍 Fixtures found:
-                    <strong>${data.response.length}</strong>
+                    <strong>
+                        ${data.response.length}
+                    </strong>
                 </p>
 
             </div>
@@ -484,12 +506,18 @@ async function analyzeMatches() {
 
                 <p>
                     <strong>Error:</strong>
-                    ${escapeHtml(error.message)}
+                    ${escapeHtml(
+                        error.message
+                    )}
                 </p>
 
             </div>
 
         `;
+
+    } finally {
+
+        scanButton.disabled = false;
 
     }
 
@@ -525,13 +553,31 @@ function buildFixtureCard(
         "Away Team";
 
 
-    const homeId = createIdentity(home);
-const awayId = createIdentity(away);
+    /*
+     * GLOBAL IDENTITY
+     *
+     * We no longer restrict identities to
+     * Deportes Concepcion, Universidad de
+     * Concepcion and O'Higgins.
+     */
 
-const identitiesValid =
-    homeId &&
-    awayId &&
-    homeId !== awayId;
+    const homeIdentity =
+        createIdentity(home);
+
+
+    const awayIdentity =
+        createIdentity(away);
+
+
+    /*
+     * Every real fixture should have two
+     * different teams.
+     */
+
+    const identitiesValid =
+        Boolean(homeIdentity) &&
+        Boolean(awayIdentity) &&
+        homeIdentity !== awayIdentity;
 
 
     const kickoffUTC =
@@ -587,10 +633,12 @@ const identitiesValid =
         >
 
             <h3>
+
                 ⚽
                 ${escapeHtml(home)}
                 vs
                 ${escapeHtml(away)}
+
             </h3>
 
 
@@ -612,6 +660,7 @@ const identitiesValid =
             <div class="fixture-meta">
 
                 🕐 Kickoff:
+
                 <strong>
                     ${escapeHtml(kickoffWAT)}
                 </strong>
@@ -619,20 +668,47 @@ const identitiesValid =
             </div>
 
 
-            <button
-                class="analyze-button"
-                id="analyze-button-${index}"
-                onclick="runMatchAnalysis(
-                    ${index},
-                    '${escapeJs(home)}',
-                    '${escapeJs(away)}',
-                    '${escapeJs(homeId)}',
-                    '${escapeJs(awayId)}',
-                    '${escapeJs(matchDate)}'
-                )"
-            >
-                🔍 ANALYZE MATCH
-            </button>
+            <div class="fixture-meta">
+
+                🆔
+
+                ${escapeHtml(homeIdentity)}
+                vs
+                ${escapeHtml(awayIdentity)}
+
+            </div>
+
+
+            ${
+                identitiesValid
+                ? `
+
+                    <button
+                        class="analyze-button"
+                        id="analyze-button-${index}"
+                        onclick="runMatchAnalysis(
+                            ${index},
+                            '${escapeJs(home)}',
+                            '${escapeJs(away)}',
+                            '${escapeJs(homeIdentity)}',
+                            '${escapeJs(awayIdentity)}',
+                            '${escapeJs(matchDate)}'
+                        )"
+                    >
+                        🔍 ANALYZE MATCH
+                    </button>
+
+                `
+                : `
+
+                    <div class="status status-error">
+
+                        ❌ Unable to create valid team identities.
+
+                    </div>
+
+                `
+            }
 
 
             <div
@@ -643,6 +719,7 @@ const identitiesValid =
         </div>
 
     `;
+
 }
 
 
@@ -681,24 +758,47 @@ async function runMatchAnalysis(
 
         <div class="status status-warning">
 
-            🔎 Searching web evidence...
+            🔎 Searching web evidence for
+
+            <strong>
+                ${escapeHtml(home)}
+            </strong>
+
+            vs
+
+            <strong>
+                ${escapeHtml(away)}
+            </strong>
 
         </div>
 
     `;
 
 
+    /*
+     * IMPORTANT:
+     *
+     * The backend now receives the actual
+     * API-Football team names AND their
+     * generated identities.
+     */
+
     const MATCH = {
 
-        home: home,
+        home:
+            home,
 
-        homeIdentity: homeIdentity,
+        homeIdentity:
+            homeIdentity,
 
-        away: away,
+        away:
+            away,
 
-        awayIdentity: awayIdentity,
+        awayIdentity:
+            awayIdentity,
 
-        date: date
+        date:
+            date
 
     };
 
@@ -756,6 +856,21 @@ async function runMatchAnalysis(
         /* =================================================
            STEP 2 — NORMALIZE
         ================================================= */
+
+        /*
+         * webData already contains:
+         *
+         * home
+         * homeIdentity
+         * away
+         * awayIdentity
+         * date
+         * searches
+         * allResults
+         *
+         * Therefore it can be sent directly
+         * to normalize-web.
+         */
 
         const normalizeResponse =
             await fetch(
@@ -820,7 +935,8 @@ async function runMatchAnalysis(
                     body:
                         JSON.stringify({
 
-                            match: MATCH,
+                            match:
+                                MATCH,
 
                             normalized:
                                 normalized
@@ -865,7 +981,10 @@ async function runMatchAnalysis(
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "MATCH ANALYSIS ERROR:",
+            error
+        );
 
 
         box.innerHTML = `
@@ -881,6 +1000,19 @@ async function runMatchAnalysis(
                         error.message
                     )}
                 </strong>
+
+                <details>
+
+                    <summary>
+                        Technical details
+                    </summary>
+
+                    <pre>${escapeHtml(
+                        error.stack ||
+                        String(error)
+                    )}</pre>
+
+                </details>
 
             </div>
 
@@ -966,8 +1098,6 @@ function buildAnalysisHTML(
         <h2>📊 Match Analysis</h2>
 
 
-        <!-- STATUS -->
-
         <h3>Analysis Status</h3>
 
         <div class="grid">
@@ -1034,8 +1164,6 @@ function buildAnalysisHTML(
         </div>
 
 
-        <!-- FORM -->
-
         <h3>Recent Form</h3>
 
         <div class="grid">
@@ -1072,8 +1200,6 @@ function buildAnalysisHTML(
         </div>
 
 
-        <!-- 1X2 -->
-
         <h3>1X2 Market</h3>
 
         <div class="market-grid">
@@ -1085,11 +1211,13 @@ function buildAnalysisHTML(
                 </div>
 
                 <div class="market-value">
+
                     ${formatPercentValue(
                         oneXtwo.home ??
                         oneXtwo.homeProbability ??
                         oneXtwo["1"]
                     )}
+
                 </div>
 
             </div>
@@ -1102,11 +1230,13 @@ function buildAnalysisHTML(
                 </div>
 
                 <div class="market-value">
+
                     ${formatPercentValue(
                         oneXtwo.draw ??
                         oneXtwo.drawProbability ??
                         oneXtwo.X
                     )}
+
                 </div>
 
             </div>
@@ -1119,19 +1249,19 @@ function buildAnalysisHTML(
                 </div>
 
                 <div class="market-value">
+
                     ${formatPercentValue(
                         oneXtwo.away ??
                         oneXtwo.awayProbability ??
                         oneXtwo["2"]
                     )}
+
                 </div>
 
             </div>
 
         </div>
 
-
-        <!-- GOALS -->
 
         <h3>Goals Markets</h3>
 
@@ -1144,9 +1274,7 @@ function buildAnalysisHTML(
                 </div>
 
                 <div class="stat-value">
-                    ${formatMarket(
-                        btts
-                    )}
+                    ${formatMarket(btts)}
                 </div>
 
             </div>
@@ -1159,17 +1287,13 @@ function buildAnalysisHTML(
                 </div>
 
                 <div class="stat-value">
-                    ${formatMarket(
-                        ou
-                    )}
+                    ${formatMarket(ou)}
                 </div>
 
             </div>
 
         </div>
 
-
-        <!-- XG -->
 
         <h3>Expected Goals</h3>
 
@@ -1182,12 +1306,14 @@ function buildAnalysisHTML(
                 </div>
 
                 <div class="stat-value">
+
                     ${
                         xgHome !== undefined &&
                         xgHome !== null
                         ? formatNumber(xgHome)
                         : "— Missing"
                     }
+
                 </div>
 
             </div>
@@ -1200,12 +1326,14 @@ function buildAnalysisHTML(
                 </div>
 
                 <div class="stat-value">
+
                     ${
                         xgAway !== undefined &&
                         xgAway !== null
                         ? formatNumber(xgAway)
                         : "— Missing"
                     }
+
                 </div>
 
             </div>
@@ -1213,25 +1341,15 @@ function buildAnalysisHTML(
         </div>
 
 
-        <!-- EVIDENCE -->
-
         <h3>Evidence Availability</h3>
 
-        ${buildEvidence(
-            normalized
-        )}
+        ${buildEvidence(normalized)}
 
-
-        <!-- WARNINGS -->
 
         <h3>Important Warnings</h3>
 
-        ${buildWarnings(
-            normalized
-        )}
+        ${buildWarnings(normalized)}
 
-
-        <!-- RAW DATA -->
 
         <details>
 
@@ -1332,60 +1450,27 @@ function buildEvidence(
 
     const items = [
 
-        [
-            "Identity",
-            availability.identityReady
-        ],
+        ["Identity", availability.identityReady],
 
-        [
-            "Form",
-            availability.formReady
-        ],
+        ["Form", availability.formReady],
 
-        [
-            "Stats",
-            availability.statsReady
-        ],
+        ["Stats", availability.statsReady],
 
-        [
-            "BTTS",
-            hasBTTS
-        ],
+        ["BTTS", hasBTTS],
 
-        [
-            "Over / Under",
-            hasOU
-        ],
+        ["Over / Under", hasOU],
 
-        [
-            "xG",
-            hasXG
-        ],
+        ["xG", hasXG],
 
-        [
-            "Injuries",
-            hasInjuries
-        ],
+        ["Injuries", hasInjuries],
 
-        [
-            "Lineups",
-            hasLineups
-        ],
+        ["Lineups", hasLineups],
 
-        [
-            "Odds",
-            hasOdds
-        ],
+        ["Odds", hasOdds],
 
-        [
-            "Data Ready",
-            availability.dataReady
-        ],
+        ["Data Ready", availability.dataReady],
 
-        [
-            "Analysis Ready",
-            availability.analysisReady
-        ]
+        ["Analysis Ready", availability.analysisReady]
 
     ];
 
@@ -1403,9 +1488,7 @@ function buildEvidence(
                         : "missing"}
                 ">
 
-                    ${escapeHtml(
-                        item[0]
-                    )}
+                    ${escapeHtml(item[0])}
 
                     <br>
 
@@ -1705,11 +1788,6 @@ function formatPercentValue(
     }
 
 
-    /*
-     * If the API returns a probability
-     * between 0 and 1, convert it to %.
-     */
-
     const percent =
         number > 0 &&
         number <= 1
@@ -1752,11 +1830,6 @@ function formatQuality(
     }
 
 
-    /*
-     * Your normalized V3.16 example
-     * returned quality = 0.95.
-     */
-
     const percent =
         number <= 1
         ? number * 100
@@ -1769,65 +1842,63 @@ function formatQuality(
 
 
 /* =========================================================
-   TEAM IDENTITY
-========================================================= */
-/* =========================================================
-   TEAM IDENTITY
+   GLOBAL TEAM IDENTITY
 ========================================================= */
 
-function createIdentity(name) {
+/*
+ * Converts ANY API-Football team name into a
+ * stable internal identity.
+ *
+ * Examples:
+ *
+ * Manchester United
+ *     -> MANCHESTER_UNITED
+ *
+ * Real Madrid
+ *     -> REAL_MADRID
+ *
+ * O'Higgins
+ *     -> O_HIGGINS
+ *
+ * Universidad de Concepción
+ *     -> UNIVERSIDAD_DE_CONCEPCION
+ *
+ * Deportes Concepción
+ *     -> DEPORTES_CONCEPCION
+ */
 
-    const normalized = String(name || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[’']/g, "'")
-        .replace(/\s+/g, " ")
-        .trim();
+function createIdentity(
+    name
+) {
+
+    const value =
+        String(name || "")
+            .trim()
+            .normalize("NFD")
+            .replace(
+                /[\u0300-\u036f]/g,
+                ""
+            )
+            .replace(
+                /[’']/g,
+                ""
+            )
+            .replace(
+                /&/g,
+                " AND "
+            )
+            .toUpperCase()
+            .replace(
+                /[^A-Z0-9]+/g,
+                "_"
+            )
+            .replace(
+                /^_+|_+$/g,
+                "" 
+            );
 
 
-    /* IMPORTANT:
-       Check Universidad first because
-       "universidad de concepcion" contains
-       "de concepcion".
-    */
-
-    if (
-        normalized === "universidad de concepcion" ||
-        normalized === "u. de concepcion" ||
-        normalized === "u de concepcion"
-    ) {
-
-        return "UNIVERSIDAD_DE_CONCEPCION";
-
-    }
-
-
-    if (
-        normalized === "deportes concepcion" ||
-        normalized === "d. concepcion" ||
-        normalized === "d concepcion"
-    ) {
-
-        return "DEPORTES_CONCEPCION";
-
-    }
-
-
-    if (
-        normalized === "o'higgins" ||
-        normalized === "o higgins" ||
-        normalized === "o.higgins" ||
-        normalized === "club o'higgins" ||
-        normalized === "club o higgins"
-    ) {
-
-        return "OHIGGINS";
-
-    }
-
-
-    return "";
+    return value || "";
 
 }
 
