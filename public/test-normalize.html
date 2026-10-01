@@ -84,6 +84,11 @@
         opacity: .9;
     }
 
+    button:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+    }
+
     .status {
         margin: 15px 0;
         padding: 12px;
@@ -247,6 +252,7 @@
     }
 
     @media(max-width: 700px) {
+
         .form-grid {
             grid-template-columns: 1fr;
         }
@@ -266,141 +272,257 @@
 
 <div class="container">
 
+    <!-- HEADER -->
+
     <div class="header">
+
         <h1>TomsonStakes</h1>
-        <p>Football Web Data & Prediction Analysis</p>
+
+        <p>
+            Football Web Data & Prediction Analysis
+        </p>
+
     </div>
+
+
+    <!-- MATCH -->
 
     <div class="match-card">
 
         <div class="teams">
+
             Deportes Concepcion
-            <div class="vs">VS</div>
+
+            <div class="vs">
+                VS
+            </div>
+
             O'Higgins
+
         </div>
 
         <div class="date">
             30 September 2026
         </div>
 
-        <button onclick="runAnalysis()">
+        <button
+            id="runButton"
+            onclick="runAnalysis()"
+        >
             RUN ANALYSIS
         </button>
 
     </div>
 
-    <div id="status" class="status">
+
+    <!-- STATUS -->
+
+    <div
+        id="status"
+        class="status"
+    >
         Ready to analyze.
     </div>
 
-    <div id="results" class="hidden">
 
-        <!-- READINESS -->
+    <!-- RESULTS -->
+
+    <div
+        id="results"
+        class="hidden"
+    >
+
+        <!-- =========================
+             ANALYSIS STATUS
+        ========================== -->
 
         <div class="section">
-            <h2>Analysis Status</h2>
+
+            <h2>
+                Analysis Status
+            </h2>
 
             <div class="grid">
 
                 <div class="stat">
-                    <div class="stat-title">Overall Status</div>
-                    <div id="analysisStatus" class="stat-value">
+
+                    <div class="stat-title">
+                        Overall Status
+                    </div>
+
+                    <div
+                        id="analysisStatus"
+                        class="stat-value"
+                    >
                         -
                     </div>
+
                 </div>
 
-                <div class="stat">
-                    <div class="stat-title">Confidence</div>
-                    <div id="confidence" class="stat-value">
-                        -
-                    </div>
-                </div>
 
                 <div class="stat">
-                    <div class="stat-title">Model Method</div>
-                    <div id="modelMethod" class="stat-value">
+
+                    <div class="stat-title">
+                        Confidence
+                    </div>
+
+                    <div
+                        id="confidence"
+                        class="stat-value"
+                    >
                         -
                     </div>
+
                 </div>
 
+
                 <div class="stat">
-                    <div class="stat-title">Data Quality</div>
-                    <div id="dataQuality" class="stat-value">
+
+                    <div class="stat-title">
+                        Model Method
+                    </div>
+
+                    <div
+                        id="modelMethod"
+                        class="stat-value"
+                    >
                         -
                     </div>
+
+                </div>
+
+
+                <div class="stat">
+
+                    <div class="stat-title">
+                        Data Quality
+                    </div>
+
+                    <div
+                        id="dataQuality"
+                        class="stat-value"
+                    >
+                        -
+                    </div>
+
                 </div>
 
             </div>
+
         </div>
 
 
-        <!-- FORM -->
+        <!-- =========================
+             RECENT FORM
+        ========================== -->
 
         <div class="section">
-            <h2>Recent Form</h2>
+
+            <h2>
+                Recent Form
+            </h2>
 
             <div class="form-grid">
 
                 <div class="team-form">
-                    <h3>Deportes Concepcion</h3>
+
+                    <h3>
+                        Deportes Concepcion
+                    </h3>
+
                     <div id="homeForm"></div>
+
                 </div>
 
+
                 <div class="team-form">
-                    <h3>O'Higgins</h3>
+
+                    <h3>
+                        O'Higgins
+                    </h3>
+
                     <div id="awayForm"></div>
+
                 </div>
 
             </div>
+
         </div>
 
 
-        <!-- 1X2 -->
+        <!-- =========================
+             1X2
+        ========================== -->
 
         <div class="section">
-            <h2>1X2 Market</h2>
+
+            <h2>
+                1X2 Market
+            </h2>
 
             <div class="market">
 
                 <div class="market-box">
+
                     <div class="market-label">
                         Home
                     </div>
 
-                    <div id="home1x2" class="market-value">
+                    <div
+                        id="home1x2"
+                        class="market-value"
+                    >
                         -
                     </div>
+
                 </div>
 
+
                 <div class="market-box">
+
                     <div class="market-label">
                         Draw
                     </div>
 
-                    <div id="draw1x2" class="market-value">
+                    <div
+                        id="draw1x2"
+                        class="market-value"
+                    >
                         -
                     </div>
+
                 </div>
 
+
                 <div class="market-box">
+
                     <div class="market-label">
                         Away
                     </div>
 
-                    <div id="away1x2" class="market-value">
+                    <div
+                        id="away1x2"
+                        class="market-value"
+                    >
                         -
                     </div>
+
                 </div>
 
             </div>
+
         </div>
 
 
-        <!-- BTTS / O-U -->
+        <!-- =========================
+             GOALS
+        ========================== -->
 
         <div class="section">
 
-            <h2>Goals Markets</h2>
+            <h2>
+                Goals Markets
+            </h2>
 
             <div class="grid">
 
@@ -410,11 +532,15 @@
                         BTTS
                     </div>
 
-                    <div id="btts" class="stat-value">
+                    <div
+                        id="btts"
+                        class="stat-value"
+                    >
                         -
                     </div>
 
                 </div>
+
 
                 <div class="stat">
 
@@ -422,7 +548,10 @@
                         Over / Under
                     </div>
 
-                    <div id="ou" class="stat-value">
+                    <div
+                        id="ou"
+                        class="stat-value"
+                    >
                         -
                     </div>
 
@@ -433,11 +562,15 @@
         </div>
 
 
-        <!-- XG -->
+        <!-- =========================
+             XG
+        ========================== -->
 
         <div class="section">
 
-            <h2>Expected Goals</h2>
+            <h2>
+                Expected Goals
+            </h2>
 
             <div class="grid">
 
@@ -447,11 +580,15 @@
                         Deportes Concepcion xG
                     </div>
 
-                    <div id="homeXg" class="stat-value">
+                    <div
+                        id="homeXg"
+                        class="stat-value"
+                    >
                         -
                     </div>
 
                 </div>
+
 
                 <div class="stat">
 
@@ -459,7 +596,10 @@
                         O'Higgins xG
                     </div>
 
-                    <div id="awayXg" class="stat-value">
+                    <div
+                        id="awayXg"
+                        class="stat-value"
+                    >
                         -
                     </div>
 
@@ -469,72 +609,39 @@
 
         </div>
 
-function displayAvailability(normalized) {
 
-    const container =
-        document.getElementById("availability");
+        <!-- =========================
+             AVAILABILITY
+        ========================== -->
 
-    const availability =
-        normalized.availability ||
-        normalized.readiness ||
-        {};
+        <div class="section">
 
-    const items = [
-        ["Identity", availability.identityReady],
-        ["Form", availability.formReady],
-        ["Stats", availability.statsReady],
-        ["BTTS", availability.btts],
-        ["Over / Under", availability.overUnder],
-        ["xG", availability.xG],
-        ["Injuries", availability.injuries],
-        ["Lineups", availability.lineups],
-        ["Odds", availability.odds],
-        ["Data Ready", availability.dataReady],
-        ["Analysis Ready", availability.analysisReady]
-    ];
+            <h2>
+                Evidence Availability
+            </h2>
 
-    container.innerHTML = items.map(([label, value]) => {
+            <!-- IMPORTANT:
+                 The ID is directly on this grid.
+                 This prevents the null innerHTML error.
+            -->
 
-        let text = "— Missing";
-        let css = "not-ready";
-
-        if (value === true) {
-            text = "✓ Available";
-            css = "ready";
-        }
-        else if (
-            value !== false &&
-            value !== undefined &&
-            value !== null
-        ) {
-            text = String(value);
-            css = "partial";
-        }
-
-        return `
-            <div class="stat ${css}">
-                <div class="stat-title">
-                    ${label}
-                </div>
-
-                <div class="stat-value">
-                    ${text}
-                </div>
-            </div>
-        `;
-
-    }).join("");
-}
-        
+            <div
+                id="availability"
+                class="grid"
+            ></div>
 
         </div>
 
 
-        <!-- WARNINGS -->
+        <!-- =========================
+             WARNINGS
+        ========================== -->
 
         <div class="section">
 
-            <h2>Important Warnings</h2>
+            <h2>
+                Important Warnings
+            </h2>
 
             <div id="warnings"></div>
 
@@ -543,7 +650,9 @@ function displayAvailability(normalized) {
     </div>
 
 
-    <!-- RAW DEBUG DATA -->
+    <!-- =========================
+         RAW API DATA
+    ========================== -->
 
     <details>
 
@@ -551,13 +660,25 @@ function displayAvailability(normalized) {
             View Raw API Data
         </summary>
 
-        <h3>Web Data</h3>
+
+        <h3>
+            Web Data
+        </h3>
+
         <pre id="webRaw"></pre>
 
-        <h3>Normalized Data</h3>
+
+        <h3>
+            Normalized Data
+        </h3>
+
         <pre id="normalizedRaw"></pre>
 
-        <h3>Prediction</h3>
+
+        <h3>
+            Prediction
+        </h3>
+
         <pre id="predictionRaw"></pre>
 
     </details>
@@ -567,83 +688,136 @@ function displayAvailability(normalized) {
 
 <script>
 
+/* =====================================================
+   MATCH CONFIGURATION
+===================================================== */
+
 const MATCH = {
+
     home: "Deportes Concepcion",
-    homeIdentity: "DEPORTES_CONCEPCION",
+
+    homeIdentity:
+        "DEPORTES_CONCEPCION",
 
     away: "O'Higgins",
-    awayIdentity: "OHIGGINS",
 
-    date: "2026-09-30"
+    awayIdentity:
+        "OHIGGINS",
+
+    date:
+        "2026-09-30"
+
 };
 
 
+/* =====================================================
+   RUN ANALYSIS
+===================================================== */
+
 async function runAnalysis() {
 
-    const status = document.getElementById("status");
+    const status =
+        document.getElementById("status");
 
-    const results = document.getElementById("results");
+    const results =
+        document.getElementById("results");
+
+    const runButton =
+        document.getElementById("runButton");
+
 
     results.classList.add("hidden");
 
-    status.className = "status";
-    status.textContent = "Searching web data...";
+    status.className =
+        "status";
+
+    status.textContent =
+        "Searching web data...";
+
+    runButton.disabled =
+        true;
 
 
     try {
 
-        /*
-         * STEP 1
-         * WEB DATA
-         */
+        /* =============================================
+           STEP 1 — WEB DATA
+        ============================================= */
 
         const webUrl =
             `/api/web-data` +
-            `?home=${encodeURIComponent(MATCH.home)}` +
-            `&homeIdentity=${encodeURIComponent(MATCH.homeIdentity)}` +
-            `&away=${encodeURIComponent(MATCH.away)}` +
-            `&awayIdentity=${encodeURIComponent(MATCH.awayIdentity)}` +
-            `&date=${encodeURIComponent(MATCH.date)}`;
+            `?home=${encodeURIComponent(
+                MATCH.home
+            )}` +
+            `&homeIdentity=${encodeURIComponent(
+                MATCH.homeIdentity
+            )}` +
+            `&away=${encodeURIComponent(
+                MATCH.away
+            )}` +
+            `&awayIdentity=${encodeURIComponent(
+                MATCH.awayIdentity
+            )}` +
+            `&date=${encodeURIComponent(
+                MATCH.date
+            )}`;
 
 
-        const webResponse = await fetch(webUrl);
+        const webResponse =
+            await fetch(webUrl);
 
-        const webData = await webResponse.json();
+
+        const webData =
+            await webResponse.json();
 
 
         if (!webResponse.ok) {
+
             throw new Error(
                 webData.error ||
                 "Web data request failed."
             );
+
         }
 
 
-        document.getElementById("webRaw").textContent =
-            JSON.stringify(webData, null, 2);
+        document.getElementById(
+            "webRaw"
+        ).textContent =
+            JSON.stringify(
+                webData,
+                null,
+                2
+            );
 
 
-        /*
-         * STEP 2
-         * NORMALIZE
-         */
+        /* =============================================
+           STEP 2 — NORMALIZE
+        ============================================= */
 
         status.textContent =
             "Normalizing sources...";
 
 
         const normalizeResponse =
-            await fetch("/api/normalize-web", {
+            await fetch(
+                "/api/normalize-web",
+                {
 
-                method: "POST",
+                    method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify(webData)
+                    body:
+                        JSON.stringify(
+                            webData
+                        )
 
-            });
+                }
+            );
 
 
         const normalized =
@@ -660,37 +834,49 @@ async function runAnalysis() {
         }
 
 
-        document.getElementById("normalizedRaw").textContent =
-            JSON.stringify(normalized, null, 2);
+        document.getElementById(
+            "normalizedRaw"
+        ).textContent =
+            JSON.stringify(
+                normalized,
+                null,
+                2
+            );
 
 
-        /*
-         * STEP 3
-         * PREDICTION
-         */
+        /* =============================================
+           STEP 3 — PREDICTION
+        ============================================= */
 
         status.textContent =
             "Running prediction engine...";
 
 
         const predictionResponse =
-            await fetch("/api/predict", {
+            await fetch(
+                "/api/predict",
+                {
 
-                method: "POST",
+                    method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify({
+                    body:
+                        JSON.stringify({
 
-                    match: MATCH,
+                            match:
+                                MATCH,
 
-                    normalized: normalized
+                            normalized:
+                                normalized
 
-                })
+                        })
 
-            });
+                }
+            );
 
 
         const prediction =
@@ -707,13 +893,19 @@ async function runAnalysis() {
         }
 
 
-        document.getElementById("predictionRaw").textContent =
-            JSON.stringify(prediction, null, 2);
+        document.getElementById(
+            "predictionRaw"
+        ).textContent =
+            JSON.stringify(
+                prediction,
+                null,
+                2
+            );
 
 
-        /*
-         * DISPLAY RESULTS
-         */
+        /* =============================================
+           DISPLAY RESULTS
+        ============================================= */
 
         displayResults(
             normalized,
@@ -721,7 +913,10 @@ async function runAnalysis() {
         );
 
 
-        results.classList.remove("hidden");
+        results.classList.remove(
+            "hidden"
+        );
+
 
         status.textContent =
             "Analysis completed.";
@@ -730,35 +925,48 @@ async function runAnalysis() {
             "status ready";
 
 
-    } catch (error) {
+    }
 
-        console.error(error);
+    catch (error) {
+
+        console.error(
+            error
+        );
+
 
         status.textContent =
-            "Error: " + error.message;
+            "Error: " +
+            error.message;
 
         status.className =
             "status not-ready";
 
     }
 
+    finally {
+
+        runButton.disabled =
+            false;
+
+    }
+
 }
 
 
-/* =========================
+/* =====================================================
    DISPLAY RESULTS
-========================= */
+===================================================== */
 
 function displayResults(
     normalized,
     prediction
 ) {
 
-    /*
-     * STATUS
-     */
+    /* =============================================
+       STATUS
+    ============================================= */
 
-    const status =
+    const analysisStatus =
         prediction.status ||
         prediction.analysisStatus ||
         normalized.readiness?.status ||
@@ -767,12 +975,13 @@ function displayResults(
 
     document.getElementById(
         "analysisStatus"
-    ).textContent = status;
+    ).textContent =
+        analysisStatus;
 
 
-    /*
-     * CONFIDENCE
-     */
+    /* =============================================
+       CONFIDENCE
+    ============================================= */
 
     const confidence =
         prediction.confidence ??
@@ -786,9 +995,9 @@ function displayResults(
         confidence + "%";
 
 
-    /*
-     * MODEL METHOD
-     */
+    /* =============================================
+       MODEL METHOD
+    ============================================= */
 
     document.getElementById(
         "modelMethod"
@@ -797,9 +1006,9 @@ function displayResults(
         "MARKET_BASELINE";
 
 
-    /*
-     * QUALITY
-     */
+    /* =============================================
+       DATA QUALITY
+    ============================================= */
 
     const quality =
         normalized.quality?.score ??
@@ -815,24 +1024,27 @@ function displayResults(
             : quality;
 
 
-    /*
-     * FORM
-     */
+    /* =============================================
+       FORM
+    ============================================= */
 
     displayForm(
         "homeForm",
-        normalized.form?.home || []
+        normalized.form?.home ||
+        []
     );
+
 
     displayForm(
         "awayForm",
-        normalized.form?.away || []
+        normalized.form?.away ||
+        []
     );
 
 
-    /*
-     * 1X2
-     */
+    /* =============================================
+       1X2
+    ============================================= */
 
     const oneXtwo =
         prediction.oneXtwo ||
@@ -871,13 +1083,14 @@ function displayResults(
         );
 
 
-    /*
-     * BTTS
-     */
+    /* =============================================
+       BTTS
+    ============================================= */
 
     const btts =
         prediction.btts ||
         normalized.btts ||
+        normalized.statistics?.btts ||
         {};
 
 
@@ -889,15 +1102,16 @@ function displayResults(
         );
 
 
-    /*
-     * OVER / UNDER
-     */
+    /* =============================================
+       OVER / UNDER
+    ============================================= */
 
     const ou =
         prediction.overUnder ||
         prediction.ou ||
         normalized.overUnder ||
         normalized.ou ||
+        normalized.statistics?.overUnder ||
         {};
 
 
@@ -909,16 +1123,22 @@ function displayResults(
         );
 
 
-    /*
-     * XG
-     */
+    /* =============================================
+       XG
+    ============================================= */
+
+    const xg =
+        normalized.xG ||
+        normalized.xg ||
+        normalized.statistics?.xg ||
+        {};
+
 
     document.getElementById(
         "homeXg"
     ).textContent =
         formatNumber(
-            normalized.xG?.home ??
-            normalized.xg?.home
+            xg.home
         );
 
 
@@ -926,23 +1146,22 @@ function displayResults(
         "awayXg"
     ).textContent =
         formatNumber(
-            normalized.xG?.away ??
-            normalized.xg?.away
+            xg.away
         );
 
 
-    /*
-     * AVAILABILITY
-     */
+    /* =============================================
+       AVAILABILITY
+    ============================================= */
 
     displayAvailability(
         normalized
     );
 
 
-    /*
-     * WARNINGS
-     */
+    /* =============================================
+       WARNINGS
+    ============================================= */
 
     displayWarnings(
         normalized
@@ -951,9 +1170,9 @@ function displayResults(
 }
 
 
-/* =========================
-   FORM
-========================= */
+/* =====================================================
+   FORM DISPLAY
+===================================================== */
 
 function displayForm(
     elementId,
@@ -961,68 +1180,81 @@ function displayForm(
 ) {
 
     const element =
-        document.getElementById(elementId);
+        document.getElementById(
+            elementId
+        );
 
 
-    if (!Array.isArray(form) ||
-        form.length === 0) {
+    if (
+        !Array.isArray(form) ||
+        form.length === 0
+    ) {
 
         element.innerHTML =
             "<span>No reliable recent form found.</span>";
 
         return;
+
     }
 
 
     element.innerHTML =
-        form.map(match => {
+        form.map(
+            match => {
 
-            const result =
-                String(
-                    match.result ||
-                    match.outcome ||
-                    "?"
-                ).toUpperCase();
-
-
-            let css = "draw";
-
-            if (result === "W")
-                css = "win";
-
-            if (result === "L")
-                css = "loss";
+                const result =
+                    String(
+                        match.result ||
+                        match.outcome ||
+                        "?"
+                    ).toUpperCase();
 
 
-            const score =
-                match.score ||
-                match.resultScore ||
-                "";
+                let css =
+                    "draw";
 
 
-            const opponent =
-                match.opponent ||
-                "";
+                if (result === "W")
+                    css = "win";
 
 
-            return `
-                <span
-                    class="form-item ${css}"
-                    title="${opponent} ${score}"
-                >
-                    ${result}
-                </span>
-            `;
+                if (result === "L")
+                    css = "loss";
 
-        })
-        .join("");
+
+                const score =
+                    match.score ||
+                    match.resultScore ||
+                    "";
+
+
+                const opponent =
+                    match.opponent ||
+                    "";
+
+
+                return `
+                    <span
+                        class="form-item ${css}"
+                        title="${escapeHtml(
+                            opponent +
+                            " " +
+                            score
+                        )}"
+                    >
+                        ${escapeHtml(result)}
+                    </span>
+                `;
+
+            }
+        ).join("");
 
 }
 
 
-/* =========================
+/* =====================================================
    AVAILABILITY
-========================= */
+===================================================== */
 
 function displayAvailability(
     normalized
@@ -1034,6 +1266,24 @@ function displayAvailability(
         );
 
 
+    /*
+     * Safety check.
+     *
+     * This prevents:
+     * Cannot set properties of null
+     */
+
+    if (!container) {
+
+        console.error(
+            "Availability container not found."
+        );
+
+        return;
+
+    }
+
+
     const availability =
         normalized.availability ||
         normalized.readiness ||
@@ -1042,46 +1292,130 @@ function displayAvailability(
 
     const items = [
 
-        ["Identity", availability.identityReady],
-        ["Form", availability.formReady],
-        ["Stats", availability.statsReady],
-        ["BTTS", availability.btts],
-        ["O/U", availability.overUnder],
-        ["xG", availability.xG],
-        ["Injuries", availability.injuries],
-        ["Lineups", availability.lineups],
-        ["Odds", availability.odds]
+        [
+            "Identity",
+            availability.identityReady
+        ],
+
+        [
+            "Form",
+            availability.formReady
+        ],
+
+        [
+            "Stats",
+            availability.statsReady
+        ],
+
+        [
+            "BTTS",
+            availability.btts
+        ],
+
+        [
+            "Over / Under",
+            availability.overUnder
+        ],
+
+        [
+            "xG",
+            availability.xG
+        ],
+
+        [
+            "Injuries",
+            availability.injuries
+        ],
+
+        [
+            "Lineups",
+            availability.lineups
+        ],
+
+        [
+            "Odds",
+            availability.odds
+        ],
+
+        [
+            "Data Ready",
+            availability.dataReady
+        ],
+
+        [
+            "Analysis Ready",
+            availability.analysisReady
+        ]
 
     ];
 
 
     container.innerHTML =
-        items.map(item => {
+        items.map(
+            item => {
 
-            const value =
-                item[1] === true;
+                const label =
+                    item[0];
 
-            return `
-                <div class="stat">
-                    <div class="stat-title">
-                        ${item[0]}
+                const value =
+                    item[1];
+
+
+                let text =
+                    "— Missing";
+
+                let css =
+                    "not-ready";
+
+
+                if (value === true) {
+
+                    text =
+                        "✓ Available";
+
+                    css =
+                        "ready";
+
+                }
+
+                else if (
+                    value !== false &&
+                    value !== undefined &&
+                    value !== null
+                ) {
+
+                    text =
+                        String(value);
+
+                    css =
+                        "partial";
+
+                }
+
+
+                return `
+                    <div class="stat ${css}">
+
+                        <div class="stat-title">
+                            ${escapeHtml(label)}
+                        </div>
+
+                        <div class="stat-value">
+                            ${escapeHtml(text)}
+                        </div>
+
                     </div>
+                `;
 
-                    <div class="stat-value">
-                        ${value ? "✓ Available" : "— Missing"}
-                    </div>
-                </div>
-            `;
-
-        })
-        .join("");
+            }
+        ).join("");
 
 }
 
 
-/* =========================
+/* =====================================================
    WARNINGS
-========================= */
+===================================================== */
 
 function displayWarnings(
     normalized
@@ -1093,47 +1427,69 @@ function displayWarnings(
         );
 
 
+    if (!container) {
+
+        return;
+
+    }
+
+
     const warnings =
-        normalized.warnings || [];
+        Array.isArray(
+            normalized.warnings
+        )
+            ? normalized.warnings
+            : [];
 
 
-    if (!warnings.length) {
+    if (
+        warnings.length === 0
+    ) {
 
         container.innerHTML =
             "<div class='stat'>No warnings.</div>";
 
         return;
+
     }
 
 
     container.innerHTML =
-        warnings.map(warning => {
+        warnings.map(
+            warning => {
 
-            return `
-                <div class="warning">
-                    ${escapeHtml(
-                        String(warning)
-                    )}
-                </div>
-            `;
+                return `
+                    <div class="warning">
+                        ${escapeHtml(
+                            String(
+                                warning
+                            )
+                        )}
+                    </div>
+                `;
 
-        }).join("");
+            }
+        ).join("");
 
 }
 
 
-/* =========================
-   HELPERS
-========================= */
+/* =====================================================
+   FORMAT PERCENT
+===================================================== */
 
-function formatPercent(value) {
+function formatPercent(
+    value
+) {
 
     if (
         value === undefined ||
         value === null ||
         value === ""
     ) {
+
         return "-";
+
     }
 
 
@@ -1141,23 +1497,39 @@ function formatPercent(value) {
         Number(value);
 
 
-    if (Number.isNaN(number))
+    if (
+        Number.isNaN(number)
+    ) {
+
         return String(value);
 
+    }
 
-    return number.toFixed(1) + "%";
+
+    return (
+        number.toFixed(1) +
+        "%"
+    );
 
 }
 
 
-function formatNumber(value) {
+/* =====================================================
+   FORMAT NUMBER
+===================================================== */
+
+function formatNumber(
+    value
+) {
 
     if (
         value === undefined ||
         value === null ||
         value === ""
     ) {
+
         return "-";
+
     }
 
 
@@ -1165,14 +1537,23 @@ function formatNumber(value) {
         Number(value);
 
 
-    if (Number.isNaN(number))
+    if (
+        Number.isNaN(number)
+    ) {
+
         return String(value);
+
+    }
 
 
     return number.toFixed(2);
 
 }
 
+
+/* =====================================================
+   FORMAT MARKET
+===================================================== */
 
 function formatMarket(
     market
@@ -1182,12 +1563,30 @@ function formatMarket(
         market === undefined ||
         market === null
     ) {
+
         return "-";
+
     }
 
 
-    if (typeof market === "string")
+    if (
+        typeof market === "string"
+    ) {
+
         return market;
+
+    }
+
+
+    if (
+        typeof market === "number"
+    ) {
+
+        return String(
+            market
+        );
+
+    }
 
 
     if (
@@ -1270,16 +1669,35 @@ function formatMarket(
 }
 
 
+/* =====================================================
+   ESCAPE HTML
+===================================================== */
+
 function escapeHtml(
     value
 ) {
 
-    return value
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    return String(value)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
 
