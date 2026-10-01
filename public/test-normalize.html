@@ -1,1418 +1,1348 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>TomsonStakes Analysis</title>
+    <title>TomsonStakes Analysis</title>
 
-<style>
-    * {
-        box-sizing: border-box;
-    }
-
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #f4f6f8;
-        color: #17202a;
-    }
-
-    .container {
-        max-width: 1100px;
-        margin: auto;
-        padding: 20px;
-    }
-
-    .header {
-        background: #111827;
-        color: white;
-        padding: 22px;
-        border-radius: 14px;
-        margin-bottom: 18px;
-    }
-
-    .header h1 {
-        margin: 0 0 6px;
-        font-size: 28px;
-    }
-
-    .header p {
-        margin: 0;
-        opacity: .75;
-    }
-
-    .match-card {
-        background: white;
-        border-radius: 14px;
-        padding: 22px;
-        text-align: center;
-        margin-bottom: 18px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.06);
-    }
-
-    .teams {
-        font-size: 24px;
-        font-weight: bold;
-    }
-
-    .vs {
-        margin: 8px 0;
-        color: #6b7280;
-        font-size: 14px;
-    }
-
-    .date {
-        color: #6b7280;
-        font-size: 14px;
-    }
-
-    button {
-        width: 100%;
-        border: none;
-        padding: 14px;
-        margin-top: 15px;
-        border-radius: 9px;
-        background: #111827;
-        color: white;
-        font-size: 16px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    button:hover {
-        opacity: .9;
-    }
-
-    button:disabled {
-        opacity: .6;
-        cursor: not-allowed;
-    }
-
-    .status {
-        margin: 15px 0;
-        padding: 12px;
-        border-radius: 8px;
-        background: #eef2ff;
-        color: #3730a3;
-        font-weight: bold;
-    }
-
-    .section {
-        background: white;
-        border-radius: 14px;
-        padding: 18px;
-        margin-bottom: 18px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.05);
-    }
-
-    .section h2 {
-        margin-top: 0;
-        font-size: 19px;
-        border-bottom: 1px solid #e5e7eb;
-        padding-bottom: 10px;
-    }
-
-    .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 12px;
-    }
-
-    .stat {
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 14px;
-    }
-
-    .stat-title {
-        font-size: 13px;
-        color: #6b7280;
-        margin-bottom: 7px;
-    }
-
-    .stat-value {
-        font-size: 20px;
-        font-weight: bold;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
-
-    .team-form {
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 15px;
-    }
-
-    .team-form h3 {
-        margin-top: 0;
-    }
-
-    .form-item {
-        display: inline-block;
-        padding: 7px 10px;
-        margin: 3px;
-        border-radius: 7px;
-        font-weight: bold;
-        font-size: 13px;
-    }
-
-    .win {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .draw {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .loss {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .market {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-    }
-
-    .market-box {
-        border: 1px solid #e5e7eb;
-        padding: 15px;
-        text-align: center;
-        border-radius: 10px;
-    }
-
-    .market-label {
-        font-size: 13px;
-        color: #6b7280;
-    }
-
-    .market-value {
-        font-size: 22px;
-        font-weight: bold;
-        margin-top: 5px;
-    }
-
-    .warning {
-        background: #fff7ed;
-        color: #9a3412;
-        border: 1px solid #fed7aa;
-        padding: 12px;
-        border-radius: 8px;
-        margin-top: 8px;
-    }
-
-    .ready {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .partial {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .not-ready {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    details {
-        background: white;
-        border-radius: 14px;
-        padding: 15px;
-        margin-bottom: 18px;
-    }
-
-    summary {
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    pre {
-        white-space: pre-wrap;
-        word-break: break-word;
-        background: #111827;
-        color: #e5e7eb;
-        padding: 15px;
-        border-radius: 10px;
-        overflow-x: auto;
-        font-size: 12px;
-    }
-
-    .hidden {
-        display: none;
-    }
-
-    @media(max-width: 700px) {
-
-        .form-grid {
-            grid-template-columns: 1fr;
+    <style>
+        * {
+            box-sizing: border-box;
         }
 
-        .market {
-            grid-template-columns: 1fr;
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
         }
 
-        .teams {
-            font-size: 20px;
+        .container {
+            max-width: 1200px;
+            margin: auto;
         }
-    }
-</style>
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .match-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .team {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .vs {
+            font-size: 18px;
+            color: #777;
+        }
+
+        button {
+            border: none;
+            background: #111;
+            color: #fff;
+            padding: 12px 22px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            background: #f0f0f0;
+            margin-top: 15px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .item {
+            background: #f8f9fa;
+            border: 1px solid #e2e5e8;
+            border-radius: 7px;
+            padding: 13px;
+        }
+
+        .item-title {
+            font-size: 13px;
+            color: #777;
+            margin-bottom: 5px;
+        }
+
+        .item-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .availability-item {
+            background: #f8f9fa;
+            border: 1px solid #e2e5e8;
+            border-radius: 7px;
+            padding: 13px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .available {
+            color: #16803c;
+            font-weight: bold;
+        }
+
+        .missing {
+            color: #b42318;
+            font-weight: bold;
+        }
+
+        .warning {
+            padding: 10px 12px;
+            background: #fff7e6;
+            border-left: 4px solid #f0a000;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-team {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 7px;
+            background: #fafafa;
+        }
+
+        .form-team h3 {
+            margin-top: 0;
+        }
+
+        .result {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 5px;
+            background: #eee;
+            margin: 3px;
+            font-size: 13px;
+        }
+
+        .raw {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #111;
+            color: #eee;
+            padding: 15px;
+            border-radius: 7px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 12px;
+            color: #555;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 10px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .team {
+                font-size: 18px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
 <div class="container">
 
-    <!-- HEADER -->
+    <h1>TomsonStakes Analysis</h1>
 
-    <div class="header">
-
-        <h1>TomsonStakes</h1>
-
-        <p>
-            Football Web Data & Prediction Analysis
-        </p>
-
+    <div class="subtitle">
+        Football match analysis and evidence dashboard
     </div>
-
 
     <!-- MATCH -->
+    <div class="card">
 
-    <div class="match-card">
+        <div class="match-box">
 
-        <div class="teams">
-
-            Deportes Concepcion
-
-            <div class="vs">
-                VS
+            <div>
+                <div class="team" id="homeTeam">Deportes Concepcion</div>
+                <div class="vs">vs</div>
+                <div class="team" id="awayTeam">O'Higgins</div>
             </div>
 
-            O'Higgins
+            <div>
+                <strong id="matchDate">2026-09-30</strong>
+            </div>
+
+            <button id="runButton" onclick="runAnalysis()">
+                Run Analysis
+            </button>
 
         </div>
 
-        <div class="date">
-            30 September 2026
+        <div class="loading" id="loading">
+            Running analysis...
         </div>
 
-        <button
-            id="runButton"
-            onclick="runAnalysis()"
-        >
-            RUN ANALYSIS
-        </button>
+        <div class="status" id="status">
+            Ready.
+        </div>
 
     </div>
 
 
-    <!-- STATUS -->
+    <!-- ANALYSIS STATUS -->
+    <div class="card">
 
-    <div
-        id="status"
-        class="status"
-    >
-        Ready to analyze.
-    </div>
+        <h2>Analysis Status</h2>
 
+        <div class="grid">
 
-    <!-- RESULTS -->
-
-    <div
-        id="results"
-        class="hidden"
-    >
-
-        <!-- =========================
-             ANALYSIS STATUS
-        ========================== -->
-
-        <div class="section">
-
-            <h2>
-                Analysis Status
-            </h2>
-
-            <div class="grid">
-
-                <div class="stat">
-
-                    <div class="stat-title">
-                        Overall Status
-                    </div>
-
-                    <div
-                        id="analysisStatus"
-                        class="stat-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-
-                <div class="stat">
-
-                    <div class="stat-title">
-                        Confidence
-                    </div>
-
-                    <div
-                        id="confidence"
-                        class="stat-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-
-                <div class="stat">
-
-                    <div class="stat-title">
-                        Model Method
-                    </div>
-
-                    <div
-                        id="modelMethod"
-                        class="stat-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-
-                <div class="stat">
-
-                    <div class="stat-title">
-                        Data Quality
-                    </div>
-
-                    <div
-                        id="dataQuality"
-                        class="stat-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
+            <div class="item">
+                <div class="item-title">Confidence</div>
+                <div class="item-value" id="confidence">-</div>
             </div>
 
-        </div>
-
-
-        <!-- =========================
-             RECENT FORM
-        ========================== -->
-
-        <div class="section">
-
-            <h2>
-                Recent Form
-            </h2>
-
-            <div class="form-grid">
-
-                <div class="team-form">
-
-                    <h3>
-                        Deportes Concepcion
-                    </h3>
-
-                    <div id="homeForm"></div>
-
-                </div>
-
-
-                <div class="team-form">
-
-                    <h3>
-                        O'Higgins
-                    </h3>
-
-                    <div id="awayForm"></div>
-
-                </div>
-
+            <div class="item">
+                <div class="item-title">Model Method</div>
+                <div class="item-value" id="modelMethod">-</div>
             </div>
 
-        </div>
-
-
-        <!-- =========================
-             1X2
-        ========================== -->
-
-        <div class="section">
-
-            <h2>
-                1X2 Market
-            </h2>
-
-            <div class="market">
-
-                <div class="market-box">
-
-                    <div class="market-label">
-                        Home
-                    </div>
-
-                    <div
-                        id="home1x2"
-                        class="market-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-
-                <div class="market-box">
-
-                    <div class="market-label">
-                        Draw
-                    </div>
-
-                    <div
-                        id="draw1x2"
-                        class="market-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-
-                <div class="market-box">
-
-                    <div class="market-label">
-                        Away
-                    </div>
-
-                    <div
-                        id="away1x2"
-                        class="market-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
+            <div class="item">
+                <div class="item-title">Data Quality</div>
+                <div class="item-value" id="dataQuality">-</div>
             </div>
-
-        </div>
-
-
-        <!-- =========================
-             GOALS
-        ========================== -->
-
-        <div class="section">
-
-            <h2>
-                Goals Markets
-            </h2>
-
-            <div class="grid">
-
-                <div class="stat">
-
-                    <div class="stat-title">
-                        BTTS
-                    </div>
-
-                    <div
-                        id="btts"
-                        class="stat-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-
-                <div class="stat">
-
-                    <div class="stat-title">
-                        Over / Under
-                    </div>
-
-                    <div
-                        id="ou"
-                        class="stat-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- =========================
-             XG
-        ========================== -->
-
-        <div class="section">
-
-            <h2>
-                Expected Goals
-            </h2>
-
-            <div class="grid">
-
-                <div class="stat">
-
-                    <div class="stat-title">
-                        Deportes Concepcion xG
-                    </div>
-
-                    <div
-                        id="homeXg"
-                        class="stat-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-
-                <div class="stat">
-
-                    <div class="stat-title">
-                        O'Higgins xG
-                    </div>
-
-                    <div
-                        id="awayXg"
-                        class="stat-value"
-                    >
-                        -
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- =========================
-             AVAILABILITY
-        ========================== -->
-
-        <div class="section">
-
-            <h2>
-                Evidence Availability
-            </h2>
-
-            <!-- IMPORTANT:
-                 The ID is directly on this grid.
-                 This prevents the null innerHTML error.
-            -->
-
-            <div
-                id="availability"
-                class="grid"
-            ></div>
-
-        </div>
-
-
-        <!-- =========================
-             WARNINGS
-        ========================== -->
-
-        <div class="section">
-
-            <h2>
-                Important Warnings
-            </h2>
-
-            <div id="warnings"></div>
 
         </div>
 
     </div>
 
 
-    <!-- =========================
-         RAW API DATA
-    ========================== -->
+    <!-- RECENT FORM -->
+    <div class="card">
 
-    <details>
+        <h2>Recent Form</h2>
 
-        <summary>
-            View Raw API Data
-        </summary>
+        <div class="form-row">
+
+            <div class="form-team">
+
+                <h3 id="formHomeName">
+                    Home
+                </h3>
+
+                <div id="homeForm">
+                    No data
+                </div>
+
+                <p id="homeSummary">
+                    -
+                </p>
+
+            </div>
 
 
-        <h3>
-            Web Data
-        </h3>
+            <div class="form-team">
 
-        <pre id="webRaw"></pre>
+                <h3 id="formAwayName">
+                    Away
+                </h3>
+
+                <div id="awayForm">
+                    No data
+                </div>
+
+                <p id="awaySummary">
+                    -
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
 
 
-        <h3>
-            Normalized Data
-        </h3>
+    <!-- 1X2 -->
+    <div class="card">
 
-        <pre id="normalizedRaw"></pre>
+        <h2>1X2 Market</h2>
+
+        <div class="grid">
+
+            <div class="item">
+                <div class="item-title">Home</div>
+                <div class="item-value" id="marketHome">-</div>
+            </div>
+
+            <div class="item">
+                <div class="item-title">Draw</div>
+                <div class="item-value" id="marketDraw">-</div>
+            </div>
+
+            <div class="item">
+                <div class="item-title">Away</div>
+                <div class="item-value" id="marketAway">-</div>
+            </div>
+
+        </div>
+
+    </div>
 
 
-        <h3>
-            Prediction
-        </h3>
+    <!-- GOALS -->
+    <div class="card">
 
-        <pre id="predictionRaw"></pre>
+        <h2>Goals Markets</h2>
 
-    </details>
+        <div class="grid">
+
+            <div class="item">
+                <div class="item-title">BTTS</div>
+                <div class="item-value" id="btts">-</div>
+            </div>
+
+            <div class="item">
+                <div class="item-title">Over / Under</div>
+                <div class="item-value" id="overUnder">-</div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- XG -->
+    <div class="card">
+
+        <h2>Expected Goals (xG)</h2>
+
+        <div class="grid">
+
+            <div class="item">
+                <div class="item-title">xG</div>
+                <div class="item-value" id="xg">-</div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- EVIDENCE -->
+    <div class="card">
+
+        <h2>Evidence Availability</h2>
+
+        <div id="availability" class="grid"></div>
+
+    </div>
+
+
+    <!-- WARNINGS -->
+    <div class="card">
+
+        <h2>Important Warnings</h2>
+
+        <div id="warnings">
+            No warnings.
+        </div>
+
+    </div>
+
+
+    <!-- RAW DATA -->
+    <div class="card">
+
+        <h2>Raw API Data</h2>
+
+        <h3>Web Data</h3>
+        <div class="raw" id="webData">
+            No data
+        </div>
+
+        <h3>Normalized Data</h3>
+        <div class="raw" id="normalizedData">
+            No data
+        </div>
+
+        <h3>Prediction</h3>
+        <div class="raw" id="predictionData">
+            No data
+        </div>
+
+    </div>
 
 </div>
 
 
 <script>
 
-/* =====================================================
-   MATCH CONFIGURATION
-===================================================== */
-
 const MATCH = {
-
     home: "Deportes Concepcion",
-
-    homeIdentity:
-        "DEPORTES_CONCEPCION",
-
+    homeIdentity: "DEPORTES_CONCEPCION",
     away: "O'Higgins",
-
-    awayIdentity:
-        "OHIGGINS",
-
-    date:
-        "2026-09-30"
-
+    awayIdentity: "OHIGGINS",
+    date: "2026-09-30"
 };
 
 
-/* =====================================================
+/* =========================================================
    RUN ANALYSIS
-===================================================== */
+========================================================= */
 
 async function runAnalysis() {
 
-    const status =
-        document.getElementById("status");
+    const button = document.getElementById("runButton");
+    const loading = document.getElementById("loading");
+    const status = document.getElementById("status");
 
-    const results =
-        document.getElementById("results");
+    button.disabled = true;
+    loading.style.display = "block";
 
-    const runButton =
-        document.getElementById("runButton");
-
-
-    results.classList.add("hidden");
-
-    status.className =
-        "status";
-
-    status.textContent =
-        "Searching web data...";
-
-    runButton.disabled =
-        true;
-
+    status.innerHTML = "Collecting web data...";
 
     try {
 
-        /* =============================================
-           STEP 1 — WEB DATA
-        ============================================= */
+        /* -------------------------------------------------
+           STEP 1: WEB DATA
+        ------------------------------------------------- */
 
         const webUrl =
-            `/api/web-data` +
-            `?home=${encodeURIComponent(
-                MATCH.home
-            )}` +
-            `&homeIdentity=${encodeURIComponent(
-                MATCH.homeIdentity
-            )}` +
-            `&away=${encodeURIComponent(
-                MATCH.away
-            )}` +
-            `&awayIdentity=${encodeURIComponent(
-                MATCH.awayIdentity
-            )}` +
-            `&date=${encodeURIComponent(
-                MATCH.date
-            )}`;
+            `/api/web-data?home=${encodeURIComponent(MATCH.home)}`
+            + `&away=${encodeURIComponent(MATCH.away)}`
+            + `&date=${encodeURIComponent(MATCH.date)}`;
 
-
-        const webResponse =
-            await fetch(webUrl);
-
-
-        const webData =
-            await webResponse.json();
-
+        const webResponse = await fetch(webUrl);
 
         if (!webResponse.ok) {
-
             throw new Error(
-                webData.error ||
-                "Web data request failed."
+                `Web-data request failed: HTTP ${webResponse.status}`
             );
-
         }
 
+        const webData = await webResponse.json();
 
-        document.getElementById(
-            "webRaw"
-        ).textContent =
-            JSON.stringify(
-                webData,
-                null,
-                2
-            );
+        document.getElementById("webData").textContent =
+            JSON.stringify(webData, null, 2);
 
 
-        /* =============================================
-           STEP 2 — NORMALIZE
-        ============================================= */
+        /* -------------------------------------------------
+           STEP 2: NORMALIZE
+        ------------------------------------------------- */
 
-        status.textContent =
-            "Normalizing sources...";
+        status.innerHTML = "Normalizing evidence...";
 
+        const normalizeResponse = await fetch(
+            "/api/normalize-web",
+            {
+                method: "POST",
 
-        const normalizeResponse =
-            await fetch(
-                "/api/normalize-web",
-                {
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:
-                        JSON.stringify(
-                            webData
-                        )
-
-                }
-            );
-
-
-        const normalized =
-            await normalizeResponse.json();
-
+                body: JSON.stringify(webData)
+            }
+        );
 
         if (!normalizeResponse.ok) {
-
             throw new Error(
-                normalized.error ||
-                "Normalization failed."
+                `Normalization failed: HTTP ${normalizeResponse.status}`
             );
-
         }
 
+        const normalized = await normalizeResponse.json();
 
-        document.getElementById(
-            "normalizedRaw"
-        ).textContent =
-            JSON.stringify(
-                normalized,
-                null,
-                2
-            );
+        document.getElementById("normalizedData").textContent =
+            JSON.stringify(normalized, null, 2);
 
 
-        /* =============================================
-           STEP 3 — PREDICTION
-        ============================================= */
+        /* -------------------------------------------------
+           STEP 3: PREDICTION
+        ------------------------------------------------- */
 
-        status.textContent =
-            "Running prediction engine...";
+        status.innerHTML = "Running prediction model...";
 
+        const predictionResponse = await fetch(
+            "/api/predict",
+            {
+                method: "POST",
 
-        const predictionResponse =
-            await fetch(
-                "/api/predict",
-                {
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            match:
-                                MATCH,
-
-                            normalized:
-                                normalized
-
-                        })
-
-                }
-            );
-
-
-        const prediction =
-            await predictionResponse.json();
-
+                body: JSON.stringify({
+                    match: MATCH,
+                    normalized: normalized
+                })
+            }
+        );
 
         if (!predictionResponse.ok) {
-
             throw new Error(
-                prediction.error ||
-                "Prediction failed."
+                `Prediction failed: HTTP ${predictionResponse.status}`
             );
-
         }
 
+        const prediction = await predictionResponse.json();
 
-        document.getElementById(
-            "predictionRaw"
-        ).textContent =
-            JSON.stringify(
-                prediction,
-                null,
-                2
-            );
+        document.getElementById("predictionData").textContent =
+            JSON.stringify(prediction, null, 2);
 
 
-        /* =============================================
-           DISPLAY RESULTS
-        ============================================= */
+        /* -------------------------------------------------
+           DISPLAY
+        ------------------------------------------------- */
 
-        displayResults(
-            normalized,
-            prediction
-        );
+        displayResults(normalized, prediction);
 
+        status.innerHTML = "Analysis completed successfully.";
 
-        results.classList.remove(
-            "hidden"
-        );
+    } catch (error) {
 
+        console.error(error);
 
-        status.textContent =
-            "Analysis completed.";
+        status.innerHTML =
+            "Analysis failed: " +
+            escapeHtml(error.message);
 
-        status.className =
-            "status ready";
+    } finally {
 
-
+        button.disabled = false;
+        loading.style.display = "none";
     }
-
-    catch (error) {
-
-        console.error(
-            error
-        );
-
-
-        status.textContent =
-            "Error: " +
-            error.message;
-
-        status.className =
-            "status not-ready";
-
-    }
-
-    finally {
-
-        runButton.disabled =
-            false;
-
-    }
-
 }
 
 
-/* =====================================================
+/* =========================================================
    DISPLAY RESULTS
-===================================================== */
+========================================================= */
 
-function displayResults(
-    normalized,
-    prediction
-) {
+function displayResults(normalized, prediction) {
 
-    /* =============================================
-       STATUS
-    ============================================= */
-
-    const analysisStatus =
-        prediction.status ||
-        prediction.analysisStatus ||
-        normalized.readiness?.status ||
-        "UNKNOWN";
+    normalized = normalized || {};
+    prediction = prediction || {};
 
 
-    document.getElementById(
-        "analysisStatus"
-    ).textContent =
-        analysisStatus;
-
-
-    /* =============================================
-       CONFIDENCE
-    ============================================= */
+    /* -------------------------------------------------
+       ANALYSIS STATUS
+    ------------------------------------------------- */
 
     const confidence =
         prediction.confidence ??
-        normalized.quality?.score ??
-        0;
+        normalized.confidence ??
+        null;
+
+    document.getElementById("confidence").textContent =
+        confidence != null
+            ? formatPercent(confidence)
+            : "-";
 
 
-    document.getElementById(
-        "confidence"
-    ).textContent =
-        confidence + "%";
-
-
-    /* =============================================
-       MODEL METHOD
-    ============================================= */
-
-    document.getElementById(
-        "modelMethod"
-    ).textContent =
+    const modelMethod =
         prediction.modelMethod ||
-        "MARKET_BASELINE";
-
-
-    /* =============================================
-       DATA QUALITY
-    ============================================= */
-
-    const quality =
-        normalized.quality?.score ??
-        normalized.quality ??
+        prediction.method ||
+        normalized.modelMethod ||
         "-";
 
-
-    document.getElementById(
-        "dataQuality"
-    ).textContent =
-        typeof quality === "number"
-            ? quality + "%"
-            : quality;
+    document.getElementById("modelMethod").textContent =
+        modelMethod;
 
 
-    /* =============================================
+    const quality =
+        normalized.quality ??
+        prediction.dataQuality ??
+        null;
+
+    document.getElementById("dataQuality").textContent =
+        quality != null
+            ? formatPercent(quality)
+            : "-";
+
+
+    /* -------------------------------------------------
        FORM
-    ============================================= */
+    ------------------------------------------------- */
 
-    displayForm(
-        "homeForm",
-        normalized.form?.home ||
-        []
-    );
+    displayForm(normalized);
 
 
-    displayForm(
-        "awayForm",
-        normalized.form?.away ||
-        []
-    );
+    /* -------------------------------------------------
+       MARKETS
+    ------------------------------------------------- */
 
-
-    /* =============================================
-       1X2
-    ============================================= */
-
-    const oneXtwo =
+    const predictionOneXtwo =
         prediction.oneXtwo ||
-        prediction.markets?.oneXtwo ||
-        prediction.markets?.["1X2"] ||
-        {};
+        prediction.market ||
+        normalized.oneXtwo ||
+        normalized.market ||
+        normalized.odds?.oneXtwo ||
+        null;
 
 
-    document.getElementById(
-        "home1x2"
-    ).textContent =
-        formatPercent(
-            oneXtwo.home ??
-            oneXtwo.homeProbability ??
-            oneXtwo["1"]
-        );
+    if (predictionOneXtwo) {
 
+        document.getElementById("marketHome").textContent =
+            formatMarketValue(
+                predictionOneXtwo.home
+            );
 
-    document.getElementById(
-        "draw1x2"
-    ).textContent =
-        formatPercent(
-            oneXtwo.draw ??
-            oneXtwo.drawProbability ??
-            oneXtwo.X
-        );
+        document.getElementById("marketDraw").textContent =
+            formatMarketValue(
+                predictionOneXtwo.draw
+            );
 
-
-    document.getElementById(
-        "away1x2"
-    ).textContent =
-        formatPercent(
-            oneXtwo.away ??
-            oneXtwo.awayProbability ??
-            oneXtwo["2"]
-        );
-
-
-    /* =============================================
-       BTTS
-    ============================================= */
-
-    const btts =
-    prediction?.btts ||
-    normalized?.btts ||
-    normalized?.statistics?.btts ||
-    null;
-
-
-    document.getElementById("btts").innerHTML =
-    formatMarket(btts);
-
-
-    /* =============================================
-       OVER / UNDER
-    ============================================= */
-
-    const overUnder =
-    prediction?.overUnder ||
-    prediction?.ou ||
-    normalized?.overUnder ||
-    normalized?.ou ||
-    normalized?.statistics?.overUnder ||
-    null;
-
-
-    document.getElementById("overUnder").innerHTML =
-    formatMarket(overUnder);
-
-
-    /* =============================================
-       XG
-    ============================================= */
-
-    const btts =
-    prediction?.btts ||
-    normalized?.btts ||
-    normalized?.statistics?.btts ||
-    null;
-
-
-    document.getElementById("xg").innerHTML =
-    formatMarket(xg);
-
-
-    /* =============================================
-       AVAILABILITY
-    ============================================= */
-
-    displayAvailability(
-        normalized
-    );
-
-
-    /* =============================================
-       WARNINGS
-    ============================================= */
-
-    displayWarnings(
-        normalized
-    );
-
-}
-
-
-/* =====================================================
-   FORM DISPLAY
-===================================================== */
-
-function displayForm(
-    elementId,
-    form
-) {
-
-    const element =
-        document.getElementById(
-            elementId
-        );
-
-
-    if (
-        !Array.isArray(form) ||
-        form.length === 0
-    ) {
-
-        element.innerHTML =
-            "<span>No reliable recent form found.</span>";
-
-        return;
-
+        document.getElementById("marketAway").textContent =
+            formatMarketValue(
+                predictionOneXtwo.away
+            );
     }
 
 
-    element.innerHTML =
-        form.map(
-            match => {
+    /* -------------------------------------------------
+       BTTS
+    ------------------------------------------------- */
 
-                const result =
-                    String(
-                        match.result ||
-                        match.outcome ||
-                        "?"
-                    ).toUpperCase();
+    const btts =
+        prediction.btts ||
+        normalized.btts ||
+        normalized.statistics?.btts ||
+        normalized.odds?.btts ||
+        null;
 
-
-                let css =
-                    "draw";
-
-
-                if (result === "W")
-                    css = "win";
+    document.getElementById("btts").innerHTML =
+        formatMarket(btts);
 
 
-                if (result === "L")
-                    css = "loss";
+    /* -------------------------------------------------
+       OVER / UNDER
+    ------------------------------------------------- */
+
+    const overUnder =
+        prediction.overUnder ||
+        prediction.ou ||
+        normalized.overUnder ||
+        normalized.ou ||
+        normalized.statistics?.overUnder ||
+        normalized.odds?.overUnder ||
+        null;
+
+    document.getElementById("overUnder").innerHTML =
+        formatMarket(overUnder);
 
 
-                const score =
-                    match.score ||
-                    match.resultScore ||
-                    "";
+    /* -------------------------------------------------
+       XG
+    ------------------------------------------------- */
+
+    const xg =
+        prediction.xG ||
+        prediction.xg ||
+        normalized.xG ||
+        normalized.xg ||
+        normalized.statistics?.xg ||
+        null;
+
+    document.getElementById("xg").innerHTML =
+        formatMarket(xg);
 
 
-                const opponent =
-                    match.opponent ||
-                    "";
+    /* -------------------------------------------------
+       AVAILABILITY
+    ------------------------------------------------- */
+
+    displayAvailability(normalized);
 
 
-                return `
-                    <span
-                        class="form-item ${css}"
-                        title="${escapeHtml(
-                            opponent +
-                            " " +
-                            score
-                        )}"
-                    >
-                        ${escapeHtml(result)}
-                    </span>
-                `;
+    /* -------------------------------------------------
+       WARNINGS
+    ------------------------------------------------- */
 
-            }
-        ).join("");
-
+    displayWarnings(normalized, prediction);
 }
 
 
-/* =====================================================
-   AVAILABILITY
-===================================================== */
+/* =========================================================
+   FORM DISPLAY
+========================================================= */
+
+function displayForm(normalized) {
+
+    const form = normalized.form || {};
+
+    const homeForm = Array.isArray(form.home)
+        ? form.home
+        : [];
+
+    const awayForm = Array.isArray(form.away)
+        ? form.away
+        : [];
+
+
+    document.getElementById("formHomeName").textContent =
+        normalized.match?.home ||
+        MATCH.home;
+
+
+    document.getElementById("formAwayName").textContent =
+        normalized.match?.away ||
+        MATCH.away;
+
+
+    document.getElementById("homeForm").innerHTML =
+        renderFormResults(homeForm);
+
+
+    document.getElementById("awayForm").innerHTML =
+        renderFormResults(awayForm);
+
+
+    document.getElementById("homeSummary").textContent =
+        formatFormSummary(form.homeSummary);
+
+
+    document.getElementById("awaySummary").textContent =
+        formatFormSummary(form.awaySummary);
+}
+
+
+function renderFormResults(results) {
+
+    if (!results.length) {
+        return "No form data available.";
+    }
+
+    return results.map(item => {
+
+        const result =
+            item.result ||
+            "-";
+
+        const score =
+            item.score ||
+            (
+                item.homeGoals != null &&
+                item.awayGoals != null
+                    ? `${item.homeGoals}-${item.awayGoals}`
+                    : ""
+            );
+
+        return `
+            <span class="result">
+                ${escapeHtml(result)}
+                ${score ? " " + escapeHtml(score) : ""}
+            </span>
+        `;
+
+    }).join("");
+}
+
+
+function formatFormSummary(summary) {
+
+    if (!summary) {
+        return "-";
+    }
+
+    const matches =
+        summary.matches ??
+        0;
+
+    const wins =
+        summary.wins ??
+        0;
+
+    const draws =
+        summary.draws ??
+        0;
+
+    const losses =
+        summary.losses ??
+        0;
+
+    const points =
+        summary.points ??
+        0;
+
+    return `${matches} matches | ${wins}W ${draws}D ${losses}L | ${points} pts`;
+}
+
+
+/* =========================================================
+   EVIDENCE AVAILABILITY
+========================================================= */
 
 function displayAvailability(normalized) {
-    const el = document.getElementById("availability");
-    if (!el) return;
 
-    const statistics = normalized?.statistics || {};
-    const odds = normalized?.odds || {};
+    const el =
+        document.getElementById("availability");
+
+    if (!el) {
+        return;
+    }
+
+
+    const statistics =
+        normalized?.statistics ||
+        {};
+
+
+    const odds =
+        normalized?.odds ||
+        {};
+
+
+    const availability =
+        normalized?.availability ||
+        {};
+
 
     const hasBTTS =
         Array.isArray(statistics.btts) &&
         statistics.btts.length > 0;
 
+
     const hasOverUnder =
         Array.isArray(statistics.overUnder) &&
         statistics.overUnder.length > 0;
+
 
     const hasXG =
         Array.isArray(statistics.xg) &&
         statistics.xg.length > 0;
 
+
     const hasInjuries =
         Array.isArray(normalized?.injuries) &&
         normalized.injuries.length > 0;
+
 
     const hasLineups =
         Array.isArray(normalized?.lineups) &&
         normalized.lineups.length > 0;
 
+
     const hasOdds =
-        odds &&
-        (
+        !!(
             odds.oneXtwo ||
             odds.btts ||
             odds.overUnder
         );
 
+
     const items = [
-        ["Identity", normalized?.availability?.identityReady],
-        ["Form", normalized?.availability?.formReady],
-        ["Stats", normalized?.availability?.statsReady],
-        ["BTTS", hasBTTS],
-        ["Over / Under", hasOverUnder],
-        ["xG", hasXG],
-        ["Injuries", hasInjuries],
-        ["Lineups", hasLineups],
-        ["Odds", !!hasOdds],
-        ["Data Ready", normalized?.availability?.dataReady],
-        ["Analysis Ready", normalized?.availability?.analysisReady]
+
+        [
+            "Identity",
+            !!availability.identityReady
+        ],
+
+        [
+            "Form",
+            !!availability.formReady
+        ],
+
+        [
+            "Stats",
+            !!availability.statsReady
+        ],
+
+        [
+            "BTTS",
+            hasBTTS
+        ],
+
+        [
+            "Over / Under",
+            hasOverUnder
+        ],
+
+        [
+            "xG",
+            hasXG
+        ],
+
+        [
+            "Injuries",
+            hasInjuries
+        ],
+
+        [
+            "Lineups",
+            hasLineups
+        ],
+
+        [
+            "Odds",
+            hasOdds
+        ],
+
+        [
+            "Data Ready",
+            !!availability.dataReady
+        ],
+
+        [
+            "Analysis Ready",
+            !!availability.analysisReady
+        ]
+
     ];
 
-    el.innerHTML = items.map(([label, available]) => `
-        <div class="availability-item">
-            <strong>${escapeHtml(label)}</strong>
-            <span class="${available ? "available" : "missing"}">
-                ${available ? "✓ Available" : "— Missing"}
-            </span>
-        </div>
-    `).join("");
+
+    el.innerHTML =
+        items.map(([label, available]) => {
+
+            return `
+                <div class="availability-item">
+
+                    <strong>
+                        ${escapeHtml(label)}
+                    </strong>
+
+                    <span class="${available
+                        ? "available"
+                        : "missing"}">
+
+                        ${available
+                            ? "✓ Available"
+                            : "— Missing"}
+
+                    </span>
+
+                </div>
+            `;
+
+        }).join("");
 }
 
 
-/* =====================================================
+/* =========================================================
    WARNINGS
-===================================================== */
+========================================================= */
 
-function displayWarnings(
-    normalized
-) {
+function displayWarnings(normalized, prediction) {
 
-    const container =
-        document.getElementById(
-            "warnings"
-        );
+    const el =
+        document.getElementById("warnings");
 
-
-    if (!container) {
-
+    if (!el) {
         return;
-
     }
 
 
-    const warnings =
-        Array.isArray(
-            normalized.warnings
-        )
-            ? normalized.warnings
-            : [];
+    const warnings = [];
+
+
+    if (Array.isArray(normalized?.warnings)) {
+
+        normalized.warnings.forEach(warning => {
+
+            if (
+                warning &&
+                !warnings.includes(warning)
+            ) {
+                warnings.push(warning);
+            }
+
+        });
+
+    }
 
 
     if (
-        warnings.length === 0
+        Array.isArray(prediction?.warnings)
     ) {
 
-        container.innerHTML =
-            "<div class='stat'>No warnings.</div>";
+        prediction.warnings.forEach(warning => {
 
-        return;
+            if (
+                warning &&
+                !warnings.includes(warning)
+            ) {
+                warnings.push(warning);
+            }
+
+        });
 
     }
 
 
-    container.innerHTML =
-        warnings.map(
-            warning => {
+    if (!warnings.length) {
 
-                return `
-                    <div class="warning">
-                        ${escapeHtml(
-                            String(
-                                warning
-                            )
-                        )}
-                    </div>
-                `;
+        el.innerHTML =
+            "<div>No warnings.</div>";
+
+        return;
+    }
+
+
+    el.innerHTML =
+        warnings.map(warning => {
+
+            return `
+                <div class="warning">
+                    ${escapeHtml(warning)}
+                </div>
+            `;
+
+        }).join("");
+}
+
+
+/* =========================================================
+   MARKET FORMATTER
+========================================================= */
+
+function formatMarket(market) {
+
+    if (!market) {
+        return "-";
+    }
+
+
+    /* ---------------------------------------------
+       ARRAY
+    --------------------------------------------- */
+
+    if (Array.isArray(market)) {
+
+        if (!market.length) {
+            return "-";
+        }
+
+
+        /*
+         * Remove duplicate market evidence.
+         * This prevents repeated OVER/UNDER entries
+         * from making the interface unnecessarily long.
+         */
+
+        const unique = [];
+
+        const seen = new Set();
+
+
+        market.forEach(item => {
+
+            if (!item) {
+                return;
+            }
+
+
+            const selection =
+                item.selection ||
+                item.pick ||
+                "";
+
+
+            const line =
+                item.line != null
+                    ? item.line
+                    : "";
+
+
+            const percentage =
+                item.percentage != null
+                    ? item.percentage
+                    : "";
+
+
+            const odds =
+                item.odds != null
+                    ? item.odds
+                    : "";
+
+
+            const key =
+                `${selection}|${line}|${percentage}|${odds}`;
+
+
+            if (!seen.has(key)) {
+
+                seen.add(key);
+
+                unique.push({
+                    selection,
+                    line,
+                    percentage,
+                    odds
+                });
 
             }
-        ).join("");
 
-}
+        });
 
 
-/* =====================================================
-   FORMAT PERCENT
-===================================================== */
+        return unique.map(item => {
 
-function formatPercent(
-    value
-) {
+            let text =
+                item.selection || "";
 
-    if (
-        value === undefined ||
-        value === null ||
-        value === ""
-    ) {
 
-        return "-";
+            if (item.line !== "") {
 
+                text +=
+                    ` ${item.line}`;
+
+            }
+
+
+            if (item.percentage !== "") {
+
+                text +=
+                    ` (${item.percentage}%)`;
+
+            }
+
+
+            if (item.odds !== "") {
+
+                text +=
+                    ` @ ${item.odds}`;
+
+            }
+
+
+            return escapeHtml(text);
+
+        }).filter(Boolean).join("<br>");
     }
 
 
-    const number =
-        Number(value);
+    /* ---------------------------------------------
+       OBJECT
+    --------------------------------------------- */
+
+    if (typeof market === "object") {
+
+        const selection =
+            market.selection ||
+            market.pick ||
+            "";
 
 
-    if (
-        Number.isNaN(number)
-    ) {
+        const line =
+            market.line != null
+                ? market.line
+                : "";
 
-        return String(value);
 
+        const percentage =
+            market.percentage != null
+                ? market.percentage
+                : "";
+
+
+        const odds =
+            market.odds != null
+                ? market.odds
+                : "";
+
+
+        let text =
+            selection;
+
+
+        if (line !== "") {
+
+            text +=
+                ` ${line}`;
+
+        }
+
+
+        if (percentage !== "") {
+
+            text +=
+                ` (${percentage}%)`;
+
+        }
+
+
+        if (odds !== "") {
+
+            text +=
+                ` @ ${odds}`;
+
+        }
+
+
+        return text
+            ? escapeHtml(text)
+            : "-";
     }
 
 
-    return (
-        number.toFixed(1) +
-        "%"
+    return escapeHtml(
+        String(market)
     );
-
 }
 
 
-/* =====================================================
-   FORMAT NUMBER
-===================================================== */
+/* =========================================================
+   MARKET VALUE
+========================================================= */
 
-function formatNumber(
-    value
-) {
+function formatMarketValue(value) {
+
+    if (value == null) {
+        return "-";
+    }
+
+
+    if (typeof value === "number") {
+
+        return formatPercent(value);
+
+    }
+
 
     if (
-        value === undefined ||
-        value === null ||
-        value === ""
+        typeof value === "object"
     ) {
 
-        return "-";
+        if (
+            value.percentage != null
+        ) {
 
+            return formatPercent(
+                value.percentage
+            );
+
+        }
+
+
+        if (
+            value.odds != null
+        ) {
+
+            return formatNumber(
+                value.odds
+            );
+
+        }
+
+
+        if (
+            value.value != null
+        ) {
+
+            return String(
+                value.value
+            );
+
+        }
+
+    }
+
+
+    return escapeHtml(
+        String(value)
+    );
+}
+
+
+/* =========================================================
+   FORMAT PERCENT
+========================================================= */
+
+function formatPercent(value) {
+
+    if (value == null || value === "") {
+        return "-";
+    }
+
+
+    let number =
+        Number(value);
+
+
+    if (Number.isNaN(number)) {
+        return escapeHtml(
+            String(value)
+        );
+    }
+
+
+    /*
+     * If value is between 0 and 1,
+     * treat it as decimal probability.
+     */
+
+    if (
+        number >= 0 &&
+        number <= 1
+    ) {
+
+        number *= 100;
+
+    }
+
+
+    return `${number.toFixed(1)}%`;
+}
+
+
+/* =========================================================
+   FORMAT NUMBER
+========================================================= */
+
+function formatNumber(value) {
+
+    if (value == null || value === "") {
+        return "-";
     }
 
 
@@ -1420,99 +1350,51 @@ function formatNumber(
         Number(value);
 
 
-    if (
-        Number.isNaN(number)
-    ) {
+    if (Number.isNaN(number)) {
 
-        return String(value);
+        return escapeHtml(
+            String(value)
+        );
 
     }
 
 
     return number.toFixed(2);
-
 }
 
 
-/* =====================================================
-   FORMAT MARKET
-===================================================== */
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
 
-    function formatMarket(market) {
-    if (!market) return "-";
+function escapeHtml(value) {
 
-    // Array of market evidence
-    if (Array.isArray(market)) {
-        if (market.length === 0) return "-";
-
-        return market.map(item => {
-            if (!item) return "";
-
-            const selection = item.selection || "";
-            const line = item.line ? ` ${item.line}` : "";
-            const percentage = item.percentage != null
-                ? ` (${item.percentage}%)`
-                : "";
-            const odds = item.odds != null
-                ? ` @ ${item.odds}`
-                : "";
-
-            return `${selection}${line}${percentage}${odds}`;
-        }).filter(Boolean).join("<br>");
+    if (value == null) {
+        return "";
     }
 
-    // Normal object
-    if (typeof market === "object") {
-        const selection = market.selection || market.pick || "";
-        const line = market.line ? ` ${market.line}` : "";
-        const percentage = market.percentage != null
-            ? ` (${market.percentage}%)`
-            : "";
-        const odds = market.odds != null
-            ? ` @ ${market.odds}`
-            : "";
-
-        if (selection || line || percentage || odds) {
-            return `${selection}${line}${percentage}${odds}`;
-        }
-
-        return "-";
-    }
-
-    return String(market);
-}           
-
-/* =====================================================
-   ESCAPE HTML
-===================================================== */
-
-function escapeHtml(
-    value
-) {
 
     return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
+
+
+/* =========================================================
+   INITIAL DISPLAY
+========================================================= */
+
+document.getElementById("homeTeam").textContent =
+    MATCH.home;
+
+document.getElementById("awayTeam").textContent =
+    MATCH.away;
+
+document.getElementById("matchDate").textContent =
+    MATCH.date;
 
 </script>
 
