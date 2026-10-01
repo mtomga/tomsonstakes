@@ -1,78 +1,177 @@
 export default async function handler(req, res) {
+
     try {
 
         if (req.method !== "POST") {
             return res.status(405).json({
+                success: false,
                 error: "POST method required."
             });
         }
 
-        const body = req.body || {};
-        const match = body.match || {};
+        const body =
+            req.body || {};
+
+        const match =
+            body.match || {};
 
         const home =
-            match.home ||
-            match.homeInput ||
-            "";
+            String(
+                match.home ||
+                match.homeInput ||
+                ""
+            ).trim();
 
         const away =
-            match.away ||
-            match.awayInput ||
-            "";
+            String(
+                match.away ||
+                match.awayInput ||
+                ""
+            ).trim();
 
         const homeIdentity =
-            match.homeIdentity ||
-            "";
+            String(
+                match.homeIdentity ||
+                ""
+            ).trim();
 
         const awayIdentity =
-            match.awayIdentity ||
-            "";
+            String(
+                match.awayIdentity ||
+                ""
+            ).trim();
 
         const matchDate =
-            match.date ||
-            "";
+            String(
+                match.date ||
+                ""
+            ).trim();
 
-        if (!home || !away || !matchDate) {
+        // =====================================================
+        // BASIC VALIDATION
+        // =====================================================
+
+        if (
+            !home ||
+            !away ||
+            !matchDate
+        ) {
             return res.status(400).json({
-                error: "match.home, match.away and match.date are required."
+                success: false,
+                error:
+                    "match.home, match.away and match.date are required."
             });
         }
 
-        const VALID_IDENTITIES = [
-            "DEPORTES_CONCEPCION",
-            "UNIVERSIDAD_DE_CONCEPCION",
-            "OHIGGINS"
-        ];
+        // =====================================================
+        // GLOBAL TEAM IDENTITY
+        // =====================================================
 
-        if (!VALID_IDENTITIES.includes(homeIdentity)) {
+        function createIdentity(name) {
+
+            return String(name || "")
+                .trim()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[’']/g, "")
+                .replace(/&/g, " AND ")
+                .toUpperCase()
+                .replace(/[^A-Z0-9]+/g, "_")
+                .replace(/^_+|_+$/g, "");
+        }
+
+        const expectedHomeIdentity =
+            createIdentity(home);
+
+        const expectedAwayIdentity =
+            createIdentity(away);
+
+        // =====================================================
+        // VERIFY TEAM IDENTITIES
+        // =====================================================
+
+        if (
+            !expectedHomeIdentity ||
+            !expectedAwayIdentity
+        ) {
             return res.status(400).json({
-                error: "Invalid homeIdentity."
+                success: false,
+                error:
+                    "Unable to generate team identities."
             });
         }
 
-        if (!VALID_IDENTITIES.includes(awayIdentity)) {
+        if (
+            homeIdentity !==
+                expectedHomeIdentity
+        ) {
             return res.status(400).json({
-                error: "Invalid awayIdentity."
+                success: false,
+                error:
+                    "Invalid homeIdentity.",
+
+                details: {
+                    supplied:
+                        homeIdentity,
+
+                    expected:
+                        expectedHomeIdentity,
+
+                    team:
+                        home
+                }
             });
         }
 
-        if (homeIdentity === awayIdentity) {
+        if (
+            awayIdentity !==
+                expectedAwayIdentity
+        ) {
             return res.status(400).json({
-                error: "Home and away identities cannot be the same."
+                success: false,
+                error:
+                    "Invalid awayIdentity.",
+
+                details: {
+                    supplied:
+                        awayIdentity,
+
+                    expected:
+                        expectedAwayIdentity,
+
+                    team:
+                        away
+                }
             });
         }
 
-        const canonical = {
-            DEPORTES_CONCEPCION: "Deportes Concepcion",
-            UNIVERSIDAD_DE_CONCEPCION: "Universidad de Concepcion",
-            OHIGGINS: "O'Higgins"
-        };
+        if (
+            homeIdentity ===
+            awayIdentity
+        ) {
+            return res.status(400).json({
+                success: false,
+                error:
+                    "Home and away identities cannot be the same."
+            });
+        }
+
+        // =====================================================
+        // CANONICAL NAMES
+        //
+        // No fixed team list.
+        // API-Football's team names are authoritative here.
+        // =====================================================
 
         const homeCanonical =
-            canonical[homeIdentity];
+            home;
 
         const awayCanonical =
-            canonical[awayIdentity];
+            away;
+
+        // =====================================================
+        // SEARCH DATA
+        // =====================================================
 
         const searches =
             Array.isArray(body.searches)
@@ -84,14 +183,26 @@ export default async function handler(req, res) {
                 ? body.allResults
                 : [];
 
-        /*
-         * =========================================================
-         * DATE HELPERS
-         * =========================================================
-         */
+        // =====================================================
+        // DATE HELPERS
+        // =====================================================
 
         const targetDate =
-            new Date(`${matchDate}T00:00:00Z`);
+            new Date(
+                `${matchDate}T00:00:00Z`
+            );
+
+        if (
+            Number.isNaN(
+                targetDate.getTime()
+            )
+        ) {
+            return res.status(400).json({
+                success: false,
+                error:
+                    "Invalid match date."
+            });
+        }
 
         const targetTime =
             targetDate.getTime();
@@ -100,19 +211,179 @@ export default async function handler(req, res) {
             targetDate.getUTCFullYear();
 
         function cleanText(value) {
-            return String(value || "")
+
+            return String(
+                value || ""
+            )
                 .replace(/\s+/g, " ")
                 .trim();
         }
 
         function normalizeText(value) {
+
             return cleanText(value)
                 .toLowerCase()
                 .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[’']/g, "'")
-                .replace(/[–—]/g, "-");
+                .replace(
+                    /[\u0300-\u036f]/g,
+                    ""
+                )
+                .replace(
+                    /[’']/g,
+                    "'"
+                )
+                .replace(
+                    /[–—]/g,
+                    "-"
+                );
         }
+
+        // =====================================================
+        // TEAM TEXT NORMALIZATION
+        // =====================================================
+
+        function teamTextVariants(
+            teamName
+        ) {
+
+            const original =
+                cleanText(teamName);
+
+            const withoutApostrophe =
+                original.replace(
+                    /[’']/g,
+                    ""
+                );
+
+            const normalized =
+                original
+                    .normalize("NFD")
+                    .replace(
+                        /[\u0300-\u036f]/g,
+                        ""
+                    )
+                    .replace(
+                        /[’']/g,
+                        ""
+                    );
+
+            const lowerOriginal =
+                normalizeText(
+                    original
+                );
+
+            const variants = [
+
+                original,
+
+                withoutApostrophe,
+
+                normalized,
+
+                lowerOriginal
+
+            ];
+
+            /*
+             * Add a simple initial form where useful:
+             *
+             * "Manchester United"
+             * -> "m united"
+             *
+             * "Deportes Concepcion"
+             * -> "d concepcion"
+             *
+             * This is deliberately conservative.
+             */
+
+            const words =
+                normalized
+                    .split(/\s+/)
+                    .filter(Boolean);
+
+            if (
+                words.length >= 2
+            ) {
+
+                const firstInitial =
+                    words[0].charAt(0);
+
+                const remainder =
+                    words
+                        .slice(1)
+                        .join(" ");
+
+                if (
+                    firstInitial &&
+                    remainder
+                ) {
+                    variants.push(
+                        `${firstInitial} ${remainder}`
+                    );
+                }
+            }
+
+            return [
+                ...new Set(
+                    variants
+                        .map(
+                            value =>
+                                normalizeText(
+                                    value
+                                )
+                        )
+                        .filter(Boolean)
+                )
+            ];
+        }
+
+        const homeAliases =
+            teamTextVariants(
+                homeCanonical
+            );
+
+        const awayAliases =
+            teamTextVariants(
+                awayCanonical
+            );
+
+        function containsTeam(
+            text,
+            aliases
+        ) {
+
+            const normalized =
+                normalizeText(text);
+
+            return aliases.some(
+                alias =>
+                    normalized.includes(
+                        alias
+                    )
+            );
+        }
+
+        function containsHome(
+            text
+        ) {
+            return containsTeam(
+                text,
+                homeAliases
+            );
+        }
+
+        function containsAway(
+            text
+        ) {
+            return containsTeam(
+                text,
+                awayAliases
+            );
+        }
+
+        // =====================================================
+        // DATE PARSING
+        // =====================================================
 
         function dateOnly(value) {
 
@@ -126,65 +397,88 @@ export default async function handler(req, res) {
             const parsed =
                 new Date(text);
 
-            if (!Number.isNaN(parsed.getTime())) {
+            if (
+                !Number.isNaN(
+                    parsed.getTime()
+                )
+            ) {
                 return parsed;
             }
 
             return null;
         }
 
-        function extractDates(text) {
+        function extractDates(
+            text
+        ) {
 
             const dates = [];
 
             const source =
                 cleanText(text);
 
-            /*
-             * September 27, 2026
-             */
+            let match;
+
+            // September 27, 2026
             const longPattern =
                 /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s*(20\d{2})\b/gi;
 
-            let match;
-
-            while ((match = longPattern.exec(source))) {
+            while (
+                (match =
+                    longPattern.exec(
+                        source
+                    ))
+            ) {
 
                 const parsed =
                     new Date(
                         `${match[1]} ${match[2]}, ${match[3]}`
                     );
 
-                if (!Number.isNaN(parsed.getTime())) {
+                if (
+                    !Number.isNaN(
+                        parsed.getTime()
+                    )
+                ) {
                     dates.push(parsed);
                 }
             }
 
-            /*
-             * 27 Sep 2026
-             */
+            // 27 Sep 2026
             const shortPattern =
                 /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(20\d{2})\b/gi;
 
-            while ((match = shortPattern.exec(source))) {
+            while (
+                (match =
+                    shortPattern.exec(
+                        source
+                    ))
+            ) {
 
                 const parsed =
                     new Date(
                         `${match[2]} ${match[1]}, ${match[3]}`
                     );
 
-                if (!Number.isNaN(parsed.getTime())) {
+                if (
+                    !Number.isNaN(
+                        parsed.getTime()
+                    )
+                ) {
                     dates.push(parsed);
                 }
             }
 
-            /*
-             * 27.09.2026
-             */
+            // 27.09.2026
             const numericPattern =
                 /\b(\d{1,2})[./-](\d{1,2})[./-](20\d{2})\b/g;
 
-            while ((match = numericPattern.exec(source))) {
+            while (
+                (match =
+                    numericPattern.exec(
+                        source
+                    ))
+            ) {
 
                 const day =
                     Number(match[1]);
@@ -204,7 +498,11 @@ export default async function handler(req, res) {
                         )
                     );
 
-                if (!Number.isNaN(parsed.getTime())) {
+                if (
+                    !Number.isNaN(
+                        parsed.getTime()
+                    )
+                ) {
                     dates.push(parsed);
                 }
             }
@@ -212,14 +510,21 @@ export default async function handler(req, res) {
             return dates;
         }
 
-        function resultDate(item) {
+        function resultDate(
+            item
+        ) {
 
             const dates = [];
 
-            if (item && item.date) {
+            if (
+                item &&
+                item.date
+            ) {
 
                 const d =
-                    dateOnly(item.date);
+                    dateOnly(
+                        item.date
+                    );
 
                 if (d) {
                     dates.push(d);
@@ -232,24 +537,29 @@ export default async function handler(req, res) {
                         item?.title,
                         item?.snippet
                     ]
-                    .filter(Boolean)
-                    .join(" ")
+                        .filter(Boolean)
+                        .join(" ")
                 )
             );
 
-            if (!dates.length) {
+            if (
+                !dates.length
+            ) {
                 return null;
             }
 
             dates.sort(
                 (a, b) =>
-                    b.getTime() - a.getTime()
+                    b.getTime() -
+                    a.getTime()
             );
 
             return dates[0];
         }
 
-        function isFutureResult(item) {
+        function isFutureResult(
+            item
+        ) {
 
             const d =
                 resultDate(item);
@@ -258,165 +568,126 @@ export default async function handler(req, res) {
                 return false;
             }
 
-            return d.getTime() > targetTime;
-        }
-
-        /*
-         * =========================================================
-         * TEAM IDENTITY HELPERS
-         * =========================================================
-         */
-
-        function identityAliases(identity) {
-
-            switch (identity) {
-
-                case "DEPORTES_CONCEPCION":
-                    return [
-                        "deportes concepcion",
-                        "deportes concepción",
-                        "d. concepcion",
-                        "d. concepción",
-                        "d concepcion",
-                        "d concepción"
-                    ];
-
-                case "UNIVERSIDAD_DE_CONCEPCION":
-                    return [
-                        "universidad de concepcion",
-                        "universidad de concepción",
-                        "u. de concepcion",
-                        "u. de concepción",
-                        "u de concepcion",
-                        "u de concepción"
-                    ];
-
-                case "OHIGGINS":
-                    return [
-                        "o'higgins",
-                        "o’higgins",
-                        "o higgins",
-                        "o.higgins",
-                        "club o'higgins",
-                        "club o’higgins"
-                    ];
-
-                default:
-                    return [];
-            }
-        }
-
-        function containsTeam(text, identity) {
-
-            const normalized =
-                normalizeText(text);
-
-            const aliases =
-                identityAliases(identity);
-
-            return aliases.some(alias =>
-                normalized.includes(
-                    normalizeText(alias)
-                )
-            );
-        }
-
-        function containsWrongConcepcion(text) {
-
-            const normalized =
-                normalizeText(text);
-
             return (
-                normalized.includes(
-                    "universidad de concepcion"
-                ) ||
-                normalized.includes(
-                    "universidad de concepción"
-                )
+                d.getTime() >
+                targetTime
             );
         }
 
-        /*
-         * =========================================================
-         * RESULT CONTAINER
-         * =========================================================
-         */
+        // =====================================================
+        // FLATTEN SEARCH RESULTS
+        // =====================================================
 
         const flatResults = [];
 
-        for (const search of searches) {
+        for (
+            const search
+            of searches
+        ) {
 
             const searchResults =
-                Array.isArray(search.results)
+                Array.isArray(
+                    search.results
+                )
                     ? search.results
                     : [];
 
-            for (const item of searchResults) {
+            for (
+                const item
+                of searchResults
+            ) {
 
                 flatResults.push({
+
                     type:
-                        search.type || null,
+                        search.type ||
+                        null,
 
                     team:
-                        search.team || null,
+                        search.team ||
+                        null,
 
                     teamIdentity:
-                        search.teamIdentity || null,
+                        search.teamIdentity ||
+                        null,
 
                     title:
-                        cleanText(item.title),
+                        cleanText(
+                            item.title
+                        ),
 
                     link:
-                        item.link || null,
+                        item.link ||
+                        null,
 
                     snippet:
-                        cleanText(item.snippet),
+                        cleanText(
+                            item.snippet
+                        ),
 
                     date:
-                        item.date || null
+                        item.date ||
+                        null
                 });
             }
         }
+
+        /*
+         * Fallback when only allResults is available.
+         */
 
         if (
             flatResults.length === 0 &&
             allResults.length > 0
         ) {
 
-            for (const item of allResults) {
+            for (
+                const item
+                of allResults
+            ) {
 
                 flatResults.push({
+
                     type:
-                        item.type || null,
+                        item.type ||
+                        null,
 
                     team:
+                        item.team ||
                         null,
 
                     teamIdentity:
+                        item.teamIdentity ||
                         null,
 
                     title:
-                        cleanText(item.title),
+                        cleanText(
+                            item.title
+                        ),
 
                     link:
-                        item.link || null,
+                        item.link ||
+                        null,
 
                     snippet:
-                        cleanText(item.snippet),
+                        cleanText(
+                            item.snippet
+                        ),
 
                     date:
-                        item.date || null
+                        item.date ||
+                        null
                 });
             }
         }
 
-        /*
-         * =========================================================
-         * FORM PARSING - V3.16
-         * =========================================================
-         */
+        // =====================================================
+        // SCORE PARSER
+        // =====================================================
 
-        function parseScorePairs(text) {
+        function parseScorePairs(
+            text
+        ) {
 
             const pairs = [];
 
@@ -425,24 +696,23 @@ export default async function handler(req, res) {
 
             let match;
 
-            /*
-             * -----------------------------------------------------
-             * NORMAL SCORE
-             *
-             * 2-0
-             * 2 - 0
-             * 2:0
-             * 2 – 0
-             * 2—0
-             * -----------------------------------------------------
-             */
+            // Normal scores:
+            // 2-0
+            // 2:0
+            // 2 – 0
 
             const standard =
                 /\b(\d{1,2})\s*[-:]\s*(\d{1,2})\b/g;
 
-            while ((match = standard.exec(source))) {
+            while (
+                (match =
+                    standard.exec(
+                        source
+                    ))
+            ) {
 
                 pairs.push({
+
                     homeGoals:
                         Number(match[1]),
 
@@ -461,26 +731,22 @@ export default async function handler(req, res) {
             }
 
             /*
-             * -----------------------------------------------------
-             * COMPACT SCORE
+             * Compact scores:
+             * 01, 11, 20, 21 etc.
              *
-             * 01
-             * 11
-             * 13
-             * 21
-             *
-             * Flashscore-style snippets often use:
-             *
-             * D. Concepcion. A. Italiano. 01. L.
-             *
-             * Nublense. D. Concepcion. 01. W.
-             * -----------------------------------------------------
+             * Only accept when there is explicit football
+             * result context.
              */
 
             const compact =
                 /\b([0-9])([0-9])\b/g;
 
-            while ((match = compact.exec(source))) {
+            while (
+                (match =
+                    compact.exec(
+                        source
+                    ))
+            ) {
 
                 const before =
                     source.slice(
@@ -503,16 +769,17 @@ export default async function handler(req, res) {
                 const context =
                     `${before} ${after}`;
 
-                /*
-                 * Compact scores should have football
-                 * result context.
-                 */
                 if (
-                    /\b(W|D|L)\b/i.test(context) ||
-                    /\b(FT|full[- ]?time|final)\b/i.test(context)
+                    /\b(W|D|L)\b/i.test(
+                        context
+                    ) ||
+                    /\b(FT|full[- ]?time|final)\b/i.test(
+                        context
+                    )
                 ) {
 
                     pairs.push({
+
                         homeGoals:
                             Number(match[1]),
 
@@ -534,40 +801,25 @@ export default async function handler(req, res) {
             return pairs;
         }
 
-        /*
-         * Find the position of the requested team relative
-         * to a score.
-         *
-         * Examples:
-         *
-         * Deportes Concepcion 2-0 Curico Unido
-         * -> HOME
-         *
-         * Colo Colo 1-1 Deportes Concepcion
-         * -> AWAY
-         *
-         * Nublense. D. Concepcion. 01. W.
-         * -> HOME/away determined by team ordering
-         */
+        // =====================================================
+        // SCORE TEAM POSITION
+        // =====================================================
 
         function determineTeamPosition(
             text,
             score,
-            identity
+            aliases
         ) {
 
             const normalized =
                 normalizeText(text);
 
-            const aliases =
-                identityAliases(identity)
-                    .map(alias =>
-                        normalizeText(alias)
-                    )
-                    .sort(
-                        (a, b) =>
-                            b.length - a.length
-                    );
+            const sortedAliases =
+                [...aliases].sort(
+                    (a, b) =>
+                        b.length -
+                        a.length
+                );
 
             const scoreStart =
                 score.index;
@@ -580,7 +832,7 @@ export default async function handler(req, res) {
                 normalized.slice(
                     Math.max(
                         0,
-                        scoreStart - 120
+                        scoreStart - 140
                     ),
                     scoreStart
                 );
@@ -588,17 +840,23 @@ export default async function handler(req, res) {
             const after =
                 normalized.slice(
                     scoreEnd,
-                    scoreEnd + 120
+                    scoreEnd + 140
                 );
 
             const beforeHas =
-                aliases.some(alias =>
-                    before.includes(alias)
+                sortedAliases.some(
+                    alias =>
+                        before.includes(
+                            alias
+                        )
                 );
 
             const afterHas =
-                aliases.some(alias =>
-                    after.includes(alias)
+                sortedAliases.some(
+                    alias =>
+                        after.includes(
+                            alias
+                        )
                 );
 
             if (
@@ -616,10 +874,10 @@ export default async function handler(req, res) {
             }
 
             /*
-             * If both sides contain the team name because
-             * of a noisy search snippet, use the nearest
-             * occurrence.
+             * If both sides contain an alias,
+             * determine which occurrence is nearest.
              */
+
             if (
                 beforeHas &&
                 afterHas
@@ -631,27 +889,42 @@ export default async function handler(req, res) {
                 let afterDistance =
                     Infinity;
 
-                for (const alias of aliases) {
+                for (
+                    const alias
+                    of sortedAliases
+                ) {
 
-                    const bIndex =
-                        before.lastIndexOf(alias);
+                    const beforeIndex =
+                        before.lastIndexOf(
+                            alias
+                        );
 
-                    if (bIndex >= 0) {
+                    if (
+                        beforeIndex >= 0
+                    ) {
+
                         beforeDistance =
                             Math.min(
                                 beforeDistance,
-                                before.length - bIndex
+
+                                before.length -
+                                beforeIndex
                             );
                     }
 
-                    const aIndex =
-                        after.indexOf(alias);
+                    const afterIndex =
+                        after.indexOf(
+                            alias
+                        );
 
-                    if (aIndex >= 0) {
+                    if (
+                        afterIndex >= 0
+                    ) {
+
                         afterDistance =
                             Math.min(
                                 afterDistance,
-                                aIndex
+                                afterIndex
                             );
                     }
                 }
@@ -674,61 +947,19 @@ export default async function handler(req, res) {
             return null;
         }
 
-        /*
-         * Determine whether the score itself belongs to the
-         * requested team's match against the target opponent.
-         *
-         * This is deliberately stricter than simply checking
-         * whether both team names occur somewhere on the page.
-         */
-        function scoreBelongsToTargetFixture(
-            item,
-            score
-        ) {
+        // =====================================================
+        // SCORE → W/D/L
+        // =====================================================
 
-            const source =
-                normalizeText(
-                    `${item.title} ${item.snippet}`
-                );
-
-            const start =
-                Math.max(
-                    0,
-                    score.index - 140
-                );
-
-            const end =
-                Math.min(
-                    source.length,
-                    score.index +
-                    score.raw.length +
-                    140
-                );
-
-            const context =
-                source.slice(start, end);
-
-            return (
-                containsTeam(
-                    context,
-                    homeIdentity
-                ) &&
-                containsTeam(
-                    context,
-                    awayIdentity
-                )
-            );
-        }
-
-        /*
-         * Convert a parsed score into W/D/L.
-         */
         function scoreToResult(
             score,
             position
         ) {
 
-            if (position === "HOME") {
+            if (
+                position ===
+                "HOME"
+            ) {
 
                 if (
                     score.homeGoals >
@@ -747,7 +978,10 @@ export default async function handler(req, res) {
                 return "D";
             }
 
-            if (position === "AWAY") {
+            if (
+                position ===
+                "AWAY"
+            ) {
 
                 if (
                     score.awayGoals >
@@ -769,398 +1003,81 @@ export default async function handler(req, res) {
             return null;
         }
 
-        function inferFormResult(
-            item,
-            identity
+        // =====================================================
+        // TARGET MATCH DETECTION
+        // =====================================================
+
+        function isTargetFixture(
+            item
         ) {
 
-            const title =
-                cleanText(item.title);
-
-            const snippet =
-                cleanText(item.snippet);
-
-            const combined =
-                `${title} ${snippet}`;
-
-            if (
-                !containsTeam(
-                    combined,
-                    identity
-                )
-            ) {
-                return null;
-            }
-
-            /*
-             * -----------------------------------------------------
-             * Prevent University of Concepcion from being
-             * confused with Deportes Concepcion.
-             * -----------------------------------------------------
-             */
-
-            if (
-                identity ===
-                "DEPORTES_CONCEPCION"
-            ) {
-
-                const titleHasUniversity =
-                    containsTeam(
-                        title,
-                        "UNIVERSIDAD_DE_CONCEPCION"
-                    );
-
-                const titleHasRequested =
-                    containsTeam(
-                        title,
-                        identity
-                    );
-
-                if (
-                    titleHasUniversity &&
-                    !titleHasRequested
-                ) {
-                    return null;
-                }
-            }
-
-            const scores =
-                parseScorePairs(combined);
-
-            if (!scores.length) {
-                return null;
-            }
-
-            /*
-             * -----------------------------------------------------
-             * First priority:
-             * Find a score that clearly belongs to the requested
-             * team's fixture.
-             * -----------------------------------------------------
-             */
-
-            const candidateScores = [];
-
-            for (const score of scores) {
-
-                const position =
-                    determineTeamPosition(
-                        combined,
-                        score,
-                        identity
-                    );
-
-                if (!position) {
-                    continue;
-                }
-
-                /*
-                 * A source containing both target teams
-                 * around the score is the target fixture,
-                 * not recent form.
-                 */
-                if (
-                    scoreBelongsToTargetFixture(
-                        item,
-                        score
-                    )
-                ) {
-                    continue;
-                }
-
-                candidateScores.push({
-                    score,
-                    position
-                });
-            }
-
-            /*
-             * Use the first reliable score.
-             */
-            if (candidateScores.length) {
-
-                const selected =
-                    candidateScores[0];
-
-                const result =
-                    scoreToResult(
-                        selected.score,
-                        selected.position
-                    );
-
-                if (!result) {
-                    return null;
-                }
-
-                return {
-
-                    result,
-
-                    homeGoals:
-                        selected.score.homeGoals,
-
-                    awayGoals:
-                        selected.score.awayGoals,
-
-                    score:
-                        `${selected.score.homeGoals}-${selected.score.awayGoals}`,
-
-                    date:
-                        resultDate(item),
-
-                    source:
-                        item.link,
-
-                    title:
-                        item.title,
-
-                    snippet:
-                        item.snippet,
-
-                    evidenceType:
-                        selected.score.compact
-                            ? "FORM_COMPACT_SCORE"
-                            : "FORM_SCORE"
-                };
-            }
-
-            /*
-             * -----------------------------------------------------
-             * Second priority:
-             * Explicit W/D/L marker.
-             *
-             * Example:
-             *
-             * Nublense. D. Concepcion. 01. W.
-             *
-             * This is useful when score orientation cannot be
-             * safely established but the source explicitly marks
-             * the requested team as W/D/L.
-             * -----------------------------------------------------
-             */
-
-            const normalized =
-                normalizeText(combined);
-
-            const aliases =
-                identityAliases(identity)
-                    .map(alias =>
-                        normalizeText(alias)
-                    )
-                    .sort(
-                        (a, b) =>
-                            b.length - a.length
-                    );
-
-            let nearestTeamIndex = -1;
-
-            for (const alias of aliases) {
-
-                const index =
-                    normalized.indexOf(alias);
-
-                if (
-                    index >= 0 &&
-                    (
-                        nearestTeamIndex === -1 ||
-                        index < nearestTeamIndex
-                    )
-                ) {
-                    nearestTeamIndex = index;
-                }
-            }
-
-            if (nearestTeamIndex >= 0) {
-
-                const nearby =
-                    normalized.slice(
-                        nearestTeamIndex,
-                        nearestTeamIndex + 120
-                    );
-
-                const wl =
-                    nearby.match(
-                        /\b([WDL])\b/i
-                    );
-
-                if (wl) {
-
-                    return {
-
-                        result:
-                            wl[1].toUpperCase(),
-
-                        homeGoals:
-                            null,
-
-                        awayGoals:
-                            null,
-
-                        score:
-                            null,
-
-                        date:
-                            resultDate(item),
-
-                        source:
-                            item.link,
-
-                        title:
-                            item.title,
-
-                        snippet:
-                            item.snippet,
-
-                        evidenceType:
-                            "FORM_WDL"
-                    };
-                }
-            }
-
-            return null;
-        }
-
-        /*
-         * =========================================================
-         * TARGET FIXTURE / WRONG FIXTURE
-         * =========================================================
-         */
-
-        function isSameMatchAsTarget(item) {
-
-            const combined =
+            const text =
                 normalizeText(
                     [
                         item.title,
                         item.snippet,
                         item.link
                     ]
-                    .filter(Boolean)
-                    .join(" ")
+                        .filter(Boolean)
+                        .join(" ")
                 );
 
             return (
-                containsTeam(
-                    combined,
-                    homeIdentity
-                ) &&
-                containsTeam(
-                    combined,
-                    awayIdentity
-                )
+                containsHome(text) &&
+                containsAway(text)
             );
         }
 
-        /*
-         * This function is now context-aware.
-         *
-         * Santa Cruz is a wrong H2H opponent, but it is NOT
-         * a wrong O'Higgins recent-form opponent.
-         */
-        function isKnownWrongFixture(
-            item,
-            context = "general"
-        ) {
-
-            const combined =
-                normalizeText(
-                    [
-                        item.title,
-                        item.snippet,
-                        item.link
-                    ]
-                    .filter(Boolean)
-                    .join(" ")
-                );
-
-            /*
-             * Santa Cruz is only wrong when we are looking
-             * specifically for the target H2H/fixture.
-             */
-            if (
-                context === "h2h" &&
-                combined.includes(
-                    "deportes santa cruz"
-                ) &&
-                (
-                    combined.includes("o'higgins") ||
-                    combined.includes("o higgins")
-                )
-            ) {
-                return true;
-            }
-
-            /*
-             * University of Concepcion must not contaminate
-             * Deportes Concepcion.
-             */
-            if (
-                homeIdentity ===
-                "DEPORTES_CONCEPCION"
-            ) {
-
-                if (
-                    combined.includes(
-                        "universidad de concepcion"
-                    ) ||
-                    combined.includes(
-                        "universidad de concepción"
-                    )
-                ) {
-
-                    const directUniversityFixture =
-                        (
-                            combined.includes(
-                                "vs universidad de concepcion"
-                            ) ||
-                            combined.includes(
-                                "universidad de concepcion vs"
-                            ) ||
-                            combined.includes(
-                                "universidad de concepcion."
-                            )
-                        );
-
-                    if (directUniversityFixture) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        /*
-         * =========================================================
-         * FORM EXTRACTION
-         * =========================================================
-         */
+        // =====================================================
+        // EXTRACT FORM FOR ONE TEAM
+        // =====================================================
 
         function extractFormForTeam(
-            identity
+            identity,
+            aliases
         ) {
 
-            const teamSearches =
-                searches.filter(search => {
-
-                    const type =
-                        String(
-                            search.type || ""
-                        ).toLowerCase();
-
-                    const searchIdentity =
-                        search.teamIdentity;
-
-                    return (
-                        type.startsWith("form_") &&
-                        (
-                            searchIdentity === identity ||
-                            !searchIdentity
-                        )
-                    );
-                });
-
             const candidates = [];
+
+            /*
+             * Only form searches.
+             *
+             * Because /api/web-data now tags each form
+             * search with the correct teamIdentity, we prefer
+             * that information.
+             */
+
+            const teamSearches =
+                searches.filter(
+                    search => {
+
+                        const type =
+                            String(
+                                search.type ||
+                                ""
+                            ).toLowerCase();
+
+                        const searchIdentity =
+                            String(
+                                search.teamIdentity ||
+                                ""
+                            );
+
+                        return (
+                            type.startsWith(
+                                identity ===
+                                    homeIdentity
+                                    ? "form_home"
+                                    : "form_away"
+                            ) &&
+                            (
+                                !searchIdentity ||
+                                searchIdentity ===
+                                    identity
+                            )
+                        );
+                    }
+                );
 
             for (
                 const search
@@ -1168,7 +1085,9 @@ export default async function handler(req, res) {
             ) {
 
                 const results =
-                    Array.isArray(search.results)
+                    Array.isArray(
+                        search.results
+                    )
                         ? search.results
                         : [];
 
@@ -1180,13 +1099,16 @@ export default async function handler(req, res) {
                     const item = {
 
                         type:
-                            search.type,
+                            search.type ||
+                            null,
 
                         team:
-                            search.team,
+                            search.team ||
+                            null,
 
                         teamIdentity:
-                            search.teamIdentity,
+                            search.teamIdentity ||
+                            null,
 
                         title:
                             cleanText(
@@ -1194,7 +1116,8 @@ export default async function handler(req, res) {
                             ),
 
                         link:
-                            raw.link || null,
+                            raw.link ||
+                            null,
 
                         snippet:
                             cleanText(
@@ -1202,163 +1125,206 @@ export default async function handler(req, res) {
                             ),
 
                         date:
-                            raw.date || null
+                            raw.date ||
+                            null
                     };
 
-                    /*
-                     * -------------------------------------------------
-                     * Future matches are never form.
-                     * -------------------------------------------------
-                     */
-
                     if (
-                        isFutureResult(item)
-                    ) {
-                        continue;
-                    }
-
-                    /*
-                     * -------------------------------------------------
-                     * Do NOT automatically reject a source just
-                     * because both target teams appear somewhere.
-                     *
-                     * We now inspect the actual score context inside
-                     * inferFormResult().
-                     * -------------------------------------------------
-                     */
-
-                    if (
-                        isKnownWrongFixture(
-                            item,
-                            "form"
+                        isFutureResult(
+                            item
                         )
                     ) {
                         continue;
                     }
 
-                    const parsed =
-                        inferFormResult(
-                            item,
-                            identity
+                    const combined =
+                        `${item.title} ${item.snippet}`;
+
+                    /*
+                     * The requested team must actually occur
+                     * in the result.
+                     */
+
+                    if (
+                        !containsTeam(
+                            combined,
+                            aliases
+                        )
+                    ) {
+                        continue;
+                    }
+
+                    const scores =
+                        parseScorePairs(
+                            combined
                         );
 
-                    if (!parsed) {
+                    if (
+                        !scores.length
+                    ) {
+                        /*
+                         * Try explicit W/D/L evidence.
+                         */
+                        const normalized =
+                            normalizeText(
+                                combined
+                            );
+
+                        const nearby =
+                            normalized.slice(
+                                0,
+                                220
+                            );
+
+                        const wdl =
+                            nearby.match(
+                                /\b([WDL])\b/i
+                            );
+
+                        if (wdl) {
+
+                            candidates.push({
+
+                                result:
+                                    wdl[1]
+                                        .toUpperCase(),
+
+                                homeGoals:
+                                    null,
+
+                                awayGoals:
+                                    null,
+
+                                score:
+                                    null,
+
+                                date:
+                                    resultDate(
+                                        item
+                                    ),
+
+                                source:
+                                    item.link,
+
+                                title:
+                                    item.title,
+
+                                snippet:
+                                    item.snippet,
+
+                                evidenceType:
+                                    "FORM_WDL",
+
+                                searchType:
+                                    search.type,
+
+                                teamIdentity:
+                                    identity
+                            });
+                        }
+
                         continue;
                     }
 
                     /*
-                     * -------------------------------------------------
-                     * Explicitly reject the old July 27 target H2H
-                     * when it appears as a form result.
-                     *
-                     * This is deliberately score-specific so that
-                     * ordinary matches are not lost.
-                     * -------------------------------------------------
+                     * Try each score.
                      */
 
-                    const text =
-                        normalizeText(
-                            [
-                                item.title,
-                                item.snippet
-                            ]
-                            .filter(Boolean)
-                            .join(" ")
-                        );
+                    for (
+                        const score
+                        of scores
+                    ) {
 
-                    const oldTargetFixture =
-                        (
-                            text.includes(
-                                "deportes concepcion 2 - 0 o'higgins"
-                            ) ||
-                            text.includes(
-                                "deportes concepcion 2-0 o'higgins"
-                            ) ||
-                            text.includes(
-                                "deportes concepcion 2 0 o'higgins"
-                            ) ||
-                            text.includes(
-                                "o'higgins 0 - 2 deportes concepcion"
-                            ) ||
-                            text.includes(
-                                "o'higgins 0-2 deportes concepcion"
+                        const position =
+                            determineTeamPosition(
+                                combined,
+                                score,
+                                aliases
+                            );
+
+                        if (
+                            !position
+                        ) {
+                            continue;
+                        }
+
+                        const result =
+                            scoreToResult(
+                                score,
+                                position
+                            );
+
+                        if (
+                            !result
+                        ) {
+                            continue;
+                        }
+
+                        /*
+                         * If the result is actually the current
+                         * target fixture, don't use it as recent
+                         * form.
+                         */
+
+                        if (
+                            isTargetFixture(
+                                item
                             )
-                        );
+                        ) {
+                            continue;
+                        }
 
-                    if (oldTargetFixture) {
-                        continue;
+                        candidates.push({
+
+                            result,
+
+                            homeGoals:
+                                score.homeGoals,
+
+                            awayGoals:
+                                score.awayGoals,
+
+                            score:
+                                `${score.homeGoals}-${score.awayGoals}`,
+
+                            date:
+                                resultDate(
+                                    item
+                                ),
+
+                            source:
+                                item.link,
+
+                            title:
+                                item.title,
+
+                            snippet:
+                                item.snippet,
+
+                            evidenceType:
+                                score.compact
+                                    ? "FORM_COMPACT_SCORE"
+                                    : "FORM_SCORE",
+
+                            searchType:
+                                search.type,
+
+                            teamIdentity:
+                                identity
+                        });
+
+                        /*
+                         * One result per source item.
+                         */
+
+                        break;
                     }
-
-                    /*
-                     * -------------------------------------------------
-                     * Also reject if parsed result has both target
-                     * identities immediately around the score.
-                     * -------------------------------------------------
-                     */
-
-                    if (
-                        parsed.score &&
-                        scoreBelongsToTargetFixture(
-                            item,
-                            {
-                                index:
-                                    text.indexOf(
-                                        parsed.score
-                                            .replace(
-                                                "-",
-                                                " - "
-                                            )
-                                    ) >= 0
-                                        ? text.indexOf(
-                                            parsed.score
-                                                .replace(
-                                                    "-",
-                                                    " - "
-                                                )
-                                        )
-                                        : Math.max(
-                                            0,
-                                            text.indexOf(
-                                                parsed.score
-                                            )
-                                        ),
-
-                                raw:
-                                    parsed.score
-                            }
-                        )
-                    ) {
-                        continue;
-                    }
-
-                    candidates.push({
-
-                        ...parsed,
-
-                        searchType:
-                            search.type,
-
-                        teamIdentity:
-                            identity
-                    });
                 }
             }
 
-            /*
-             * =====================================================
-             * DEDUPLICATION
-             * =====================================================
-             *
-             * Multiple search engines can return the same match.
-             *
-             * First try:
-             * date + score
-             *
-             * Then:
-             * date + result + opponent-ish title
-             *
-             * This prevents five copies of the same match.
-             */
+            // =================================================
+            // DEDUPLICATE
+            // =================================================
 
             const unique = [];
 
@@ -1374,7 +1340,10 @@ export default async function handler(req, res) {
                     item.date
                         ? item.date
                             .toISOString()
-                            .slice(0, 10)
+                            .slice(
+                                0,
+                                10
+                            )
                         : "NO_DATE";
 
                 const scoreKey =
@@ -1382,9 +1351,6 @@ export default async function handler(req, res) {
                     item.result ||
                     "";
 
-                /*
-                 * Normalize title but remove common source words.
-                 */
                 const titleKey =
                     normalizeText(
                         item.title
@@ -1401,8 +1367,7 @@ export default async function handler(req, res) {
                         dateKey,
                         scoreKey,
                         titleKey
-                    ]
-                    .join("|");
+                    ].join("|");
 
                 if (
                     seen.has(key)
@@ -1415,11 +1380,9 @@ export default async function handler(req, res) {
                 unique.push(item);
             }
 
-            /*
-             * -----------------------------------------------------
-             * Sort newest first.
-             * -----------------------------------------------------
-             */
+            // =================================================
+            // SORT NEWEST FIRST
+            // =================================================
 
             unique.sort(
                 (a, b) => {
@@ -1434,62 +1397,79 @@ export default async function handler(req, res) {
                             ? b.date.getTime()
                             : 0;
 
-                    return bTime - aTime;
+                    return (
+                        bTime -
+                        aTime
+                    );
                 }
             );
 
-            /*
-             * -----------------------------------------------------
-             * Keep maximum five reliable matches.
-             * -----------------------------------------------------
-             */
-
-            return unique.slice(0, 5);
+            return unique.slice(
+                0,
+                5
+            );
         }
 
         const homeForm =
             extractFormForTeam(
-                homeIdentity
+                homeIdentity,
+                homeAliases
             );
 
         const awayForm =
             extractFormForTeam(
-                awayIdentity
+                awayIdentity,
+                awayAliases
             );
 
-        /*
-         * =========================================================
-         * FORM SUMMARY
-         * =========================================================
-         */
+        // =====================================================
+        // FORM SUMMARY
+        // =====================================================
 
-        function formSummary(form) {
+        function formSummary(
+            form
+        ) {
 
             let wins = 0;
             let draws = 0;
             let losses = 0;
 
-            for (const item of form) {
+            for (
+                const item
+                of form
+            ) {
 
-                if (item.result === "W") {
+                if (
+                    item.result ===
+                    "W"
+                ) {
                     wins++;
                 }
 
-                if (item.result === "D") {
+                if (
+                    item.result ===
+                    "D"
+                ) {
                     draws++;
                 }
 
-                if (item.result === "L") {
+                if (
+                    item.result ===
+                    "L"
+                ) {
                     losses++;
                 }
             }
 
             return {
+
                 matches:
                     form.length,
 
                 wins,
+
                 draws,
+
                 losses,
 
                 points:
@@ -1501,38 +1481,9 @@ export default async function handler(req, res) {
             };
         }
 
-        /*
-         * =========================================================
-         * H2H
-         * =========================================================
-         */
-
-        function isExactPair(item) {
-
-            const title =
-                normalizeText(
-                    item.title
-                );
-
-            const link =
-                normalizeText(
-                    item.link
-                );
-
-            const primary =
-                `${title} ${link}`;
-
-            return (
-                containsTeam(
-                    primary,
-                    homeIdentity
-                ) &&
-                containsTeam(
-                    primary,
-                    awayIdentity
-                )
-            );
-        }
+        // =====================================================
+        // H2H
+        // =====================================================
 
         const h2h = [];
 
@@ -1542,15 +1493,18 @@ export default async function handler(req, res) {
         ) {
 
             if (
-                String(search.type || "")
-                    .toLowerCase() !==
+                String(
+                    search.type || ""
+                ).toLowerCase() !==
                 "h2h"
             ) {
                 continue;
             }
 
             const results =
-                Array.isArray(search.results)
+                Array.isArray(
+                    search.results
+                )
                     ? search.results
                     : [];
 
@@ -1567,7 +1521,8 @@ export default async function handler(req, res) {
                         ),
 
                     link:
-                        raw.link || null,
+                        raw.link ||
+                        null,
 
                     snippet:
                         cleanText(
@@ -1575,20 +1530,16 @@ export default async function handler(req, res) {
                         ),
 
                     date:
-                        raw.date || null
+                        raw.date ||
+                        null
                 };
 
-                if (
-                    !isExactPair(item)
-                ) {
-                    continue;
-                }
+                const text =
+                    `${item.title} ${item.snippet}`;
 
                 if (
-                    isKnownWrongFixture(
-                        item,
-                        "h2h"
-                    )
+                    !containsHome(text) ||
+                    !containsAway(text)
                 ) {
                     continue;
                 }
@@ -1610,11 +1561,9 @@ export default async function handler(req, res) {
             }
         }
 
-        /*
-         * =========================================================
-         * MARKET / STATISTICS
-         * =========================================================
-         */
+        // =====================================================
+        // MARKET / STATISTICS SOURCES
+        // =====================================================
 
         const marketSources = [];
 
@@ -1636,7 +1585,9 @@ export default async function handler(req, res) {
             }
 
             const results =
-                Array.isArray(search.results)
+                Array.isArray(
+                    search.results
+                )
                     ? search.results
                     : [];
 
@@ -1653,7 +1604,8 @@ export default async function handler(req, res) {
                         ),
 
                     link:
-                        raw.link || null,
+                        raw.link ||
+                        null,
 
                     snippet:
                         cleanText(
@@ -1661,50 +1613,39 @@ export default async function handler(req, res) {
                         ),
 
                     date:
-                        raw.date || null
+                        raw.date ||
+                        null
                 };
 
                 const text =
-                    normalizeText(
-                        [
-                            item.title,
-                            item.snippet,
-                            item.link
-                        ]
+                    [
+                        item.title,
+                        item.snippet,
+                        item.link
+                    ]
                         .filter(Boolean)
-                        .join(" ")
-                    );
+                        .join(" ");
 
                 const hasHome =
-                    containsTeam(
-                        text,
-                        homeIdentity
-                    );
+                    containsHome(text);
 
                 const hasAway =
-                    containsTeam(
-                        text,
-                        awayIdentity
-                    );
-
-                const exactFixture =
-                    hasHome &&
-                    hasAway;
+                    containsAway(text);
 
                 marketSources.push({
 
                     ...item,
 
-                    exactFixture
+                    exactFixture:
+                        hasHome &&
+                        hasAway
                 });
             }
         }
 
-        /*
-         * =========================================================
-         * BTTS
-         * =========================================================
-         */
+        // =====================================================
+        // BTTS
+        // =====================================================
 
         const btts = [];
 
@@ -1713,7 +1654,9 @@ export default async function handler(req, res) {
             of marketSources
         ) {
 
-            if (!source.exactFixture) {
+            if (
+                !source.exactFixture
+            ) {
                 continue;
             }
 
@@ -1737,10 +1680,14 @@ export default async function handler(req, res) {
                             .toUpperCase(),
 
                     odds:
-                        Number(match[2]),
+                        Number(
+                            match[2]
+                        ),
 
                     percentage:
-                        Number(match[3]),
+                        Number(
+                            match[3]
+                        ),
 
                     source:
                         source.link,
@@ -1751,11 +1698,9 @@ export default async function handler(req, res) {
             }
         }
 
-        /*
-         * =========================================================
-         * OVER / UNDER
-         * =========================================================
-         */
+        // =====================================================
+        // OVER / UNDER
+        // =====================================================
 
         const overUnder = [];
 
@@ -1764,7 +1709,9 @@ export default async function handler(req, res) {
             of marketSources
         ) {
 
-            if (!source.exactFixture) {
+            if (
+                !source.exactFixture
+            ) {
                 continue;
             }
 
@@ -1788,19 +1735,27 @@ export default async function handler(req, res) {
                 const line =
                     Number(
                         match[2]
-                            .replace(",", ".")
+                            .replace(
+                                ",",
+                                "."
+                            )
                     );
 
                 const odds =
                     match[3]
                         ? Number(
                             match[3]
-                                .replace(",", ".")
+                                .replace(
+                                    ",",
+                                    "."
+                                )
                         )
                         : null;
 
                 if (
-                    Number.isFinite(line)
+                    Number.isFinite(
+                        line
+                    )
                 ) {
 
                     overUnder.push({
@@ -1821,11 +1776,9 @@ export default async function handler(req, res) {
             }
         }
 
-        /*
-         * =========================================================
-         * 1X2
-         * =========================================================
-         */
+        // =====================================================
+        // 1X2
+        // =====================================================
 
         const oneXtwo = [];
 
@@ -1834,7 +1787,9 @@ export default async function handler(req, res) {
             of marketSources
         ) {
 
-            if (!source.exactFixture) {
+            if (
+                !source.exactFixture
+            ) {
                 continue;
             }
 
@@ -1870,20 +1825,32 @@ export default async function handler(req, res) {
             });
         }
 
-        /*
-         * =========================================================
-         * XG
-         * =========================================================
-         */
+        // =====================================================
+        // xG
+        // =====================================================
 
         const xg = [];
+
+        function escapeRegex(
+            value
+        ) {
+
+            return String(
+                value || ""
+            ).replace(
+                /[.*+?^${}()|[\]\\]/g,
+                "\\$&"
+            );
+        }
 
         for (
             const source
             of marketSources
         ) {
 
-            if (!source.exactFixture) {
+            if (
+                !source.exactFixture
+            ) {
                 continue;
             }
 
@@ -1892,27 +1859,29 @@ export default async function handler(req, res) {
 
             const homePattern =
                 new RegExp(
-                    `${homeCanonical.replace(
-                        /[.*+?^${}()|[\]\\]/g,
-                        "\\$&"
+                    `${escapeRegex(
+                        homeCanonical
                     )}[^\\d]{0,80}(\\d+(?:\\.\\d+)?)\\s*xG`,
                     "i"
                 );
 
             const awayPattern =
                 new RegExp(
-                    `${awayCanonical.replace(
-                        /[.*+?^${}()|[\]\\]/g,
-                        "\\$&"
+                    `${escapeRegex(
+                        awayCanonical
                     )}[^\\d]{0,80}(\\d+(?:\\.\\d+)?)\\s*xG`,
                     "i"
                 );
 
             const homeMatch =
-                text.match(homePattern);
+                text.match(
+                    homePattern
+                );
 
             const awayMatch =
-                text.match(awayPattern);
+                text.match(
+                    awayPattern
+                );
 
             if (
                 homeMatch ||
@@ -1944,11 +1913,9 @@ export default async function handler(req, res) {
             }
         }
 
-        /*
-         * =========================================================
-         * INJURIES
-         * =========================================================
-         */
+        // =====================================================
+        // INJURIES
+        // =====================================================
 
         const injuries = [];
 
@@ -1958,15 +1925,18 @@ export default async function handler(req, res) {
         ) {
 
             if (
-                String(search.type || "")
-                    .toLowerCase() !==
+                String(
+                    search.type || ""
+                ).toLowerCase() !==
                 "injuries"
             ) {
                 continue;
             }
 
             const results =
-                Array.isArray(search.results)
+                Array.isArray(
+                    search.results
+                )
                     ? search.results
                     : [];
 
@@ -1983,7 +1953,8 @@ export default async function handler(req, res) {
                         ),
 
                     link:
-                        raw.link || null,
+                        raw.link ||
+                        null,
 
                     snippet:
                         cleanText(
@@ -1991,30 +1962,16 @@ export default async function handler(req, res) {
                         ),
 
                     date:
-                        raw.date || null
+                        raw.date ||
+                        null
                 };
 
                 const text =
                     `${item.title} ${item.snippet}`;
 
                 if (
-                    !containsTeam(
-                        text,
-                        homeIdentity
-                    ) &&
-                    !containsTeam(
-                        text,
-                        awayIdentity
-                    )
-                ) {
-                    continue;
-                }
-
-                if (
-                    isKnownWrongFixture(
-                        item,
-                        "injuries"
-                    )
+                    !containsHome(text) &&
+                    !containsAway(text)
                 ) {
                     continue;
                 }
@@ -2033,11 +1990,9 @@ export default async function handler(req, res) {
             }
         }
 
-        /*
-         * =========================================================
-         * LINEUPS
-         * =========================================================
-         */
+        // =====================================================
+        // LINEUPS
+        // =====================================================
 
         const lineups = [];
 
@@ -2047,15 +2002,18 @@ export default async function handler(req, res) {
         ) {
 
             if (
-                String(search.type || "")
-                    .toLowerCase() !==
+                String(
+                    search.type || ""
+                ).toLowerCase() !==
                 "lineups"
             ) {
                 continue;
             }
 
             const results =
-                Array.isArray(search.results)
+                Array.isArray(
+                    search.results
+                )
                     ? search.results
                     : [];
 
@@ -2072,7 +2030,8 @@ export default async function handler(req, res) {
                         ),
 
                     link:
-                        raw.link || null,
+                        raw.link ||
+                        null,
 
                     snippet:
                         cleanText(
@@ -2080,23 +2039,18 @@ export default async function handler(req, res) {
                         ),
 
                     date:
-                        raw.date || null
+                        raw.date ||
+                        null
                 };
 
                 const text =
                     `${item.title} ${item.snippet}`;
 
                 const hasHome =
-                    containsTeam(
-                        text,
-                        homeIdentity
-                    );
+                    containsHome(text);
 
                 const hasAway =
-                    containsTeam(
-                        text,
-                        awayIdentity
-                    );
+                    containsAway(text);
 
                 if (
                     !hasHome &&
@@ -2108,9 +2062,8 @@ export default async function handler(req, res) {
                 lineups.push({
 
                     type:
-                        /predicted|probable|expected/i.test(
-                            text
-                        )
+                        /predicted|probable|expected/i
+                            .test(text)
                             ? "predicted"
                             : "unknown",
 
@@ -2126,11 +2079,9 @@ export default async function handler(req, res) {
             }
         }
 
-        /*
-         * =========================================================
-         * ODDS
-         * =========================================================
-         */
+        // =====================================================
+        // ODDS
+        // =====================================================
 
         const odds = {
 
@@ -2150,17 +2101,19 @@ export default async function handler(req, res) {
                     : null
         };
 
-        /*
-         * =========================================================
-         * AVAILABILITY / READINESS
-         * =========================================================
-         */
+        // =====================================================
+        // READINESS
+        // =====================================================
 
         const homeFormSummary =
-            formSummary(homeForm);
+            formSummary(
+                homeForm
+            );
 
         const awayFormSummary =
-            formSummary(awayForm);
+            formSummary(
+                awayForm
+            );
 
         const identityReady =
             Boolean(
@@ -2176,7 +2129,8 @@ export default async function handler(req, res) {
             (
                 btts.length > 0 ||
                 overUnder.length > 0 ||
-                xg.length > 0
+                xg.length > 0 ||
+                oneXtwo.length > 0
             );
 
         const dataReady =
@@ -2187,55 +2141,77 @@ export default async function handler(req, res) {
         const analysisReady =
             dataReady;
 
-        /*
-         * =========================================================
-         * QUALITY
-         * =========================================================
-         */
+        // =====================================================
+        // QUALITY
+        // =====================================================
 
         let quality = 0;
 
-        if (identityReady) {
+        if (
+            identityReady
+        ) {
             quality += 0.20;
         }
 
-        if (homeForm.length >= 3) {
+        if (
+            homeForm.length >= 3
+        ) {
             quality += 0.15;
-        } else if (homeForm.length >= 1) {
+        } else if (
+            homeForm.length >= 1
+        ) {
             quality += 0.08;
         }
 
-        if (awayForm.length >= 3) {
+        if (
+            awayForm.length >= 3
+        ) {
             quality += 0.15;
-        } else if (awayForm.length >= 1) {
+        } else if (
+            awayForm.length >= 1
+        ) {
             quality += 0.08;
         }
 
-        if (h2h.length > 0) {
+        if (
+            h2h.length > 0
+        ) {
             quality += 0.10;
         }
 
-        if (btts.length > 0) {
+        if (
+            btts.length > 0
+        ) {
             quality += 0.10;
         }
 
-        if (overUnder.length > 0) {
+        if (
+            overUnder.length > 0
+        ) {
             quality += 0.10;
         }
 
-        if (oneXtwo.length > 0) {
+        if (
+            oneXtwo.length > 0
+        ) {
             quality += 0.05;
         }
 
-        if (xg.length > 0) {
+        if (
+            xg.length > 0
+        ) {
             quality += 0.10;
         }
 
-        if (injuries.length > 0) {
+        if (
+            injuries.length > 0
+        ) {
             quality += 0.05;
         }
 
-        if (lineups.length > 0) {
+        if (
+            lineups.length > 0
+        ) {
             quality += 0.05;
         }
 
@@ -2247,21 +2223,23 @@ export default async function handler(req, res) {
                 )
             );
 
-        /*
-         * =========================================================
-         * WARNINGS
-         * =========================================================
-         */
+        // =====================================================
+        // WARNINGS
+        // =====================================================
 
         const warnings = [];
 
-        if (!homeForm.length) {
+        if (
+            !homeForm.length
+        ) {
             warnings.push(
                 "No reliable recent form extracted for the home team."
             );
         }
 
-        if (!awayForm.length) {
+        if (
+            !awayForm.length
+        ) {
             warnings.push(
                 "No reliable recent form extracted for the away team."
             );
@@ -2276,44 +2254,57 @@ export default async function handler(req, res) {
             );
         }
 
-        if (!h2h.length) {
+        if (
+            !h2h.length
+        ) {
             warnings.push(
                 "No reliable H2H evidence extracted."
             );
         }
 
-        if (!btts.length) {
+        if (
+            !btts.length
+        ) {
             warnings.push(
                 "No reliable fixture-specific BTTS evidence extracted."
             );
         }
 
-        if (!overUnder.length) {
+        if (
+            !overUnder.length
+        ) {
             warnings.push(
                 "No reliable fixture-specific Over/Under evidence extracted."
             );
         }
 
-        if (!xg.length) {
+        if (
+            !xg.length
+        ) {
             warnings.push(
                 "No explicit team-attributed xG extracted."
             );
         }
 
-        if (!injuries.length) {
+        if (
+            !injuries.length
+        ) {
             warnings.push(
                 "No reliable current injury/suspension evidence extracted."
             );
         }
 
-        if (!lineups.length) {
+        if (
+            !lineups.length
+        ) {
             warnings.push(
                 "No current lineup evidence extracted."
             );
         } else if (
             lineups.every(
                 item =>
-                    item.type === "predicted"
+                    item.type ===
+                    "predicted"
             )
         ) {
             warnings.push(
@@ -2333,18 +2324,17 @@ export default async function handler(req, res) {
             "Market probabilities are kept separate from bookmaker odds."
         );
 
-        /*
-         * =========================================================
-         * RESPONSE
-         * =========================================================
-         */
+        // =====================================================
+        // RESPONSE
+        // =====================================================
 
         return res.status(200).json({
 
-            success: true,
+            success:
+                true,
 
             version:
-                "V3.16",
+                "V4.0-GLOBAL",
 
             match: {
 
@@ -2397,11 +2387,8 @@ export default async function handler(req, res) {
                 awayStatus:
                     "RESOLVED",
 
-                separateConcepcionIdentities:
-                    true,
-
-                contaminationDetected:
-                    false
+                separateTeamIdentities:
+                    true
             },
 
             form: {
@@ -2460,23 +2447,27 @@ export default async function handler(req, res) {
                 flatResults.filter(
                     item =>
                         String(
-                            item.type || ""
+                            item.type ||
+                            ""
                         )
-                        .toLowerCase()
-                        .startsWith("form_")
+                            .toLowerCase()
+                            .startsWith(
+                                "form_"
+                            )
                 ).length
         });
 
     } catch (error) {
 
         console.error(
-            "V3.16 normalize-web error:",
+            "normalize-web error:",
             error
         );
 
         return res.status(500).json({
 
-            success: false,
+            success:
+                false,
 
             error:
                 "Web normalization failed.",
