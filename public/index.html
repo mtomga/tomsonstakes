@@ -525,12 +525,13 @@ function buildFixtureCard(
         "Away Team";
 
 
-    const homeId =
-        createIdentity(home);
+    const homeId = createIdentity(home);
+const awayId = createIdentity(away);
 
-
-    const awayId =
-        createIdentity(away);
+const identitiesValid =
+    homeId &&
+    awayId &&
+    homeId !== awayId;
 
 
     const kickoffUTC =
@@ -1770,26 +1771,63 @@ function formatQuality(
 /* =========================================================
    TEAM IDENTITY
 ========================================================= */
+/* =========================================================
+   TEAM IDENTITY
+========================================================= */
 
-function createIdentity(
-    name
-) {
+function createIdentity(name) {
 
-    return String(name)
-        .toUpperCase()
+    const normalized = String(name || "")
+        .toLowerCase()
         .normalize("NFD")
-        .replace(
-            /[\u0300-\u036f]/g,
-            ""
-        )
-        .replace(
-            /[^A-Z0-9]+/g,
-            "_"
-        )
-        .replace(
-            /^_+|_+$/g,
-            ""
-        );
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[’']/g, "'")
+        .replace(/\s+/g, " ")
+        .trim();
+
+
+    /* IMPORTANT:
+       Check Universidad first because
+       "universidad de concepcion" contains
+       "de concepcion".
+    */
+
+    if (
+        normalized === "universidad de concepcion" ||
+        normalized === "u. de concepcion" ||
+        normalized === "u de concepcion"
+    ) {
+
+        return "UNIVERSIDAD_DE_CONCEPCION";
+
+    }
+
+
+    if (
+        normalized === "deportes concepcion" ||
+        normalized === "d. concepcion" ||
+        normalized === "d concepcion"
+    ) {
+
+        return "DEPORTES_CONCEPCION";
+
+    }
+
+
+    if (
+        normalized === "o'higgins" ||
+        normalized === "o higgins" ||
+        normalized === "o.higgins" ||
+        normalized === "club o'higgins" ||
+        normalized === "club o higgins"
+    ) {
+
+        return "OHIGGINS";
+
+    }
+
+
+    return "";
 
 }
 
