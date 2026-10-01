@@ -1088,66 +1088,46 @@ function displayResults(
     ============================================= */
 
     const btts =
-        prediction.btts ||
-        normalized.btts ||
-        normalized.statistics?.btts ||
-        {};
+    prediction?.btts ||
+    normalized?.btts ||
+    normalized?.statistics?.btts ||
+    null;
 
 
-    document.getElementById(
-        "btts"
-    ).textContent =
-        formatMarket(
-            btts
-        );
+    document.getElementById("btts").innerHTML =
+    formatMarket(btts);
 
 
     /* =============================================
        OVER / UNDER
     ============================================= */
 
-    const ou =
-        prediction.overUnder ||
-        prediction.ou ||
-        normalized.overUnder ||
-        normalized.ou ||
-        normalized.statistics?.overUnder ||
-        {};
+    const overUnder =
+    prediction?.overUnder ||
+    prediction?.ou ||
+    normalized?.overUnder ||
+    normalized?.ou ||
+    normalized?.statistics?.overUnder ||
+    null;
 
 
-    document.getElementById(
-        "ou"
-    ).textContent =
-        formatMarket(
-            ou
-        );
+    document.getElementById("overUnder").innerHTML =
+    formatMarket(overUnder);
 
 
     /* =============================================
        XG
     ============================================= */
 
-    const xg =
-        normalized.xG ||
-        normalized.xg ||
-        normalized.statistics?.xg ||
-        {};
+    const btts =
+    prediction?.btts ||
+    normalized?.btts ||
+    normalized?.statistics?.btts ||
+    null;
 
 
-    document.getElementById(
-        "homeXg"
-    ).textContent =
-        formatNumber(
-            xg.home
-        );
-
-
-    document.getElementById(
-        "awayXg"
-    ).textContent =
-        formatNumber(
-            xg.away
-        );
+    document.getElementById("xg").innerHTML =
+    formatMarket(xg);
 
 
     /* =============================================
@@ -1458,119 +1438,49 @@ function formatNumber(
    FORMAT MARKET
 ===================================================== */
 
-function formatMarket(
-    market
-) {
+    function formatMarket(market) {
+    if (!market) return "-";
 
-    if (
-        market === undefined ||
-        market === null
-    ) {
+    // Array of market evidence
+    if (Array.isArray(market)) {
+        if (market.length === 0) return "-";
+
+        return market.map(item => {
+            if (!item) return "";
+
+            const selection = item.selection || "";
+            const line = item.line ? ` ${item.line}` : "";
+            const percentage = item.percentage != null
+                ? ` (${item.percentage}%)`
+                : "";
+            const odds = item.odds != null
+                ? ` @ ${item.odds}`
+                : "";
+
+            return `${selection}${line}${percentage}${odds}`;
+        }).filter(Boolean).join("<br>");
+    }
+
+    // Normal object
+    if (typeof market === "object") {
+        const selection = market.selection || market.pick || "";
+        const line = market.line ? ` ${market.line}` : "";
+        const percentage = market.percentage != null
+            ? ` (${market.percentage}%)`
+            : "";
+        const odds = market.odds != null
+            ? ` @ ${market.odds}`
+            : "";
+
+        if (selection || line || percentage || odds) {
+            return `${selection}${line}${percentage}${odds}`;
+        }
 
         return "-";
-
     }
 
-
-    if (
-        typeof market === "string"
-    ) {
-
-        return market;
-
-    }
-
-
-    if (
-        typeof market === "number"
-    ) {
-
-        return String(
-            market
-        );
-
-    }
-
-
-    if (
-        market.answer !== undefined
-    ) {
-
-        let text =
-            String(
-                market.answer
-            );
-
-
-        if (
-            market.percentage !== undefined
-        ) {
-
-            text +=
-                " " +
-                market.percentage +
-                "%";
-
-        }
-
-
-        if (
-            market.odds !== undefined
-        ) {
-
-            text +=
-                " @ " +
-                market.odds;
-
-        }
-
-
-        return text;
-
-    }
-
-
-    if (
-        market.selection !== undefined
-    ) {
-
-        let text =
-            String(
-                market.selection
-            );
-
-
-        if (
-            market.line !== undefined
-        ) {
-
-            text +=
-                " " +
-                market.line;
-
-        }
-
-
-        if (
-            market.odds !== undefined
-        ) {
-
-            text +=
-                " @ " +
-                market.odds;
-
-        }
-
-
-        return text;
-
-    }
-
-
-    return "-";
-
-}
-
+    return String(market);
+}           
 
 /* =====================================================
    ESCAPE HTML
