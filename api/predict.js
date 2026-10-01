@@ -2,12 +2,20 @@ export default async function handler(req, res) {
 
     try {
 
+        // =====================================================
+        // METHOD
+        // =====================================================
+
         if (req.method !== "POST") {
             return res.status(405).json({
                 success: false,
                 error: "POST method required."
             });
         }
+
+        // =====================================================
+        // INPUT
+        // =====================================================
 
         const body = req.body || {};
 
@@ -44,11 +52,35 @@ export default async function handler(req, res) {
             );
         }
 
+        function round(value, decimals = 2) {
+
+            if (
+                value === null ||
+                value === undefined ||
+                !Number.isFinite(Number(value))
+            ) {
+                return null;
+            }
+
+            const factor =
+                Math.pow(10, decimals);
+
+            return (
+                Math.round(
+                    Number(value) * factor
+                ) / factor
+            );
+        }
+
         function average(values) {
 
-            const valid = values
-                .map(number)
-                .filter(v => v !== null);
+            const valid =
+                values
+                    .map(number)
+                    .filter(
+                        value =>
+                            value !== null
+                    );
 
             if (!valid.length) {
                 return null;
@@ -62,34 +94,7 @@ export default async function handler(req, res) {
             );
         }
 
-        function round(
-            value,
-            decimals = 2
-        ) {
-
-            if (
-                value === null ||
-                value === undefined
-            ) {
-                return null;
-            }
-
-            const factor =
-                Math.pow(
-                    10,
-                    decimals
-                );
-
-            return (
-                Math.round(
-                    value * factor
-                ) / factor
-            );
-        }
-
-        function impliedProbability(
-            odds
-        ) {
+        function impliedProbability(odds) {
 
             const value =
                 number(odds);
@@ -101,28 +106,35 @@ export default async function handler(req, res) {
                 return null;
             }
 
-            return 1 / value;
+            return (
+                1 / value
+            ) * 100;
         }
 
-        function normalizeProbabilities(
-            values
-        ) {
+        function normalizeProbabilities(values) {
 
             const entries =
                 Object.entries(values)
                     .filter(
                         ([_, value]) =>
-                            value !== null
+                            value !== null &&
+                            Number.isFinite(
+                                Number(value)
+                            )
                     );
+
+            if (!entries.length) {
+                return values;
+            }
 
             const total =
                 entries.reduce(
                     (sum, [_, value]) =>
-                        sum + value,
+                        sum + Number(value),
                     0
                 );
 
-            if (!total) {
+            if (total <= 0) {
                 return values;
             }
 
@@ -134,7 +146,10 @@ export default async function handler(req, res) {
             ) {
 
                 result[key] =
-                    (value / total) * 100;
+                    (
+                        Number(value) /
+                        total
+                    ) * 100;
             }
 
             return result;
@@ -183,11 +198,9 @@ export default async function handler(req, res) {
                 return null;
             }
 
-            const implied =
-                (1 / o) * 100;
-
             return (
-                p - implied
+                p -
+                ((1 / o) * 100)
             );
         }
 
@@ -195,7 +208,8 @@ export default async function handler(req, res) {
         // NORMALIZED DATA
         // =====================================================
 
-        const data = normalized;
+        const data =
+            normalized || {};
 
         const form =
             data.form || {};
@@ -219,9 +233,7 @@ export default async function handler(req, res) {
         // FORM
         // =====================================================
 
-        function formScore(
-            matches
-        ) {
+        function formScore(matches) {
 
             if (
                 !Array.isArray(matches) ||
@@ -232,28 +244,22 @@ export default async function handler(req, res) {
 
             const points =
                 matches
-                    .map(match => {
+                    .map(item => {
 
                         const result =
                             String(
-                                match.result || ""
+                                item.result || ""
                             ).toUpperCase();
 
-                        if (
-                            result === "W"
-                        ) {
+                        if (result === "W") {
                             return 3;
                         }
 
-                        if (
-                            result === "D"
-                        ) {
+                        if (result === "D") {
                             return 1;
                         }
 
-                        if (
-                            result === "L"
-                        ) {
+                        if (result === "L") {
                             return 0;
                         }
 
@@ -261,7 +267,8 @@ export default async function handler(req, res) {
 
                     })
                     .filter(
-                        v => v !== null
+                        value =>
+                            value !== null
                     );
 
             if (!points.length) {
@@ -307,19 +314,13 @@ export default async function handler(req, res) {
         const marketOdds = {
 
             home:
-                number(
-                    oddsData.home
-                ),
+                number(oddsData.home),
 
             draw:
-                number(
-                    oddsData.draw
-                ),
+                number(oddsData.draw),
 
             away:
-                number(
-                    oddsData.away
-                )
+                number(oddsData.away)
         };
 
         const rawImplied = {
@@ -346,7 +347,7 @@ export default async function handler(req, res) {
             );
 
         // =====================================================
-        // MODEL PROBABILITY
+        // INDEPENDENT 1X2 MODEL
         // =====================================================
 
         let modelProbability = {
@@ -368,8 +369,8 @@ export default async function handler(req, res) {
             "MARKET_BASELINE";
 
         /*
-         * Form is only applied when BOTH teams
-         * have usable form data.
+         * Form must exist for BOTH teams before
+         * it can influence the 1X2 model.
          */
 
         if (
@@ -380,67 +381,91 @@ export default async function handler(req, res) {
             marketProbability.away !== null
         ) {
 
-            const homeFormWeight =
-                homeFormScore;
+            /*
+             * Convert form into a relative strength
+             * adjustment.
+             */
 
-            const awayFormWeight =
-                awayFormScore;
+            const formDifference =
+                (
+                    homeFormScore -
+                    awayFormScore
+                ) / 100;
 
-            const adjustedHome =
-                (
-                    marketProbability.home *
-                    0.75
-                ) +
-                (
-                    homeFormWeight *
-                    0.25
+            /*
+             * Home advantage component.
+             */
+
+            const homeAdjustment =
+                formDifference * 12;
+
+            const awayAdjustment =
+                -formDifference * 12;
+
+            let adjustedHome =
+                marketProbability.home +
+                homeAdjustment;
+
+            let adjustedAway =
+                marketProbability.away +
+                awayAdjustment;
+
+            let adjustedDraw =
+                marketProbability.draw;
+
+            /*
+             * Prevent extreme distortion.
+             */
+
+            adjustedHome =
+                clamp(
+                    adjustedHome,
+                    5,
+                    85
                 );
 
-            const adjustedAway =
-                (
-                    marketProbability.away *
-                    0.75
-                ) +
-                (
-                    awayFormWeight *
-                    0.25
+            adjustedAway =
+                clamp(
+                    adjustedAway,
+                    5,
+                    85
                 );
 
-            const adjustedDraw =
-                marketProbability.draw *
-                0.90;
+            adjustedDraw =
+                clamp(
+                    adjustedDraw,
+                    5,
+                    60
+                );
 
             const total =
                 adjustedHome +
                 adjustedDraw +
                 adjustedAway;
 
-            if (total > 0) {
+            modelProbability = {
 
-                modelProbability = {
+                home:
+                    (
+                        adjustedHome /
+                        total
+                    ) * 100,
 
-                    home:
-                        (
-                            adjustedHome /
-                            total
-                        ) * 100,
+                draw:
+                    (
+                        adjustedDraw /
+                        total
+                    ) * 100,
 
-                    draw:
-                        (
-                            adjustedDraw /
-                            total
-                        ) * 100,
+                away:
+                    (
+                        adjustedAway /
+                        total
+                    ) * 100
+            };
 
-                    away:
-                        (
-                            adjustedAway /
-                            total
-                        ) * 100
-                };
-
-                modelMethod =
-                    "MARKET_PLUS_FORM";
-            }
+            modelMethod =
+                "MARKET_PLUS_FORM";
         }
 
         modelProbability.home =
@@ -496,7 +521,7 @@ export default async function handler(req, res) {
         // DRAW NO BET
         // =====================================================
 
-        let drawNoBet = {
+        const drawNoBet = {
 
             home: null,
 
@@ -512,9 +537,7 @@ export default async function handler(req, res) {
                 modelProbability.home +
                 modelProbability.away;
 
-            if (
-                nonDraw > 0
-            ) {
+            if (nonDraw > 0) {
 
                 drawNoBet.home =
                     round(
@@ -535,6 +558,44 @@ export default async function handler(req, res) {
         }
 
         // =====================================================
+        // xG
+        // =====================================================
+
+        const homeXG =
+            Array.isArray(xg.home)
+                ? average(
+                    xg.home.map(
+                        item =>
+                            item.value
+                    )
+                )
+                : null;
+
+        const awayXG =
+            Array.isArray(xg.away)
+                ? average(
+                    xg.away.map(
+                        item =>
+                            item.value
+                    )
+                )
+                : null;
+
+        /*
+         * If xG is available for both teams,
+         * calculate total expected goals.
+         */
+
+        const totalXG =
+            homeXG !== null &&
+            awayXG !== null
+                ? round(
+                    homeXG +
+                    awayXG
+                )
+                : null;
+
+        // =====================================================
         // BTTS
         // =====================================================
 
@@ -544,7 +605,9 @@ export default async function handler(req, res) {
             );
 
         const bttsOdds =
-            Array.isArray(btts.odds)
+            Array.isArray(
+                btts.odds
+            )
                 ? btts.odds
                 : [];
 
@@ -552,9 +615,7 @@ export default async function handler(req, res) {
             bttsOdds.map(item => {
 
                 const odds =
-                    number(
-                        item.value
-                    );
+                    number(item.value);
 
                 const probability =
                     number(
@@ -565,7 +626,6 @@ export default async function handler(req, res) {
 
                     answer:
                         item.answer ||
-                        item.selection ||
                         null,
 
                     odds,
@@ -576,9 +636,9 @@ export default async function handler(req, res) {
                     impliedProbability:
                         odds !== null
                             ? round(
-                                (
-                                    1 / odds
-                                ) * 100
+                                impliedProbability(
+                                    odds
+                                )
                             )
                             : null,
 
@@ -630,14 +690,10 @@ export default async function handler(req, res) {
             overUnderOdds.map(item => {
 
                 const odds =
-                    number(
-                        item.value
-                    );
+                    number(item.value);
 
                 const probability =
-                    number(
-                        item.percentage
-                    );
+                    number(item.percentage);
 
                 return {
 
@@ -646,9 +702,7 @@ export default async function handler(req, res) {
                         null,
 
                     line:
-                        number(
-                            item.line
-                        ),
+                        number(item.line),
 
                     odds,
 
@@ -658,9 +712,9 @@ export default async function handler(req, res) {
                     impliedProbability:
                         odds !== null
                             ? round(
-                                (
-                                    1 / odds
-                                ) * 100
+                                impliedProbability(
+                                    odds
+                                )
                             )
                             : null,
 
@@ -698,205 +752,517 @@ export default async function handler(req, res) {
             });
 
         // =====================================================
-        // xG
+        // GOALS MARKET PROBABILITY
         // =====================================================
 
-        const homeXG =
-            Array.isArray(xg.home)
-                ? average(
-                    xg.home.map(
-                        item =>
-                            item.value
-                    )
-                )
-                : null;
+        /*
+         * We don't invent probabilities.
+         *
+         * If a source already supplied a probability,
+         * use it.
+         *
+         * If total xG is available but no market
+         * probability exists, estimate only the
+         * standard 2.5 goal line using Poisson.
+         */
 
-        const awayXG =
-            Array.isArray(xg.away)
-                ? average(
-                    xg.away.map(
-                        item =>
-                            item.value
-                    )
-                )
-                : null;
+        function factorial(n) {
 
-        // =====================================================
-        // 1X2 VALUE
-        // =====================================================
+            if (n <= 1) {
+                return 1;
+            }
 
-        let oneXTwoValue = {
+            let result = 1;
 
-            home: null,
+            for (
+                let i = 2;
+                i <= n;
+                i++
+            ) {
+                result *= i;
+            }
 
-            draw: null,
+            return result;
+        }
 
-            away: null
-        };
+        function poisson(lambda, k) {
+
+            if (
+                lambda === null ||
+                lambda < 0
+            ) {
+                return null;
+            }
+
+            return (
+                Math.exp(-lambda) *
+                Math.pow(lambda, k) /
+                factorial(k)
+            );
+        }
+
+        function over25Probability(lambda) {
+
+            if (
+                lambda === null ||
+                lambda <= 0
+            ) {
+                return null;
+            }
+
+            let underOrEqualTwo = 0;
+
+            for (
+                let k = 0;
+                k <= 2;
+                k++
+            ) {
+
+                underOrEqualTwo +=
+                    poisson(
+                        lambda,
+                        k
+                    );
+            }
+
+            return clamp(
+                (
+                    1 -
+                    underOrEqualTwo
+                ) * 100,
+                1,
+                99
+            );
+        }
+
+        let over25ProbabilityModel =
+            null;
+
+        let under25ProbabilityModel =
+            null;
 
         if (
-            modelMethod !==
-            "MARKET_BASELINE"
+            totalXG !== null
         ) {
 
-            oneXTwoValue = {
-
-                home:
-                    round(
-                        calculateValue(
-                            modelProbability.home,
-                            marketOdds.home
-                        ),
-                        3
-                    ),
-
-                draw:
-                    round(
-                        calculateValue(
-                            modelProbability.draw,
-                            marketOdds.draw
-                        ),
-                        3
-                    ),
-
-                away:
-                    round(
-                        calculateValue(
-                            modelProbability.away,
-                            marketOdds.away
-                        ),
-                        3
+            over25ProbabilityModel =
+                round(
+                    over25Probability(
+                        totalXG
                     )
-            };
+                );
+
+            if (
+                over25ProbabilityModel !== null
+            ) {
+
+                under25ProbabilityModel =
+                    round(
+                        100 -
+                        over25ProbabilityModel
+                    );
+            }
         }
 
         // =====================================================
-        // MARKET BASELINE
+        // INDEPENDENT MODEL READINESS
         // =====================================================
-
-        const marketBaseline = {
-
-            home:
-                marketProbability.home,
-
-            draw:
-                marketProbability.draw,
-
-            away:
-                marketProbability.away,
-
-            note:
-                "These probabilities are derived from bookmaker odds and are not independent model probabilities."
-        };
-
-        // =====================================================
-        // EVIDENCE COUNTS
-        // =====================================================
-
-        const evidence = {
-
-            homeFormMatches:
-                homeFormMatches.length,
-
-            awayFormMatches:
-                awayFormMatches.length,
-
-            h2hSources:
-                Array.isArray(
-                    h2h.evidence
-                )
-                    ? h2h.evidence.length
-                    : 0,
-
-            bttsEvidence:
-                Array.isArray(
-                    btts.evidence
-                )
-                    ? btts.evidence.length
-                    : 0,
-
-            overUnderEvidence:
-                Array.isArray(
-                    overUnder.evidence
-                )
-                    ? overUnder.evidence.length
-                    : 0,
-
-            oneXTwoEvidence:
-                Array.isArray(
-                    oddsData.evidence
-                )
-                    ? oddsData.evidence.length
-                    : 0,
-
-            injuryEvidence:
-                Array.isArray(
-                    data.injuries?.evidence
-                )
-                    ? data.injuries.evidence.length
-                    : 0,
-
-            lineupEvidence:
-                Array.isArray(
-                    data.lineups?.evidence
-                )
-                    ? data.lineups.evidence.length
-                    : 0
-        };
-
-        // =====================================================
-        // READINESS
-        // =====================================================
-
-        const identityReady =
-            readiness.identityReady === true ||
-            (
-                !!match.home &&
-                !!match.away
-            );
 
         const formReady =
             homeFormMatches.length > 0 &&
             awayFormMatches.length > 0;
 
-        const statsReady =
-            bttsProbability !== null ||
-            overUnderOdds.length > 0 ||
-            homeXG !== null ||
+        const xGReady =
+            homeXG !== null &&
             awayXG !== null;
+
+        const bttsReady =
+            bttsProbability !== null;
+
+        const overUnderReady =
+            overUnderAssessments.length > 0;
 
         const independentModelReady =
             formReady ||
-            homeXG !== null ||
-            awayXG !== null;
+            xGReady ||
+            bttsReady ||
+            overUnderReady;
 
-        let status;
+        // =====================================================
+        // CANDIDATE MARKETS
+        // =====================================================
+
+        const candidates = [];
+
+        function addCandidate(
+            prediction,
+            probability,
+            market,
+            strength,
+            reason
+        ) {
+
+            const p =
+                number(probability);
+
+            if (
+                p === null ||
+                p <= 0 ||
+                p > 100
+            ) {
+                return;
+            }
+
+            candidates.push({
+
+                prediction,
+
+                probability:
+                    round(p),
+
+                market,
+
+                strength,
+
+                reason
+            });
+        }
+
+        // =====================================================
+        // PRIMARY 1X2
+        // =====================================================
 
         if (
-            identityReady &&
-            independentModelReady &&
-            statsReady
+            modelProbability.home !== null
         ) {
 
-            status =
-                "ANALYSIS_READY";
+            addCandidate(
+                "Home",
+                modelProbability.home,
+                "1X2",
+                1.00,
+                "Home win probability from the 1X2 model."
+            );
+        }
 
-        } else if (
-            identityReady &&
-            (
-                bttsProbability !== null ||
-                marketOdds.home !== null ||
-                marketOdds.away !== null
-            )
+        if (
+            modelProbability.draw !== null
         ) {
 
-            status =
-                "PARTIAL_ANALYSIS";
+            addCandidate(
+                "Draw",
+                modelProbability.draw,
+                "1X2",
+                1.00,
+                "Draw probability from the 1X2 model."
+            );
+        }
 
-        } else {
+        if (
+            modelProbability.away !== null
+        ) {
 
-            status =
-                "INSUFFICIENT_DATA";
+            addCandidate(
+                "Away",
+                modelProbability.away,
+                "1X2",
+                1.00,
+                "Away win probability from the 1X2 model."
+            );
+        }
+
+        // =====================================================
+        // OVER / UNDER 2.5
+        // =====================================================
+
+        /*
+         * Prefer actual fixture-specific probability
+         * when available.
+         *
+         * Otherwise use xG-derived probability.
+         */
+
+        let actualOver25 = null;
+        let actualUnder25 = null;
+
+        for (
+            const item
+            of overUnderAssessments
+        ) {
+
+            if (
+                number(item.line) !== 2.5
+            ) {
+                continue;
+            }
+
+            const selection =
+                String(
+                    item.selection ||
+                    ""
+                ).toUpperCase();
+
+            if (
+                selection === "OVER" &&
+                item.sourceProbability !== null
+            ) {
+
+                actualOver25 =
+                    number(
+                        item.sourceProbability
+                    );
+            }
+
+            if (
+                selection === "UNDER" &&
+                item.sourceProbability !== null
+            ) {
+
+                actualUnder25 =
+                    number(
+                        item.sourceProbability
+                    );
+            }
+        }
+
+        const finalOver25 =
+            actualOver25 !== null
+                ? actualOver25
+                : over25ProbabilityModel;
+
+        const finalUnder25 =
+            actualUnder25 !== null
+                ? actualUnder25
+                : under25ProbabilityModel;
+
+        if (
+            finalOver25 !== null
+        ) {
+
+            addCandidate(
+                "Over 2.5",
+                finalOver25,
+                "TOTAL_GOALS",
+                0.96,
+                actualOver25 !== null
+                    ? "Fixture-specific Over 2.5 probability."
+                    : "Over 2.5 probability derived from team xG."
+            );
+        }
+
+        if (
+            finalUnder25 !== null
+        ) {
+
+            addCandidate(
+                "Under 2.5",
+                finalUnder25,
+                "TOTAL_GOALS",
+                0.96,
+                actualUnder25 !== null
+                    ? "Fixture-specific Under 2.5 probability."
+                    : "Under 2.5 probability derived from team xG."
+            );
+        }
+
+        // =====================================================
+        // BTTS
+        // =====================================================
+
+        if (
+            bttsProbability !== null
+        ) {
+
+            /*
+             * btts.probability is treated as the
+             * probability of BTTS Yes.
+             */
+
+            const yes =
+                clamp(
+                    bttsProbability,
+                    1,
+                    99
+                );
+
+            const no =
+                100 - yes;
+
+            addCandidate(
+                "BTTS Yes",
+                yes,
+                "BTTS",
+                0.94,
+                "Fixture-specific BTTS probability."
+            );
+
+            addCandidate(
+                "BTTS No",
+                no,
+                "BTTS",
+                0.94,
+                "Complement of fixture-specific BTTS probability."
+            );
+        }
+
+        // =====================================================
+        // SECONDARY MARKETS
+        // =====================================================
+
+        /*
+         * Double Chance is deliberately given a lower
+         * market priority.
+         *
+         * It can qualify, but it cannot automatically
+         * dominate the primary markets.
+         */
+
+        if (
+            doubleChance.homeOrDraw !== null
+        ) {
+
+            addCandidate(
+                "Home or Draw",
+                doubleChance.homeOrDraw,
+                "DOUBLE_CHANCE",
+                0.78,
+                "Double Chance probability."
+            );
+        }
+
+        if (
+            doubleChance.awayOrDraw !== null
+        ) {
+
+            addCandidate(
+                "Away or Draw",
+                doubleChance.awayOrDraw,
+                "DOUBLE_CHANCE",
+                0.78,
+                "Double Chance probability."
+            );
+        }
+
+        // =====================================================
+        // CANDIDATE FILTER
+        // =====================================================
+
+        /*
+         * Remove weak candidates.
+         */
+
+        const eligibleCandidates =
+            candidates.filter(
+                candidate => {
+
+                    /*
+                     * Require at least 50%.
+                     */
+
+                    if (
+                        candidate.probability < 50
+                    ) {
+                        return false;
+                    }
+
+                    /*
+                     * A secondary market must have
+                     * stronger probability to compensate
+                     * for its lower market strength.
+                     */
+
+                    if (
+                        candidate.market ===
+                        "DOUBLE_CHANCE" &&
+                        candidate.probability < 70
+                    ) {
+                        return false;
+                    }
+
+                    return true;
+                }
+            );
+
+        // =====================================================
+        // MARKET PRIORITY
+        // =====================================================
+
+        /*
+         * We do not simply sort by probability.
+         *
+         * Score =
+         *
+         * probability × market strength
+         *
+         * This prevents an 85% broad Double Chance
+         * probability from automatically defeating a
+         * meaningful 60% primary-market signal.
+         */
+
+        for (
+            const candidate
+            of eligibleCandidates
+        ) {
+
+            candidate.selectionScore =
+                round(
+                    candidate.probability *
+                    candidate.strength,
+                    3
+                );
+        }
+
+        eligibleCandidates.sort(
+            (a, b) => {
+
+                if (
+                    b.selectionScore !==
+                    a.selectionScore
+                ) {
+
+                    return (
+                        b.selectionScore -
+                        a.selectionScore
+                    );
+                }
+
+                return (
+                    b.probability -
+                    a.probability
+                );
+            }
+        );
+
+        // =====================================================
+        // FINAL PREDICTION
+        // =====================================================
+
+        let finalPrediction = null;
+
+        let finalProbability = null;
+
+        let finalMarket = null;
+
+        let finalReason = null;
+
+        if (
+            eligibleCandidates.length > 0
+        ) {
+
+            const selected =
+                eligibleCandidates[0];
+
+            finalPrediction =
+                selected.prediction;
+
+            finalProbability =
+                selected.probability;
+
+            finalMarket =
+                selected.market;
+
+            finalReason =
+                selected.reason;
         }
 
         // =====================================================
@@ -905,16 +1271,35 @@ export default async function handler(req, res) {
 
         let confidence = 0;
 
-        if (identityReady) {
+        if (
+            match.home &&
+            match.away
+        ) {
             confidence += 15;
         }
 
-        if (formReady) {
+        if (
+            formReady
+        ) {
             confidence += 25;
         }
 
-        if (statsReady) {
+        if (
+            xGReady
+        ) {
             confidence += 20;
+        }
+
+        if (
+            bttsReady
+        ) {
+            confidence += 10;
+        }
+
+        if (
+            overUnderReady
+        ) {
+            confidence += 10;
         }
 
         if (
@@ -922,29 +1307,23 @@ export default async function handler(req, res) {
             marketOdds.draw !== null &&
             marketOdds.away !== null
         ) {
-            confidence += 15;
+            confidence += 10;
         }
 
         if (
-            bttsProbability !== null
+            Array.isArray(
+                h2h.evidence
+            ) &&
+            h2h.evidence.length > 0
         ) {
             confidence += 5;
         }
 
         if (
-            overUnderOdds.length > 0
-        ) {
-            confidence += 5;
-        }
-
-        if (
-            evidence.h2hSources > 0
-        ) {
-            confidence += 5;
-        }
-
-        if (
-            evidence.injuryEvidence > 0
+            Array.isArray(
+                data.injuries?.evidence
+            ) &&
+            data.injuries.evidence.length > 0
         ) {
             confidence += 5;
         }
@@ -957,372 +1336,58 @@ export default async function handler(req, res) {
             );
 
         // =====================================================
-        // HEADLINE PREDICTION ENGINE
-        //
-        // IMPORTANT:
-        // Double Chance and Draw No Bet are NOT allowed
-        // to automatically become the headline prediction.
-        //
-        // Eligible headline markets:
-        //
-        // Home
-        // Draw
-        // Away
-        // BTTS Yes
-        // BTTS No
-        // Over 2.5
-        // Under 2.5
+        // STATUS
         // =====================================================
 
-        const MIN_PREDICTION_PROBABILITY =
-            55;
-
-        const predictionCandidates = [];
-
-        // =====================================================
-        // 1X2 CANDIDATES
-        // =====================================================
+        let status =
+            "INSUFFICIENT_DATA";
 
         if (
-            modelProbability.home !== null &&
-            modelProbability.home >=
-                MIN_PREDICTION_PROBABILITY
+            finalPrediction !== null &&
+            independentModelReady
         ) {
 
-            predictionCandidates.push({
+            status =
+                "ANALYSIS_READY";
 
-                selection:
-                    "Home",
-
-                probability:
-                    modelProbability.home,
-
-                market:
-                    "1X2",
-
-                evidenceScore:
-                    formReady
-                        ? 100
-                        : 60
-            });
-        }
-
-        if (
-            modelProbability.draw !== null &&
-            modelProbability.draw >=
-                MIN_PREDICTION_PROBABILITY
+        } else if (
+            finalPrediction !== null
         ) {
 
-            predictionCandidates.push({
-
-                selection:
-                    "Draw",
-
-                probability:
-                    modelProbability.draw,
-
-                market:
-                    "1X2",
-
-                evidenceScore:
-                    formReady
-                        ? 100
-                        : 60
-            });
+            status =
+                "PARTIAL_ANALYSIS";
         }
-
-        if (
-            modelProbability.away !== null &&
-            modelProbability.away >=
-                MIN_PREDICTION_PROBABILITY
-        ) {
-
-            predictionCandidates.push({
-
-                selection:
-                    "Away",
-
-                probability:
-                    modelProbability.away,
-
-                market:
-                    "1X2",
-
-                evidenceScore:
-                    formReady
-                        ? 100
-                        : 60
-            });
-        }
-
-        // =====================================================
-        // BTTS CANDIDATES
-        // =====================================================
-
-        if (
-            bttsProbability !== null
-        ) {
-
-            /*
-             * If btts.probability is supplied as the probability
-             * of BTTS Yes, use it directly.
-             */
-
-            if (
-                bttsProbability >=
-                MIN_PREDICTION_PROBABILITY
-            ) {
-
-                predictionCandidates.push({
-
-                    selection:
-                        "BTTS Yes",
-
-                    probability:
-                        round(
-                            bttsProbability
-                        ),
-
-                    market:
-                        "BTTS",
-
-                    evidenceScore:
-                        bttsOdds.length > 0
-                            ? 90
-                            : 70
-                });
-
-            }
-
-            /*
-             * BTTS No is the complement.
-             */
-
-            const bttsNoProbability =
-                100 -
-                bttsProbability;
-
-            if (
-                bttsNoProbability >=
-                MIN_PREDICTION_PROBABILITY
-            ) {
-
-                predictionCandidates.push({
-
-                    selection:
-                        "BTTS No",
-
-                    probability:
-                        round(
-                            bttsNoProbability
-                        ),
-
-                    market:
-                        "BTTS",
-
-                    evidenceScore:
-                        bttsOdds.length > 0
-                            ? 90
-                            : 70
-                });
-            }
-        }
-
-        // =====================================================
-        // OVER / UNDER 2.5 CANDIDATES
-        // =====================================================
-
-        for (
-            const item
-            of overUnderAssessments
-        ) {
-
-            const line =
-                number(
-                    item.line
-                );
-
-            const probability =
-                number(
-                    item.sourceProbability
-                );
-
-            if (
-                line !== 2.5 ||
-                probability === null
-            ) {
-                continue;
-            }
-
-            const selection =
-                String(
-                    item.selection ||
-                    ""
-                )
-                    .trim()
-                    .toLowerCase();
-
-            if (
-                selection ===
-                "over"
-            ) {
-
-                if (
-                    probability >=
-                    MIN_PREDICTION_PROBABILITY
-                ) {
-
-                    predictionCandidates.push({
-
-                        selection:
-                            "Over 2.5",
-
-                        probability:
-                            round(
-                                probability
-                            ),
-
-                        market:
-                            "OVER_UNDER",
-
-                        evidenceScore:
-                            90
-                    });
-                }
-            }
-
-            if (
-                selection ===
-                "under"
-            ) {
-
-                if (
-                    probability >=
-                    MIN_PREDICTION_PROBABILITY
-                ) {
-
-                    predictionCandidates.push({
-
-                        selection:
-                            "Under 2.5",
-
-                        probability:
-                            round(
-                                probability
-                            ),
-
-                        market:
-                            "OVER_UNDER",
-
-                        evidenceScore:
-                            90
-                    });
-                }
-            }
-        }
-
-        // =====================================================
-        // REMOVE DUPLICATES
-        // =====================================================
-
-        const uniquePredictions = [];
-
-        const predictionKeys =
-            new Set();
-
-        for (
-            const candidate
-            of predictionCandidates
-        ) {
-
-            const key =
-                candidate.selection;
-
-            if (
-                predictionKeys.has(key)
-            ) {
-                continue;
-            }
-
-            predictionKeys.add(key);
-
-            uniquePredictions.push(
-                candidate
-            );
-        }
-
-        // =====================================================
-        // FINAL PREDICTION SELECTION
-        //
-        // Probability is the primary factor.
-        //
-        // Evidence quality is only used as a small
-        // tie-breaker so weak data cannot easily beat
-        // a properly supported prediction.
-        // =====================================================
-
-        uniquePredictions.sort(
-            (a, b) => {
-
-                const probabilityDifference =
-                    b.probability -
-                    a.probability;
-
-                /*
-                 * Only use evidence as a tie-breaker
-                 * when probabilities are very close.
-                 */
-
-                if (
-                    Math.abs(
-                        probabilityDifference
-                    ) <= 2
-                ) {
-
-                    return (
-                        b.evidenceScore -
-                        a.evidenceScore
-                    );
-                }
-
-                return probabilityDifference;
-            }
-        );
-
-        const bestPrediction =
-            uniquePredictions.length > 0
-                ? uniquePredictions[0]
-                : null;
-
-        const prediction =
-            bestPrediction
-                ? {
-
-                    selection:
-                        bestPrediction.selection,
-
-                    probability:
-                        Math.round(
-                            bestPrediction.probability
-                        ),
-
-                    market:
-                        bestPrediction.market
-
-                }
-                : null;
 
         // =====================================================
         // RESPONSE
         // =====================================================
 
+        /*
+         * IMPORTANT:
+         *
+         * The frontend only needs:
+         *
+         * prediction
+         * probability
+         *
+         * The remaining information is returned under
+         * internalAnalysis for debugging/backend use.
+         */
+
         return res.status(200).json({
 
-            success:
-                true,
+            success: true,
 
             version:
-                "Prediction Engine V1.2",
+                "Prediction Engine V2.0",
+
+            prediction:
+                finalPrediction,
+
+            probability:
+                finalProbability,
+
+            status,
 
             match: {
 
@@ -1333,69 +1398,28 @@ export default async function handler(req, res) {
                     match.away,
 
                 date:
-                    match.date ||
-                    null
+                    match.date || null
             },
 
-            // =================================================
-            // FINAL HEADLINE PREDICTION
-            //
-            // THIS IS WHAT THE FRONTEND SHOULD DISPLAY.
-            // =================================================
+            internalAnalysis: {
 
-            prediction,
+                market:
+                    finalMarket,
 
-            status,
+                reason:
+                    finalReason,
 
-            confidence,
+                confidence,
 
-            modelMethod,
+                modelMethod,
 
-            // =================================================
-            // INTERNAL MODEL DATA
-            //
-            // Keep these for the engine/debugging.
-            // The frontend does not need to display them.
-            // =================================================
+                modelProbability,
 
-            model: {
-
-                oneXTwo: {
-
-                    home:
-                        modelProbability.home,
-
-                    draw:
-                        modelProbability.draw,
-
-                    away:
-                        modelProbability.away
-                },
+                marketProbability,
 
                 doubleChance,
 
                 drawNoBet,
-
-                btts: {
-
-                    probability:
-                        bttsProbability,
-
-                    odds:
-                        bttsOdds,
-
-                    assessment:
-                        bttsAssessments
-                },
-
-                overUnder: {
-
-                    odds:
-                        overUnderOdds,
-
-                    assessment:
-                        overUnderAssessments
-                },
 
                 xg: {
 
@@ -1403,85 +1427,44 @@ export default async function handler(req, res) {
                         round(homeXG),
 
                     away:
-                        round(awayXG)
-                }
-            },
+                        round(awayXG),
 
-            market: {
+                    total:
+                        totalXG
+                },
 
-                odds:
-                    marketOdds,
+                btts: {
 
-                impliedProbability:
-                    marketProbability,
+                    probability:
+                        bttsProbability,
 
-                baseline:
-                    marketBaseline
-            },
-
-            value: {
-
-                oneXTwo:
-                    oneXTwoValue,
-
-                btts:
-                    bttsAssessments,
+                    assessments:
+                        bttsAssessments
+                },
 
                 overUnder:
-                    overUnderAssessments
-            },
+                    overUnderAssessments,
 
-            evidence,
+                candidates:
+                    eligibleCandidates,
 
-            predictionCandidates:
-                uniquePredictions,
+                allCandidates:
+                    candidates,
 
-            predictionRules: {
+                readiness: {
 
-                minimumProbability:
-                    MIN_PREDICTION_PROBABILITY,
+                    formReady,
 
-                eligibleMarkets: [
+                    xGReady,
 
-                    "Home",
+                    bttsReady,
 
-                    "Draw",
+                    overUnderReady,
 
-                    "Away",
+                    independentModelReady,
 
-                    "BTTS Yes",
-
-                    "BTTS No",
-
-                    "Over 2.5",
-
-                    "Under 2.5"
-                ],
-
-                excludedFromHeadline: [
-
-                    "Double Chance",
-
-                    "Draw No Bet"
-                ],
-
-                selectionRule:
-                    "The highest qualifying probability among eligible headline markets is selected.",
-
-                missingData:
-                    "Missing data is not guessed.",
-
-                marketBaseline:
-                    "Bookmaker implied probabilities are not treated as independent model probabilities.",
-
-                valueRule:
-                    "1X2 value is calculated only when an independent model probability exists.",
-
-                lineupRule:
-                    "Predicted lineups are not treated as confirmed.",
-
-                h2hRule:
-                    "H2H is supporting evidence only and does not dominate the model."
+                    availability
+                }
             }
 
         });
@@ -1489,13 +1472,13 @@ export default async function handler(req, res) {
     } catch (error) {
 
         console.error(
+            "Prediction Engine V2 error:",
             error
         );
 
         return res.status(500).json({
 
-            success:
-                false,
+            success: false,
 
             error:
                 "Prediction engine failed.",
