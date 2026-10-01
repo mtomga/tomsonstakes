@@ -469,18 +469,63 @@
 
         </div>
 
+function displayAvailability(normalized) {
 
-        <!-- AVAILABILITY -->
+    const container =
+        document.getElementById("availability");
 
-        <div class="section">
+    const availability =
+        normalized.availability ||
+        normalized.readiness ||
+        {};
 
-            <h2>Evidence Availability</h2>
+    const items = [
+        ["Identity", availability.identityReady],
+        ["Form", availability.formReady],
+        ["Stats", availability.statsReady],
+        ["BTTS", availability.btts],
+        ["Over / Under", availability.overUnder],
+        ["xG", availability.xG],
+        ["Injuries", availability.injuries],
+        ["Lineups", availability.lineups],
+        ["Odds", availability.odds],
+        ["Data Ready", availability.dataReady],
+        ["Analysis Ready", availability.analysisReady]
+    ];
 
-            <div class="grid">
+    container.innerHTML = items.map(([label, value]) => {
 
-                <div id="availability"></div>
+        let text = "— Missing";
+        let css = "not-ready";
 
+        if (value === true) {
+            text = "✓ Available";
+            css = "ready";
+        }
+        else if (
+            value !== false &&
+            value !== undefined &&
+            value !== null
+        ) {
+            text = String(value);
+            css = "partial";
+        }
+
+        return `
+            <div class="stat ${css}">
+                <div class="stat-title">
+                    ${label}
+                </div>
+
+                <div class="stat-value">
+                    ${text}
+                </div>
             </div>
+        `;
+
+    }).join("");
+}
+        
 
         </div>
 
