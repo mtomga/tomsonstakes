@@ -7,6 +7,7 @@
 <title>TomsonStakes Global Football</title>
 
 <style>
+
 * {
     box-sizing: border-box;
 }
@@ -23,6 +24,7 @@ body {
     margin: auto;
     padding: 20px;
 }
+
 
 /* =========================
    HEADER
@@ -45,6 +47,7 @@ body {
     font-size: 14px;
     letter-spacing: .5px;
 }
+
 
 /* =========================
    CONTROL
@@ -107,6 +110,7 @@ button:disabled {
     background: #1d4ed8;
 }
 
+
 /* =========================
    GENERAL
 ========================= */
@@ -140,6 +144,7 @@ button:disabled {
     color: #991b1b;
 }
 
+
 /* =========================
    COUNTRY SECTION
 ========================= */
@@ -162,6 +167,7 @@ button:disabled {
     font-size: 13px;
     font-weight: normal;
 }
+
 
 /* =========================
    LEAGUE SECTION
@@ -188,6 +194,7 @@ button:disabled {
     font-size: 12px;
     margin-top: 4px;
 }
+
 
 /* =========================
    FIXTURE
@@ -329,6 +336,7 @@ button:disabled {
     word-break: break-all;
 }
 
+
 /* =========================
    ANALYSIS
 ========================= */
@@ -372,6 +380,47 @@ button:disabled {
     font-weight: 900;
     margin-top: 7px;
 }
+
+
+/* =========================
+   PREDICTION REMARK
+========================= */
+
+.prediction-remark {
+    margin-top: 18px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+
+/* BELOW 60% */
+
+.remark-avoid {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+
+/* 60% - 80% */
+
+.remark-medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+
+/* ABOVE 80% */
+
+.remark-high {
+    background: #dcfce7;
+    color: #166534;
+}
+
 
 /* =========================
    RESPONSIVE
@@ -419,23 +468,40 @@ button:disabled {
     .probability-value {
         font-size: 30px;
     }
+
+    .prediction-remark {
+        font-size: 12px;
+        padding: 9px 15px;
+    }
+
 }
+
 </style>
 </head>
+
 
 <body>
 
 <div class="container">
 
+
     <!-- HEADER -->
+
     <div class="header">
-        <h1>🔥 TOMSONSTAKES</h1>
+
+        <h1>
+            🔥 TOMSONSTAKES
+        </h1>
+
         <div class="subtitle">
             GLOBAL FOOTBALL PREDICTION ENGINE
         </div>
+
     </div>
 
+
     <!-- DATE CONTROL -->
+
     <div class="control-box">
 
         <p>
@@ -459,7 +525,9 @@ button:disabled {
 
     </div>
 
+
     <!-- RESULTS -->
+
     <div id="results"></div>
 
 </div>
@@ -467,8 +535,10 @@ button:disabled {
 
 <script>
 
+
 /* =========================================================
    TOP LEAGUE PRIORITY
+
    Lower number = displayed earlier
 ========================================================= */
 
@@ -517,34 +587,48 @@ const TOP_LEAGUES = [
 ========================================================= */
 
 const FINISHED_STATUSES = [
+
     "FT",
     "AET",
     "PEN",
     "AWD",
     "WO"
+
 ];
 
+
 const LIVE_STATUSES = [
+
     "1H",
     "HT",
     "2H",
     "ET",
     "BT",
     "P"
+
 ];
+
 
 const POSTPONED_STATUSES = [
+
     "PST"
+
 ];
+
 
 const CANCELLED_STATUSES = [
+
     "CANC",
     "ABD"
+
 ];
 
+
 const SUSPENDED_STATUSES = [
+
     "SUSP",
     "INT"
+
 ];
 
 
@@ -567,25 +651,36 @@ async function analyzeMatches() {
     if (!date) {
 
         results.innerHTML = `
+
             <div class="notice status-warning">
+
                 ⚠️ Please select a match date.
+
             </div>
+
         `;
 
         return;
+
     }
 
 
     scanButton.disabled = true;
 
+
     results.innerHTML = `
+
         <div class="notice">
 
-            <h2>🔥 TOMSONSTAKES</h2>
+            <h2>
+                🔥 TOMSONSTAKES
+            </h2>
 
             <p>
                 🔎 Scanning global football fixtures for
-                <strong>${escapeHtml(date)}</strong>...
+                <strong>
+                    ${escapeHtml(date)}
+                </strong>...
             </p>
 
             <p>
@@ -593,6 +688,7 @@ async function analyzeMatches() {
             </p>
 
         </div>
+
     `;
 
 
@@ -603,7 +699,8 @@ async function analyzeMatches() {
         );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (!response.ok) {
@@ -625,6 +722,7 @@ async function analyzeMatches() {
             const apiErrors =
                 Object.values(data.errors).join("; ");
 
+
             throw new Error(apiErrors);
 
         }
@@ -640,16 +738,22 @@ async function analyzeMatches() {
 
                 <div class="notice">
 
-                    <h2>⚽ TOMSONSTAKES GLOBAL FIXTURES</h2>
+                    <h2>
+                        ⚽ TOMSONSTAKES GLOBAL FIXTURES
+                    </h2>
 
                     <p>
                         📅 Date:
-                        <strong>${escapeHtml(date)}</strong>
+                        <strong>
+                            ${escapeHtml(date)}
+                        </strong>
                     </p>
 
                     <div class="status status-warning">
+
                         ⚠️ No football fixtures were found
                         for this date.
+
                     </div>
 
                 </div>
@@ -657,16 +761,9 @@ async function analyzeMatches() {
             `;
 
             return;
+
         }
 
-
-        /*
-         * Group all fixtures by:
-         *
-         * Country
-         *      └── League
-         *              └── Fixtures
-         */
 
         const grouped =
             groupFixtures(data.response);
@@ -680,16 +777,22 @@ async function analyzeMatches() {
 
             <div class="notice">
 
-                <h2>🔥 TOMSONSTAKES GLOBAL FIXTURES</h2>
+                <h2>
+                    🔥 TOMSONSTAKES GLOBAL FIXTURES
+                </h2>
 
                 <p>
                     📅 Date:
-                    <strong>${escapeHtml(date)}</strong>
+                    <strong>
+                        ${escapeHtml(date)}
+                    </strong>
                 </p>
 
                 <p>
                     🌍 Fixtures found:
-                    <strong>${data.response.length}</strong>
+                    <strong>
+                        ${data.response.length}
+                    </strong>
                 </p>
 
             </div>
@@ -733,7 +836,9 @@ async function analyzeMatches() {
                     <br><br>
 
                     <strong>
-                        ${escapeHtml(error.message)}
+                        ${escapeHtml(
+                            error.message
+                        )}
                     </strong>
 
                 </div>
@@ -780,8 +885,11 @@ function groupFixtures(fixtures) {
         if (!countries[country]) {
 
             countries[country] = {
+
                 country,
+
                 leagues: {}
+
             };
 
         }
@@ -817,12 +925,12 @@ function groupFixtures(fixtures) {
 
 
     return countries;
+
 }
 
 
 /* =========================================================
    SORT COUNTRY GROUPS
-   A country containing a top league comes first.
 ========================================================= */
 
 function sortCountryGroups(grouped) {
@@ -834,6 +942,7 @@ function sortCountryGroups(grouped) {
                 getBestLeaguePriority(
                     Object.values(a.leagues)
                 );
+
 
             const priorityB =
                 getBestLeaguePriority(
@@ -865,7 +974,9 @@ function sortCountryGroups(grouped) {
 function getBestLeaguePriority(leagues) {
 
     if (!leagues.length) {
+
         return 9999;
+
     }
 
 
@@ -916,6 +1027,7 @@ function getLeaguePriority(name) {
 
 
     return 1000;
+
 }
 
 
@@ -932,6 +1044,7 @@ function sortLeagues(leagues) {
                 getLeaguePriority(
                     a.leagueName
                 );
+
 
             const priorityB =
                 getLeaguePriority(
@@ -970,6 +1083,7 @@ function sortFixtures(fixtures) {
                     a.fixture?.timestamp || 0
                 );
 
+
             const timeB =
                 Number(
                     b.fixture?.timestamp || 0
@@ -985,6 +1099,7 @@ function sortFixtures(fixtures) {
 
             const homeA =
                 a.teams?.home?.name || "";
+
 
             const homeB =
                 b.teams?.home?.name || "";
@@ -1038,7 +1153,9 @@ function buildCountryGroup(
                 )}
 
                 <span class="country-count">
+
                     (${fixtureCount} matches)
+
                 </span>
 
             </div>
@@ -1065,6 +1182,7 @@ function buildCountryGroup(
 
 
     return html;
+
 }
 
 
@@ -1091,20 +1209,26 @@ function buildLeagueGroup(
             <div class="league-title">
 
                 <div class="league-name">
+
                     🏆
                     ${escapeHtml(
                         league.leagueName
                     )}
+
                 </div>
 
                 ${
                     league.round
                     ?
-                    `<div class="league-round">
+                    `
+                    <div class="league-round">
+
                         ${escapeHtml(
                             league.round
                         )}
-                    </div>`
+
+                    </div>
+                    `
                     :
                     ""
                 }
@@ -1137,6 +1261,7 @@ function buildLeagueGroup(
 
 
     return html;
+
 }
 
 
@@ -1202,9 +1327,7 @@ function buildFixtureCard(
     let middleHTML = "";
 
 
-    /*
-     * UPCOMING
-     */
+    /* UPCOMING */
 
     if (state.type === "upcoming") {
 
@@ -1217,7 +1340,9 @@ function buildFixtureCard(
                 </div>
 
                 <div class="status-pill status-upcoming">
+
                     UPCOMING
+
                 </div>
 
             </div>
@@ -1227,9 +1352,7 @@ function buildFixtureCard(
     }
 
 
-    /*
-     * LIVE
-     */
+    /* LIVE */
 
     else if (state.type === "live") {
 
@@ -1270,9 +1393,7 @@ function buildFixtureCard(
     }
 
 
-    /*
-     * FINISHED
-     */
+    /* FINISHED */
 
     else if (state.type === "finished") {
 
@@ -1303,9 +1424,7 @@ function buildFixtureCard(
     }
 
 
-    /*
-     * POSTPONED
-     */
+    /* POSTPONED */
 
     else if (state.type === "postponed") {
 
@@ -1318,7 +1437,9 @@ function buildFixtureCard(
                 </div>
 
                 <div class="status-pill status-postponed">
+
                     POSTPONED
+
                 </div>
 
             </div>
@@ -1328,9 +1449,7 @@ function buildFixtureCard(
     }
 
 
-    /*
-     * CANCELLED
-     */
+    /* CANCELLED */
 
     else if (state.type === "cancelled") {
 
@@ -1343,7 +1462,9 @@ function buildFixtureCard(
                 </div>
 
                 <div class="status-pill status-cancelled">
+
                     CANCELLED
+
                 </div>
 
             </div>
@@ -1353,9 +1474,7 @@ function buildFixtureCard(
     }
 
 
-    /*
-     * SUSPENDED / INTERRUPTED
-     */
+    /* SUSPENDED */
 
     else if (state.type === "suspended") {
 
@@ -1498,7 +1617,9 @@ function buildFixtureCard(
                 <div class="fixture-id">
 
                     Fixture ID:
-                    ${escapeHtml(String(fixtureId))}
+                    ${escapeHtml(
+                        String(fixtureId)
+                    )}
 
                 </div>
 
@@ -1548,6 +1669,7 @@ function buildFixtureCard(
         </div>
 
     `;
+
 }
 
 
@@ -1582,9 +1704,7 @@ function getMatchState(match) {
         null;
 
 
-    /*
-     * FINISHED
-     */
+    /* FINISHED */
 
     if (
         FINISHED_STATUSES.includes(
@@ -1637,9 +1757,7 @@ function getMatchState(match) {
     }
 
 
-    /*
-     * LIVE
-     */
+    /* LIVE */
 
     if (
         LIVE_STATUSES.includes(
@@ -1664,9 +1782,7 @@ function getMatchState(match) {
     }
 
 
-    /*
-     * POSTPONED
-     */
+    /* POSTPONED */
 
     if (
         POSTPONED_STATUSES.includes(
@@ -1685,9 +1801,7 @@ function getMatchState(match) {
     }
 
 
-    /*
-     * CANCELLED
-     */
+    /* CANCELLED */
 
     if (
         CANCELLED_STATUSES.includes(
@@ -1706,9 +1820,7 @@ function getMatchState(match) {
     }
 
 
-    /*
-     * SUSPENDED / INTERRUPTED
-     */
+    /* SUSPENDED */
 
     if (
         SUSPENDED_STATUSES.includes(
@@ -1738,12 +1850,7 @@ function getMatchState(match) {
     }
 
 
-    /*
-     * EVERYTHING ELSE
-     *
-     * NS, TBD, etc.
-     * These are treated as upcoming.
-     */
+    /* UPCOMING */
 
     return {
 
@@ -1869,10 +1976,9 @@ async function runMatchAnalysis(
 
     try {
 
-        /*
-         * STEP 1
-         * WEB DATA
-         */
+        /* =========================
+           STEP 1 — WEB DATA
+        ========================= */
 
         const webUrl =
             `/api/web-data` +
@@ -1902,10 +2008,9 @@ async function runMatchAnalysis(
         }
 
 
-        /*
-         * STEP 2
-         * NORMALIZE WEB DATA
-         */
+        /* =========================
+           STEP 2 — NORMALIZE WEB DATA
+        ========================= */
 
         box.innerHTML = `
 
@@ -1925,8 +2030,10 @@ async function runMatchAnalysis(
                     method: "POST",
 
                     headers: {
+
                         "Content-Type":
                             "application/json"
+
                     },
 
                     body: JSON.stringify({
@@ -1956,10 +2063,9 @@ async function runMatchAnalysis(
         }
 
 
-        /*
-         * STEP 3
-         * PREDICTION ENGINE
-         */
+        /* =========================
+           STEP 3 — PREDICTION ENGINE
+        ========================= */
 
         box.innerHTML = `
 
@@ -1979,8 +2085,10 @@ async function runMatchAnalysis(
                     method: "POST",
 
                     headers: {
+
                         "Content-Type":
                             "application/json"
+
                     },
 
                     body: JSON.stringify({
@@ -2010,15 +2118,9 @@ async function runMatchAnalysis(
         }
 
 
-        /*
-         * FINAL DISPLAY
-         *
-         * IMPORTANT:
-         * We intentionally display ONLY:
-         *
-         * PREDICTION
-         * PROBABILITY
-         */
+        /* =========================
+           FINAL DISPLAY
+        ========================= */
 
         box.innerHTML =
             buildAnalysisHTML(
@@ -2050,9 +2152,11 @@ async function runMatchAnalysis(
                 <br><br>
 
                 <strong>
+
                     ${escapeHtml(
                         error.message
                     )}
+
                 </strong>
 
             </div>
@@ -2075,6 +2179,11 @@ function buildAnalysisHTML(
     prediction
 ) {
 
+    /*
+     * Make sure the API returned
+     * a valid prediction object.
+     */
+
     if (
         !prediction ||
         !prediction.success ||
@@ -2096,15 +2205,154 @@ function buildAnalysisHTML(
     }
 
 
-    const probability =
-        formatPredictionProbability(
+    /*
+     * Convert probability safely.
+     *
+     * API can return:
+     *
+     * 0.38 → 38%
+     * 0.60 → 60%
+     * 0.80 → 80%
+     *
+     * OR:
+     *
+     * 38 → 38%
+     * 60 → 60%
+     * 80 → 80%
+     */
+
+    const rawProbability =
+        Number(
             prediction.probability
         );
+
+
+    /*
+     * Reject invalid probability.
+     */
+
+    if (
+        Number.isNaN(rawProbability) ||
+        !Number.isFinite(rawProbability)
+    ) {
+
+        return `
+
+            <div class="status status-warning">
+
+                ⚠️ Invalid probability returned
+                by prediction engine.
+
+            </div>
+
+        `;
+
+    }
+
+
+    /*
+     * Convert decimal probability
+     * into percentage.
+     */
+
+    let probability;
+
+
+    if (
+        rawProbability > 0 &&
+        rawProbability <= 1
+    ) {
+
+        probability =
+            rawProbability * 100;
+
+    }
+
+    else {
+
+        probability =
+            rawProbability;
+
+    }
+
+
+    /*
+     * Keep probability within
+     * a sensible display range.
+     */
+
+    probability =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                probability
+            )
+        );
+
+
+    /*
+     * Determine confidence remark.
+     *
+     * BELOW 60%:
+     * AVOID
+     *
+     * 60% THROUGH 80%:
+     * MEDIUM
+     *
+     * ABOVE 80%:
+     * HIGH
+     */
+
+    let remark;
+    let remarkClass;
+
+
+    if (probability < 60) {
+
+        remark =
+            "AVOID";
+
+        remarkClass =
+            "remark-avoid";
+
+    }
+
+    else if (probability <= 80) {
+
+        remark =
+            "MEDIUM";
+
+        remarkClass =
+            "remark-medium";
+
+    }
+
+    else {
+
+        remark =
+            "HIGH";
+
+        remarkClass =
+            "remark-high";
+
+    }
+
+
+    /*
+     * Rounded display probability.
+     */
+
+    const displayProbability =
+        Math.round(
+            probability
+        ) + "%";
 
 
     return `
 
         <div class="prediction-result">
+
 
             <div class="prediction-label">
 
@@ -2132,10 +2380,22 @@ function buildAnalysisHTML(
             <div class="probability-value">
 
                 ${escapeHtml(
-                    probability
+                    displayProbability
                 )}
 
             </div>
+
+
+            <div
+                class="prediction-remark ${remarkClass}"
+            >
+
+                ${escapeHtml(
+                    remark
+                )}
+
+            </div>
+
 
         </div>
 
@@ -2168,21 +2428,14 @@ function formatPredictionProbability(
 
 
     if (
-        Number.isNaN(number)
+        Number.isNaN(number) ||
+        !Number.isFinite(number)
     ) {
 
         return String(value);
 
     }
 
-
-    /*
-     * If API returns 0.72,
-     * convert to 72%.
-     *
-     * If API returns 72,
-     * keep 72%.
-     */
 
     const percent =
         number > 0 && number <= 1
