@@ -1,247 +1,741 @@
 // /api/fixtures.js
 // ============================================================
-// TOMSONSTAKES GLOBAL FOOTBALL
-// FIXTURES API V4.0
+// TOMSONSTAKES FIXTURE DISCOVERY ENGINE
+// Version 4.0
 //
 // Purpose:
 // - Retrieve fixtures for a specific date
-// - Use Nigeria/WAT timezone
-// - Preserve fixture ID
-// - Preserve home/away team IDs
-// - Preserve league ID and season
-// - Add a clean normalized match object
-// - Keep raw API-Football response available
+// - Normalize API-Football fixture data
+// - Provide reliable home/away team IDs
+// - Provide league and season information
+// - Provide fixture IDs for api/predict.js V4.0
 //
 // IMPORTANT:
-// This endpoint does NOT calculate predictions.
-// Prediction calculations are handled by /api/predict.js
+// - This endpoint does NOT make predictions.
+// - This endpoint does NOT calculate probabilities.
+// - This endpoint does NOT use injuries.
+// - This endpoint does NOT use lineups.
+// - It is a clean fixture-discovery layer.
 // ============================================================
 
 export default async function handler(req, res) {
   try {
-    const { date } = req.query;
+    // ==========================================================
+    // METHOD
+    // ==========================================================
 
-    // ----------------------------------------------------------
-    // 1. Validate date
-    // ----------------------------------------------------------
+    if (req.method !== "GET") {
+      return res.status(405).json({
+        success: false,
+        error: "Method not allowed. Use GET."
+      });
+    }
+
+    // ==========================================================
+    // REQUEST
+    // ==========================================================
+
+    const {
+      date,
+      league,
+      season,
+      timezone
+    } = req.query;
+
+    // ==========================================================
+    // VALIDATION
+    // ==========================================================
 
     if (!date) {
       return res.status(400).json({
         success: false,
-        error: "Date is required. Use YYYY-MM-DD."
+        error:
+          "Date is required. Use YYYY-MM-DD."
       });
     }
 
-    // Basic YYYY-MM-DD validation
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    // ==========================================================
+    // API KEY
+    // ==========================================================
 
-    if (!datePattern.test(date)) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid date format. Use YYYY-MM-DD."
-      });
-    }
-
-    // ----------------------------------------------------------
-    // 2. API key
-    // ----------------------------------------------------------
-
-    const apiKey = process.env.APIFOOTBALL_KEY;
+    const apiKey =
+      process.env.APIFOOTBALL_KEY;
 
     if (!apiKey) {
       return res.status(500).json({
         success: false,
-        error: "API key is not configured."
+        error:
+          "APIFOOTBALL_KEY is not configured."
       });
     }
 
-    // ----------------------------------------------------------
-    // 3. Request API-Football
-    //
-    // timezone=Europe/Lagos ensures kickoff times are returned
-    // in Nigeria local time.
-    // ----------------------------------------------------------
+    // ==========================================================
+    // API-FOOTBALL URL
+    // ==========================================================
 
-    const apiUrl =
-      `https://v3.football.api-sports.io/fixtures` +
-      `?date=${encodeURIComponent(date)}` +
-      `&timezone=Europe/Lagos`;
+    let url =
+      "https://v3.football.api-sports.io/fixtures";
 
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "x-apisports-key": apiKey
-      }
-    });
+    const params =
+      new URLSearchParams();
 
-    // ----------------------------------------------------------
-    // 4. Safely parse response
-    // ----------------------------------------------------------
-
-    const text = await response.text();
-
-    let data;
-
-    try {
-      data = JSON.parse(text);
-    } catch (parseError) {
-      return res.status(502).json({
-        success: false,
-        error: "API-Football returned invalid JSON.",
-        details: text.slice(0, 500)
-      });
-    }
-
-    // ----------------------------------------------------------
-    // 5. API error handling
-    // ----------------------------------------------------------
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        success: false,
-        error: "API-Football request failed.",
-        api: data
-      });
-    }
-
-    // API-Football can return errors even with HTTP 200.
-    if (data.errors && Object.keys(data.errors).length > 0) {
-      return res.status(502).json({
-        success: false,
-        error: "API-Football returned an API error.",
-        api: data
-      });
-    }
-
-    // ----------------------------------------------------------
-    // 6. Raw fixtures
-    // ----------------------------------------------------------
-
-    const fixtures = Array.isArray(data.response)
-      ? data.response
-      : [];
-
-    // ----------------------------------------------------------
-    // 7. Normalize fixtures
-    //
-    // This is the important V4.0 change.
-    //
-    // The frontend will receive explicit:
-    //
-    // fixtureId
-    // homeTeamId
-    // awayTeamId
-    // leagueId
-    // season
-    //
-    // Therefore /api/predict.js does not need to guess
-    // which IDs belong to the selected match.
-    // ----------------------------------------------------------
-
-    const matches = fixtures.map((fixture) => {
-      const fixtureId = fixture?.fixture?.id ?? null;
-
-      const homeTeamId =
-        fixture?.teams?.home?.id ?? null;
-
-      const awayTeamId =
-        fixture?.teams?.away?.id ?? null;
-
-      const leagueId =
-        fixture?.league?.id ?? null;
-
-      const season =
-        fixture?.league?.season ?? null;
-
-      return {
-        fixtureId,
-
-        homeTeamId,
-        awayTeamId,
-
-        leagueId,
-        season,
-
-        home: {
-          id: homeTeamId,
-          name: fixture?.teams?.home?.name ?? null,
-          logo: fixture?.teams?.home?.logo ?? null,
-          winner: fixture?.teams?.home?.winner ?? null
-        },
-
-        away: {
-          id: awayTeamId,
-          name: fixture?.teams?.away?.name ?? null,
-          logo: fixture?.teams?.away?.logo ?? null,
-          winner: fixture?.teams?.away?.winner ?? null
-        },
-
-        league: {
-          id: leagueId,
-          name: fixture?.league?.name ?? null,
-          country: fixture?.league?.country ?? null,
-          season,
-          round: fixture?.league?.round ?? null,
-          logo: fixture?.league?.logo ?? null
-        },
-
-        fixture: {
-          id: fixtureId,
-          date: fixture?.fixture?.date ?? null,
-          timestamp: fixture?.fixture?.timestamp ?? null,
-          timezone: fixture?.fixture?.timezone ?? "UTC",
-          status: fixture?.fixture?.status ?? null,
-          venue: fixture?.fixture?.venue ?? null
-        }
-      };
-    });
-
-    // ----------------------------------------------------------
-    // 8. Check for malformed fixtures
-    // ----------------------------------------------------------
-
-    const validMatches = matches.filter(
-      (match) =>
-        match.fixtureId &&
-        match.homeTeamId &&
-        match.awayTeamId
+    params.set(
+      "date",
+      String(date)
     );
 
-    const invalidCount =
-      matches.length - validMatches.length;
+    // ==========================================================
+    // TIMEZONE
+    //
+    // Nigeria/WAT is the default because the frontend is
+    // designed around Nigerian kickoff times.
+    // ==========================================================
 
-    // ----------------------------------------------------------
-    // 9. Return V4.0 response
-    // ----------------------------------------------------------
+    params.set(
+      "timezone",
+      timezone ||
+        "Africa/Lagos"
+    );
+
+    // ==========================================================
+    // OPTIONAL LEAGUE
+    // ==========================================================
+
+    if (league) {
+      params.set(
+        "league",
+        String(league)
+      );
+    }
+
+    // ==========================================================
+    // OPTIONAL SEASON
+    // ==========================================================
+
+    if (season) {
+      params.set(
+        "season",
+        String(season)
+      );
+    }
+
+    url +=
+      `?${params.toString()}`;
+
+    // ==========================================================
+    // FETCH API-FOOTBALL
+    // ==========================================================
+
+    const response =
+      await fetch(
+        url,
+        {
+          method: "GET",
+
+          headers: {
+            "x-apisports-key":
+              apiKey,
+
+            "Accept":
+              "application/json"
+          }
+        }
+      );
+
+    // ==========================================================
+    // READ RESPONSE
+    // ==========================================================
+
+    const data =
+      await response
+        .json()
+        .catch(() => ({}));
+
+    // ==========================================================
+    // API ERROR
+    // ==========================================================
+
+    if (!response.ok) {
+      return res.status(
+        response.status
+      ).json({
+        success: false,
+
+        error:
+          "API-Football fixture request failed.",
+
+        apiStatus:
+          response.status,
+
+        response: data
+      });
+    }
+
+    // ==========================================================
+    // RAW FIXTURES
+    // ==========================================================
+
+    const rawFixtures =
+      Array.isArray(
+        data?.response
+      )
+        ? data.response
+        : [];
+
+    // ==========================================================
+    // HELPERS
+    // ==========================================================
+
+    const numeric = (
+      value
+    ) => {
+      if (
+        value === null ||
+        value === undefined ||
+        value === ""
+      ) {
+        return null;
+      }
+
+      const number =
+        Number(value);
+
+      return Number.isFinite(
+        number
+      )
+        ? number
+        : null;
+    };
+
+    const safeString = (
+      value
+    ) => {
+      if (
+        value === null ||
+        value === undefined
+      ) {
+        return null;
+      }
+
+      return String(value);
+    };
+
+    // ==========================================================
+    // NORMALIZE FIXTURES
+    // ==========================================================
+
+    const fixtures =
+      rawFixtures
+        .map(
+          (fixture) => {
+
+            const fixtureId =
+              numeric(
+                fixture
+                  ?.fixture
+                  ?.id
+              );
+
+            const homeId =
+              numeric(
+                fixture
+                  ?.teams
+                  ?.home
+                  ?.id
+              );
+
+            const awayId =
+              numeric(
+                fixture
+                  ?.teams
+                  ?.away
+                  ?.id
+              );
+
+            const leagueId =
+              numeric(
+                fixture
+                  ?.league
+                  ?.id
+              );
+
+            const seasonValue =
+              numeric(
+                fixture
+                  ?.league
+                  ?.season
+              );
+
+            return {
+              // =================================================
+              // FIXTURE
+              // =================================================
+
+              fixture: {
+                id:
+                  fixtureId,
+
+                date:
+                  safeString(
+                    fixture
+                      ?.fixture
+                      ?.date
+                  ),
+
+                timestamp:
+                  numeric(
+                    fixture
+                      ?.fixture
+                      ?.timestamp
+                  ),
+
+                timezone:
+                  safeString(
+                    fixture
+                      ?.fixture
+                      ?.timezone
+                  ),
+
+                status: {
+                  long:
+                    safeString(
+                      fixture
+                        ?.fixture
+                        ?.status
+                        ?.long
+                    ),
+
+                  short:
+                    safeString(
+                      fixture
+                        ?.fixture
+                        ?.status
+                        ?.short
+                    ),
+
+                  elapsed:
+                    numeric(
+                      fixture
+                        ?.fixture
+                        ?.status
+                        ?.elapsed
+                    )
+                },
+
+                venue: {
+                  id:
+                    numeric(
+                      fixture
+                        ?.fixture
+                        ?.venue
+                        ?.id
+                    ),
+
+                  name:
+                    safeString(
+                      fixture
+                        ?.fixture
+                        ?.venue
+                        ?.name
+                    ),
+
+                  city:
+                    safeString(
+                      fixture
+                        ?.fixture
+                        ?.venue
+                        ?.city
+                    )
+                }
+              },
+
+              // =================================================
+              // LEAGUE
+              // =================================================
+
+              league: {
+                id:
+                  leagueId,
+
+                name:
+                  safeString(
+                    fixture
+                      ?.league
+                      ?.name
+                  ),
+
+                country:
+                  safeString(
+                    fixture
+                      ?.league
+                      ?.country
+                  ),
+
+                logo:
+                  safeString(
+                    fixture
+                      ?.league
+                      ?.logo
+                  ),
+
+                flag:
+                  safeString(
+                    fixture
+                      ?.league
+                      ?.flag
+                  ),
+
+                season:
+                  seasonValue,
+
+                round:
+                  safeString(
+                    fixture
+                      ?.league
+                      ?.round
+                  ),
+
+                standings:
+                  Boolean(
+                    fixture
+                      ?.league
+                      ?.standings
+                  )
+              },
+
+              // =================================================
+              // HOME TEAM
+              // =================================================
+
+              home: {
+                id:
+                  homeId,
+
+                name:
+                  safeString(
+                    fixture
+                      ?.teams
+                      ?.home
+                      ?.name
+                  ),
+
+                logo:
+                  safeString(
+                    fixture
+                      ?.teams
+                      ?.home
+                      ?.logo
+                  ),
+
+                winner:
+                  fixture
+                    ?.teams
+                    ?.home
+                    ?.winner ??
+                  null
+              },
+
+              // =================================================
+              // AWAY TEAM
+              // =================================================
+
+              away: {
+                id:
+                  awayId,
+
+                name:
+                  safeString(
+                    fixture
+                      ?.teams
+                      ?.away
+                      ?.name
+                  ),
+
+                logo:
+                  safeString(
+                    fixture
+                      ?.teams
+                      ?.away
+                      ?.logo
+                  ),
+
+                winner:
+                  fixture
+                    ?.teams
+                    ?.away
+                    ?.winner ??
+                  null
+              },
+
+              // =================================================
+              // SCORE
+              // =================================================
+
+              score: {
+                halftime: {
+                  home:
+                    numeric(
+                      fixture
+                        ?.score
+                        ?.halftime
+                        ?.home
+                    ),
+
+                  away:
+                    numeric(
+                      fixture
+                        ?.score
+                        ?.halftime
+                        ?.away
+                    )
+                },
+
+                fulltime: {
+                  home:
+                    numeric(
+                      fixture
+                        ?.score
+                        ?.fulltime
+                        ?.home
+                    ),
+
+                  away:
+                    numeric(
+                      fixture
+                        ?.score
+                        ?.fulltime
+                        ?.away
+                    )
+                },
+
+                extratime: {
+                  home:
+                    numeric(
+                      fixture
+                        ?.score
+                        ?.extratime
+                        ?.home
+                    ),
+
+                  away:
+                    numeric(
+                      fixture
+                        ?.score
+                        ?.extratime
+                        ?.away
+                    )
+                },
+
+                penalty: {
+                  home:
+                    numeric(
+                      fixture
+                        ?.score
+                        ?.penalty
+                        ?.home
+                    ),
+
+                  away:
+                    numeric(
+                      fixture
+                        ?.score
+                        ?.penalty
+                        ?.away
+                    )
+                }
+              },
+
+              // =================================================
+              // EASY ACCESS FIELDS
+              //
+              // These make it easier for the frontend and
+              // predict.js to consume fixture information.
+              // =================================================
+
+              fixtureId,
+
+              homeTeamId:
+                homeId,
+
+              awayTeamId:
+                awayId,
+
+              homeTeam:
+                safeString(
+                  fixture
+                    ?.teams
+                    ?.home
+                    ?.name
+                ),
+
+              awayTeam:
+                safeString(
+                  fixture
+                    ?.teams
+                    ?.away
+                    ?.name
+                ),
+
+              leagueId,
+
+              leagueName:
+                safeString(
+                  fixture
+                    ?.league
+                    ?.name
+                ),
+
+              country:
+                safeString(
+                  fixture
+                    ?.league
+                    ?.country
+                ),
+
+              season:
+                seasonValue,
+
+              round:
+                safeString(
+                  fixture
+                    ?.league
+                    ?.round
+                ),
+
+              kickoff:
+                safeString(
+                  fixture
+                    ?.fixture
+                    ?.date
+                )
+            };
+          }
+        )
+        .filter(
+          (fixture) =>
+            fixture.fixtureId &&
+            fixture.homeTeamId &&
+            fixture.awayTeamId
+        );
+
+    // ==========================================================
+    // SORT BY KICKOFF
+    // ==========================================================
+
+    fixtures.sort(
+      (a, b) => {
+
+        const timeA =
+          new Date(
+            a.kickoff
+          ).getTime();
+
+        const timeB =
+          new Date(
+            b.kickoff
+          ).getTime();
+
+        return timeA - timeB;
+      }
+    );
+
+    // ==========================================================
+    // COUNTERS
+    // ==========================================================
+
+    const completedStatuses =
+      new Set([
+        "FT",
+        "AET",
+        "PEN"
+      ]);
+
+    const scheduledStatuses =
+      new Set([
+        "NS",
+        "TBD"
+      ]);
+
+    const completed =
+      fixtures.filter(
+        (fixture) =>
+          completedStatuses.has(
+            fixture
+              ?.fixture
+              ?.status
+              ?.short
+          )
+      ).length;
+
+    const scheduled =
+      fixtures.filter(
+        (fixture) =>
+          scheduledStatuses.has(
+            fixture
+              ?.fixture
+              ?.status
+              ?.short
+          )
+      ).length;
+
+    // ==========================================================
+    // RESPONSE
+    // ==========================================================
 
     return res.status(200).json({
       success: true,
 
-      version: "V4.0",
+      version:
+        "Fixture Discovery V4.0",
 
-      date,
+      query: {
+        date:
+          String(date),
 
-      timezone: "Europe/Lagos",
+        league:
+          league
+            ? String(league)
+            : null,
 
-      count: validMatches.length,
+        season:
+          season
+            ? String(season)
+            : null,
 
-      invalidFixtures: invalidCount,
+        timezone:
+          timezone ||
+          "Africa/Lagos"
+      },
 
-      matches: validMatches,
+      count:
+        fixtures.length,
 
-      // Keep original API-Football response for compatibility.
-      raw: data.response || [],
+      completed,
 
-      paging: data.paging || null
+      scheduled,
+
+      fixtures
     });
 
   } catch (error) {
-    console.error("fixtures.js error:", error);
+
+    console.error(
+      "Fixture Discovery V4.0 error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      error: "Unable to retrieve football fixtures.",
-      details: error?.message || "Unknown server error"
+
+      version:
+        "Fixture Discovery V4.0",
+
+      error:
+        "Unable to retrieve football fixtures.",
+
+      details:
+        error?.message ||
+        "Unknown server error."
     });
   }
 }
