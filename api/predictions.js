@@ -10,71 +10,48 @@ export default async function handler(req, res) {
         !SUPABASE_URL ||
         !SUPABASE_SERVICE_ROLE_KEY
     ) {
-
         return res.status(500).json({
-
             success: false,
-
-            error:
-                "Supabase environment variables are missing."
-
+            error: "Supabase environment variables are missing."
         });
-
     }
 
+    const headers = {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json"
+    };
 
-    /*
-     * GET
-     * Return published predictions
-     */
+
+    /* =====================================================
+       GET — PUBLIC PREDICTIONS
+    ===================================================== */
 
     if (req.method === "GET") {
 
         try {
 
-            const response =
-                await fetch(
-                    `${SUPABASE_URL}/rest/v1/prediction?status=eq.published&order=fixture_date.desc,kickoff.asc`,
-                    {
+            const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/predictions?status=eq.published&order=prediction_date.desc,kickoff.asc`,
+                {
+                    method: "GET",
+                    headers
+                }
+            );
 
-                        headers: {
-
-                            apikey:
-                                SUPABASE_SERVICE_ROLE_KEY,
-
-                            Authorization:
-                                `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-
-                            "Content-Type":
-                                "application/json"
-
-                        }
-
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
+            const data = await response.json();
 
             if (!response.ok) {
 
-                return res.status(
-                    response.status
-                ).json({
-
+                return res.status(response.status).json({
                     success: false,
-
                     error:
                         data.message ||
                         data.error ||
                         "Failed to retrieve predictions."
-
                 });
 
             }
-
 
             return res.status(200).json({
 
@@ -82,31 +59,21 @@ export default async function handler(req, res) {
 
                 count:
                     Array.isArray(data)
-                    ?
-                    data.length
-                    :
-                    0,
+                        ? data.length
+                        : 0,
 
                 predictions:
                     Array.isArray(data)
-                    ?
-                    data
-                    :
-                    []
+                        ? data
+                        : []
 
             });
 
-        }
-
-        catch (error) {
+        } catch (error) {
 
             return res.status(500).json({
-
                 success: false,
-
-                error:
-                    error.message
-
+                error: error.message
             });
 
         }
@@ -114,10 +81,9 @@ export default async function handler(req, res) {
     }
 
 
-    /*
-     * POST
-     * Save a new prediction
-     */
+    /* =====================================================
+       POST — CREATE PREDICTION
+    ===================================================== */
 
     if (req.method === "POST") {
 
@@ -125,45 +91,36 @@ export default async function handler(req, res) {
 
             const body =
                 typeof req.body === "string"
-                ?
-                JSON.parse(req.body)
-                :
-                req.body;
+                    ? JSON.parse(req.body)
+                    : req.body;
 
 
             if (!body) {
 
                 return res.status(400).json({
-
                     success: false,
-
-                    error:
-                        "Request body is required."
-
+                    error: "Request body is required."
                 });
 
             }
 
 
-            const requiredFields = [
+            /* ---------------------------------------------
+               REQUIRED FIELDS
+            --------------------------------------------- */
 
-                "fixture_date",
-                "fixture_id",
+            const requiredFields = [
+                "prediction_date",
                 "home_team",
                 "away_team",
                 "market",
-                "prediction",
+                "selection",
                 "confidence",
-                "analysis",
                 "status"
-
             ];
 
 
-            for (
-                const field
-                of requiredFields
-            ) {
+            for (const field of requiredFields) {
 
                 if (
                     body[field] === undefined ||
@@ -185,10 +142,12 @@ export default async function handler(req, res) {
             }
 
 
+            /* ---------------------------------------------
+               CONFIDENCE VALIDATION
+            --------------------------------------------- */
+
             const confidence =
-                Number(
-                    body.confidence
-                );
+                Number(body.confidence);
 
 
             if (
@@ -209,13 +168,45 @@ export default async function handler(req, res) {
             }
 
 
+            /* ---------------------------------------------
+               STATUS VALIDATION
+            --------------------------------------------- */
+
+            const allowedStatuses = [
+                "draft",
+                "published"
+            ];
+
+
+            if (
+                !allowedStatuses.includes(
+                    String(body.status).toLowerCase()
+                )
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    error:
+                        "Status must be draft or published."
+
+                });
+
+            }
+
+
+            /* ---------------------------------------------
+               BUILD DATABASE ROW
+            --------------------------------------------- */
+
             const row = {
 
-                fixture_date:
-                    body.fixture_date,
+                prediction_date:
+                    body.prediction_date,
 
                 fixture_id:
-                    body.fixture_id,
+                    body.fixture_id || null,
 
                 home_team:
                     body.home_team,
@@ -224,78 +215,72 @@ export default async function handler(req, res) {
                     body.away_team,
 
                 home_team_id:
-                    body.home_team_id,
+                    body.home_team_id || null,
 
                 away_team_id:
-                    body.away_team_id,
+                    body.away_team_id || null,
 
                 country:
-                    body.country || "",
+                    body.country || null,
 
                 league:
-                    body.league || "",
+                    body.league || null,
 
                 kickoff:
-                    body.kickoff,
+                    body.kickoff || null,
 
                 market:
                     body.market,
 
-                prediction:
-                    body.prediction,
+                selection:
+                    body.selection,
 
                 confidence,
 
                 analysis:
-                    body.analysis,
+                    body.analysis || null,
 
                 status:
-                    body.status,
+                    String(body.status).toLowerCase(),
+
+                /*
+                 * Your database requires result.
+                 * Use "pending" until the match is settled.
+                 */
 
                 result:
-                    body.result || null,
+                    body.result || "pending",
 
                 published_at:
-                    body.status === "published"
-                    ?
-                    (
-                        body.published_at ||
-                        new Date().toISOString()
-                    )
-                    :
-                    null
+                    String(body.status).toLowerCase() === "published"
+                        ? (
+                            body.published_at ||
+                            new Date().toISOString()
+                        )
+                        : null
 
             };
 
 
-            const response =
-                await fetch(
-                    `${SUPABASE_URL}/rest/v1/prediction`,
-                    {
+            /* ---------------------------------------------
+               INSERT INTO public.predictions
+            --------------------------------------------- */
 
-                        method: "POST",
+            const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/predictions`,
+                {
+                    method: "POST",
 
-                        headers: {
+                    headers: {
+                        ...headers,
+                        Prefer: "return=representation"
+                    },
 
-                            apikey:
-                                SUPABASE_SERVICE_ROLE_KEY,
+                    body:
+                        JSON.stringify(row)
 
-                            Authorization:
-                                `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-
-                            "Content-Type":
-                                "application/json",
-
-                            Prefer:
-                                "return=representation"
-
-                        },
-
-                        body:
-                            JSON.stringify(row)
-
-                    }
-                );
+                }
+            );
 
 
             const data =
@@ -308,7 +293,6 @@ export default async function handler(req, res) {
                     "SUPABASE INSERT ERROR:",
                     data
                 );
-
 
                 return res.status(
                     response.status
@@ -333,22 +317,17 @@ export default async function handler(req, res) {
 
                 prediction:
                     Array.isArray(data)
-                    ?
-                    data[0]
-                    :
-                    data
+                        ? data[0]
+                        : data
 
             });
 
-        }
-
-        catch (error) {
+        } catch (error) {
 
             console.error(
                 "PREDICTION API ERROR:",
                 error
             );
-
 
             return res.status(500).json({
 
@@ -364,12 +343,15 @@ export default async function handler(req, res) {
     }
 
 
+    /* =====================================================
+       OTHER METHODS
+    ===================================================== */
+
     return res.status(405).json({
 
         success: false,
 
-        error:
-            "Method not allowed."
+        error: "Method not allowed."
 
     });
 
