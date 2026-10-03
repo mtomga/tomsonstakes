@@ -1,2844 +1,1988 @@
+// /api/predict.js
 // ============================================================
-// TOMSONSTAKES GLOBAL FOOTBALL PREDICTION ENGINE
-// api/predict.js
-// VERSION 4.0
-// ============================================================
+// TOMSONSTAKES PREDICTION ENGINE
+// Version 4.1
 //
-// MODEL WEIGHTS
+// PURPOSE
+// ------------------------------------------------------------
+// Combines the six approved prediction signals:
 //
-// Last 5 matches — recency weighted       45%
-// Current league standings                30%
-// Season home/away strength                5%
-// Expected goals / goal model             10%
-// Recent home/away venue form              5%
-// Last 5 H2H                               5%
-// ---------------------------------------------
+// 1. Last 5 recency-weighted form       45%
+// 2. Current league standings           30%
+// 3. Season home/away strength           5%
+// 4. Expected goals / goal model        10%
+// 5. Recent home/away venue form          5%
+// 6. Last 5 H2H                            5%
+//
 // TOTAL                                  100%
 //
 // IMPORTANT
-// - No artificial home-win bias.
-// - No hardcoded Home Win.
-// - API-Football's /predictions endpoint is NOT used
-//   as a probability signal.
-// - Injuries do NOT affect probabilities.
-// - Lineups do NOT affect probabilities.
-// - The highest calculated H/D/A probability wins.
-// - Missing signals are neutral, not artificially forced.
-// - Team IDs can be resolved from the fixture/date/team names.
+// ------------------------------------------------------------
+// NOT USED:
+// - Injuries
+// - Lineups
+// - Bookmaker odds
+// - API-Football prediction endpoint
+// - Artificial home advantage
+// - Fixed home-win fallback
 //
-// Environment variable required:
-//
-// APIFOOTBALL_KEY
-//
-// API base:
-// https://v3.football.api-sports.io
-//
+// The highest calculated probability wins.
 // ============================================================
 
 const API_BASE = "https://v3.football.api-sports.io";
-const TIMEZONE = "Africa/Lagos";
-
-// ------------------------------------------------------------
-// CONFIGURATION
-// ------------------------------------------------------------
 
 const WEIGHTS = {
-    form: 0.45,
+    recentForm: 0.45,
     standings: 0.30,
-    seasonStrength: 0.05,
-    xg: 0.10,
-    venueForm: 0.05,
+    seasonVenue: 0.05,
+    expectedGoals: 0.10,
+    recentVenueForm: 0.05,
     h2h: 0.05
 };
 
-const RECENCY_WEIGHTS = [
-    0.10, // oldest
-    0.15,
-    0.20,
-    0.25,
-    0.30  // newest
-];
 
-const FINISHED_STATUSES = new Set([
-    "FT",
-    "AET",
-    "PEN"
-]);
-
-const EXCLUDED_STATUSES = new Set([
-    "NS",
-    "TBD",
-    "PST",
-    "CANC",
-    "ABD",
-    "SUSP"
-]);
-
-// ------------------------------------------------------------
+// ============================================================
 // BASIC HELPERS
-// ------------------------------------------------------------
+// ============================================================
 
-function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-}
+function num(value, fallback = 0) {
+    if (value === null || value === undefined || value === "") {
+        return fallback;
+    }
 
-function safeNumber(value, fallback = 0) {
     const n = Number(value);
+
     return Number.isFinite(n) ? n : fallback;
 }
 
-function round(value, decimals = 2) {
-    const factor = Math.pow(10, decimals);
-    return Math.round((safeNumber(value) + Number.EPSILON) * factor) / factor;
+
+function clamp(value, min = 0, max = 1) {
+    return Math.max(min, Math.min(max, value));
 }
 
-function sum(values) {
-    return values.reduce((a, b) => a + safeNumber(b), 0);
+
+function normalizeTeamId(value) {
+    const id = Number(value);
+
+    return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-function average(values, fallback = 0) {
+
+function safeDivide(a, b, fallback = 0) {
+    if (!Number.isFinite(Number(a)) || !Number.isFinite(Number(b)) || Number(b) === 0) {
+        return fallback;
+    }
+
+    return Number(a) / Number(b);
+}
+
+
+function average(values) {
     const valid = values
         .map(Number)
         .filter(Number.isFinite);
 
-    if (!valid.length) return fallback;
+    if (!valid.length) return 0;
 
-    return sum(valid) / valid.length;
+    return valid.reduce((sum, value) => sum + value, 0) / valid.length;
 }
 
-function normalizeProbabilityObject(home, draw, away) {
-    let h = Math.max(0, safeNumber(home));
-    let d = Math.max(0, safeNumber(draw));
-    let a = Math.max(0, safeNumber(away));
 
-    const total = h + d + a;
+function weightedAverage(values, weights) {
+    let numerator = 0;
+    let denominator = 0;
 
-    if (total <= 0) {
-        return {
-            home: 33.33,
-            draw: 33.34,
-            away: 33.33
-        };
+    for (let i = 0; i < values.length; i++) {
+        const value = Number(values[i]);
+        const weight = Number(weights[i]);
+
+        if (!Number.isFinite(value) || !Number.isFinite(weight)) {
+            continue;
+        }
+
+        numerator += value * weight;
+        denominator += weight;
     }
 
-    h = (h / total) * 100;
-    d = (d / total) * 100;
-    a = (a / total) * 100;
-
-    return {
-        home: round(h, 2),
-        draw: round(d, 2),
-        away: round(a, 2)
-    };
+    return denominator ? numerator / denominator : 0;
 }
 
-function blendProbabilitySignals(signals) {
-    let home = 0;
-    let draw = 0;
-    let away = 0;
-    let totalWeight = 0;
 
-    for (const signal of signals) {
-        if (!signal) continue;
+// ============================================================
+// API-FOOTBALL REQUEST
+// ============================================================
 
-        const weight = safeNumber(signal.weight);
-
-        if (weight <= 0) continue;
-
-        const p = signal.probabilities || {};
-
-        home += safeNumber(p.home, 33.3333) * weight;
-        draw += safeNumber(p.draw, 33.3333) * weight;
-        away += safeNumber(p.away, 33.3333) * weight;
-
-        totalWeight += weight;
-    }
-
-    if (totalWeight <= 0) {
-        return normalizeProbabilityObject(33.33, 33.34, 33.33);
-    }
-
-    return normalizeProbabilityObject(
-        home / totalWeight,
-        draw / totalWeight,
-        away / totalWeight
-    );
-}
-
-function getHighestOutcome(probabilities) {
-    const entries = [
-        ["Home Win", safeNumber(probabilities.home)],
-        ["Draw", safeNumber(probabilities.draw)],
-        ["Away Win", safeNumber(probabilities.away)]
-    ];
-
-    entries.sort((a, b) => b[1] - a[1]);
-
-    return {
-        prediction: entries[0][0],
-        probability: round(entries[0][1], 2)
-    };
-}
-
-function confidenceFromProbability(probability) {
-    const p = safeNumber(probability);
-
-    if (p < 60) return "AVOID";
-    if (p <= 80) return "MEDIUM";
-    return "HIGH";
-}
-
-function outcomeCodeForFixture(fixture, teamId) {
-    if (!fixture || !fixture.teams || !fixture.goals) return null;
-
-    const homeId = safeNumber(fixture.teams.home?.id);
-    const awayId = safeNumber(fixture.teams.away?.id);
-
-    const homeGoals = safeNumber(fixture.goals.home, NaN);
-    const awayGoals = safeNumber(fixture.goals.away, NaN);
-
-    if (!Number.isFinite(homeGoals) || !Number.isFinite(awayGoals)) {
-        return null;
-    }
-
-    const id = safeNumber(teamId);
-
-    if (id === homeId) {
-        if (homeGoals > awayGoals) return "W";
-        if (homeGoals < awayGoals) return "L";
-        return "D";
-    }
-
-    if (id === awayId) {
-        if (awayGoals > homeGoals) return "W";
-        if (awayGoals < homeGoals) return "L";
-        return "D";
-    }
-
-    return null;
-}
-
-function fixtureDateValue(fixture) {
-    if (fixture?.fixture?.timestamp) {
-        return safeNumber(fixture.fixture.timestamp);
-    }
-
-    if (fixture?.fixture?.date) {
-        const t = Date.parse(fixture.fixture.date);
-        if (Number.isFinite(t)) return t / 1000;
-    }
-
-    return 0;
-}
-
-function isFinishedFixture(fixture) {
-    const status = fixture?.fixture?.status?.short;
-
-    if (FINISHED_STATUSES.has(status)) return true;
-    if (EXCLUDED_STATUSES.has(status)) return false;
-
-    return false;
-}
-
-function cleanTeamName(name) {
-    return String(name || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, " ")
-        .replace(/\b(fc|cf|sc|afc|ac|club|de|cd)\b/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-}
-
-function teamNameScore(a, b) {
-    const x = cleanTeamName(a);
-    const y = cleanTeamName(b);
-
-    if (!x || !y) return 0;
-
-    if (x === y) return 1;
-
-    if (x.includes(y) || y.includes(x)) {
-        return 0.92;
-    }
-
-    const ax = new Set(x.split(" "));
-    const by = new Set(y.split(" "));
-
-    let common = 0;
-
-    for (const word of ax) {
-        if (by.has(word)) common++;
-    }
-
-    const denominator = Math.max(ax.size, by.size);
-
-    return denominator ? common / denominator : 0;
-}
-
-// ------------------------------------------------------------
-// API REQUEST
-// ------------------------------------------------------------
-
-async function apiGet(endpoint, params = {}) {
-    const key = process.env.APIFOOTBALL_KEY;
-
-    if (!key) {
-        throw new Error(
-            "APIFOOTBALL_KEY environment variable is missing."
-        );
-    }
+async function apiFootball(endpoint, params, apiKey) {
 
     const url = new URL(`${API_BASE}${endpoint}`);
 
-    for (const [keyName, value] of Object.entries(params)) {
+    Object.entries(params || {}).forEach(([key, value]) => {
+
         if (
             value !== undefined &&
             value !== null &&
-            String(value).trim() !== ""
+            value !== ""
         ) {
-            url.searchParams.set(keyName, String(value));
+            url.searchParams.set(key, String(value));
         }
-    }
+
+    });
 
     const response = await fetch(url.toString(), {
         method: "GET",
         headers: {
-            "x-apisports-key": key
+            "x-apisports-key": apiKey,
+            "Accept": "application/json"
         }
     });
+
+    const text = await response.text();
 
     let data;
 
     try {
-        data = await response.json();
+        data = JSON.parse(text);
     } catch (error) {
         throw new Error(
-            `API-Football returned invalid JSON (${response.status}).`
+            `API-Football returned invalid JSON from ${endpoint}: ${text.slice(0, 300)}`
         );
     }
 
     if (!response.ok) {
-        const apiErrors = data?.errors
-            ? JSON.stringify(data.errors)
-            : `HTTP ${response.status}`;
-
-        throw new Error(apiErrors);
+        throw new Error(
+            `API-Football HTTP ${response.status}: ${
+                JSON.stringify(data.errors || data)
+            }`
+        );
     }
 
-    if (Array.isArray(data?.errors) && data.errors.length > 0) {
-        throw new Error(JSON.stringify(data.errors));
-    }
-
-    if (data?.errors && typeof data.errors === "object") {
-        const errorValues = Object.values(data.errors);
-
-        if (errorValues.length) {
-            throw new Error(errorValues.join("; "));
-        }
+    if (data.errors && Object.keys(data.errors).length > 0) {
+        throw new Error(
+            `API-Football error from ${endpoint}: ${
+                JSON.stringify(data.errors)
+            }`
+        );
     }
 
     return data;
 }
 
-// ------------------------------------------------------------
-// RESPONSE EXTRACTION
-// ------------------------------------------------------------
 
-function apiResponse(data) {
-    return Array.isArray(data?.response)
-        ? data.response
-        : [];
+// ============================================================
+// FIXTURE
+// ============================================================
+
+async function getFixture(fixtureId, apiKey) {
+
+    const data = await apiFootball(
+        "/fixtures",
+        {
+            id: fixtureId
+        },
+        apiKey
+    );
+
+    const fixture = data.response?.[0];
+
+    if (!fixture) {
+        throw new Error(
+            `Fixture ${fixtureId} was not found.`
+        );
+    }
+
+    return fixture;
 }
 
-// ------------------------------------------------------------
-// INPUT EXTRACTION
-// ------------------------------------------------------------
 
-function extractInput(body) {
-    const match = body?.match || {};
-    const normalized = body?.normalized || {};
+// ============================================================
+// ANALYZE ENDPOINT
+//
+// The V4.1 analyze endpoint is responsible for calculating
+// team-level data.
+//
+// We call it twice:
+//
+// HOME TEAM
+// AWAY TEAM
+// ============================================================
 
-    const homeTeamId =
-        safeNumber(
-            match.homeTeamId ??
-            match.home_id ??
-            match.homeTeam?.id ??
-            normalized.homeTeamId ??
-            normalized.home?.id ??
-            normalized.fixture?.teams?.home?.id,
-            0
-        ) || null;
+function getApplicationBaseUrl(req) {
 
-    const awayTeamId =
-        safeNumber(
-            match.awayTeamId ??
-            match.away_id ??
-            match.awayTeam?.id ??
-            normalized.awayTeamId ??
-            normalized.away?.id ??
-            normalized.fixture?.teams?.away?.id,
-            0
-        ) || null;
+    // Explicit application URL takes priority.
+    if (process.env.APP_URL) {
+        return process.env.APP_URL.replace(/\/$/, "");
+    }
 
-    const fixtureId =
-        safeNumber(
-            match.fixtureId ??
-            match.fixture_id ??
-            match.id ??
-            normalized.fixtureId ??
-            normalized.fixture?.fixture?.id ??
-            normalized.fixture?.id,
-            0
-        ) || null;
+    // Vercel deployment URL.
+    if (process.env.VERCEL_URL) {
+        return `https://${process.env.VERCEL_URL}`;
+    }
 
-    const homeName =
-        match.homeTeamName ??
-        match.homeTeam ??
-        match.home ??
-        normalized.homeTeamName ??
-        normalized.home?.name ??
-        normalized.fixture?.teams?.home?.name ??
-        "";
+    // Local development.
+    const protocol =
+        req.headers["x-forwarded-proto"] ||
+        "http";
 
-    const awayName =
-        match.awayTeamName ??
-        match.awayTeam ??
-        match.away ??
-        normalized.awayTeamName ??
-        normalized.away?.name ??
-        normalized.fixture?.teams?.away?.name ??
-        "";
+    const host =
+        req.headers.host ||
+        "localhost:3000";
 
-    const date =
-        match.date ??
-        match.matchDate ??
-        normalized.date ??
-        normalized.fixture?.fixture?.date ??
-        normalized.fixture?.date ??
+    return `${protocol}://${host}`;
+}
+
+
+async function callAnalyze({
+    req,
+    teamId,
+    opponentId,
+    league,
+    season,
+    from,
+    to
+}) {
+
+    const baseUrl = getApplicationBaseUrl(req);
+
+    const url = new URL(
+        `${baseUrl}/api/analyze`
+    );
+
+    url.searchParams.set(
+        "team",
+        String(teamId)
+    );
+
+    url.searchParams.set(
+        "opponent",
+        String(opponentId)
+    );
+
+    if (league) {
+        url.searchParams.set(
+            "league",
+            String(league)
+        );
+    }
+
+    if (season) {
+        url.searchParams.set(
+            "season",
+            String(season)
+        );
+    }
+
+    if (from) {
+        url.searchParams.set(
+            "from",
+            String(from)
+        );
+    }
+
+    if (to) {
+        url.searchParams.set(
+            "to",
+            String(to)
+        );
+    }
+
+    const response = await fetch(
+        url.toString(),
+        {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        }
+    );
+
+    const text = await response.text();
+
+    let data;
+
+    try {
+        data = JSON.parse(text);
+    } catch (error) {
+        throw new Error(
+            `Analyze endpoint returned invalid JSON: ${text.slice(0, 300)}`
+        );
+    }
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.error ||
+            `Analyze endpoint returned HTTP ${response.status}.`
+        );
+
+    }
+
+    return data;
+}
+
+
+// ============================================================
+// EXTRACT LAST-5 FORM
+// ============================================================
+//
+// Converts results into a 0-1 team strength score.
+//
+// W = 3 points
+// D = 1 point
+// L = 0 points
+//
+// Recency weights:
+//
+// Match 1 = 5
+// Match 2 = 4
+// Match 3 = 3
+// Match 4 = 2
+// Match 5 = 1
+//
+// The analyze endpoint should already expose a recency score.
+// We support multiple field names so the prediction engine
+// remains compatible with V4.0/V4.1 analyze responses.
+// ============================================================
+
+function extractRecentFormScore(analysis) {
+
+    const directCandidates = [
+        analysis?.recentForm?.score,
+        analysis?.recentForm?.formScore,
+        analysis?.recencyWeightedForm,
+        analysis?.recencyWeightedFormScore,
+        analysis?.form?.recencyWeightedScore,
+        analysis?.form?.formScore,
+        analysis?.formScore
+    ];
+
+    for (const value of directCandidates) {
+
+        const n = Number(value);
+
+        if (Number.isFinite(n)) {
+
+            // If already 0-1.
+            if (n >= 0 && n <= 1) {
+                return n;
+            }
+
+            // If percentage.
+            if (n > 1 && n <= 100) {
+                return n / 100;
+            }
+        }
+    }
+
+
+    // --------------------------------------------------------
+    // Fallback: calculate from lastFive
+    // --------------------------------------------------------
+
+    const matches =
+        analysis?.lastFive ||
+        analysis?.recentMatches ||
+        analysis?.form?.lastFive ||
+        [];
+
+    if (!Array.isArray(matches) || !matches.length) {
+        return 0.5;
+    }
+
+
+    const weights = [5, 4, 3, 2, 1];
+
+    let points = 0;
+    let maxPoints = 0;
+
+    for (let i = 0; i < matches.length && i < 5; i++) {
+
+        const match = matches[i];
+
+        const result =
+            String(
+                match?.result ||
+                match?.outcome ||
+                match?.form ||
+                ""
+            ).toUpperCase();
+
+        let matchPoints = 0;
+
+        if (result === "W") {
+            matchPoints = 3;
+        } else if (result === "D") {
+            matchPoints = 1;
+        } else {
+            matchPoints = 0;
+        }
+
+        const weight = weights[i] || 1;
+
+        points += matchPoints * weight;
+        maxPoints += 3 * weight;
+    }
+
+    if (!maxPoints) {
+        return 0.5;
+    }
+
+    return clamp(points / maxPoints);
+}
+
+
+// ============================================================
+// STANDINGS SCORE
+// ============================================================
+
+function extractStandingsScore(analysis) {
+
+    const directCandidates = [
+        analysis?.standings?.score,
+        analysis?.standings?.standingScore,
+        analysis?.standingsScore,
+        analysis?.tableScore,
+        analysis?.leaguePositionScore
+    ];
+
+    for (const value of directCandidates) {
+
+        const n = Number(value);
+
+        if (Number.isFinite(n)) {
+
+            if (n >= 0 && n <= 1) {
+                return n;
+            }
+
+            if (n > 1 && n <= 100) {
+                return n / 100;
+            }
+        }
+    }
+
+
+    const standing =
+        analysis?.standings?.team ||
+        analysis?.standings ||
+        analysis?.standing ||
         null;
 
-    return {
-        fixtureId,
-        homeTeamId,
-        awayTeamId,
-        homeName: typeof homeName === "object"
-            ? homeName.name || ""
-            : String(homeName || ""),
-        awayName: typeof awayName === "object"
-            ? awayName.name || ""
-            : String(awayName || ""),
-        date
-    };
-}
-
-// ------------------------------------------------------------
-// FIXTURE RESOLUTION
-// ------------------------------------------------------------
-
-async function getFixtureById(fixtureId) {
-    if (!fixtureId) return null;
-
-    try {
-        const data = await apiGet("/fixtures", {
-            id: fixtureId,
-            timezone: TIMEZONE
-        });
-
-        return apiResponse(data)[0] || null;
-    } catch (error) {
-        return null;
-    }
-}
-
-function dateOnly(dateValue) {
-    if (!dateValue) return null;
-
-    const value = String(dateValue);
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return value;
-    }
-
-    const parsed = new Date(value);
-
-    if (Number.isNaN(parsed.getTime())) return null;
-
-    return new Intl.DateTimeFormat("en-CA", {
-        timeZone: TIMEZONE,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit"
-    }).format(parsed);
-}
-
-function fixtureDateInLagos(fixture) {
-    if (!fixture?.fixture?.date) return null;
-
-    return dateOnly(fixture.fixture.date);
-}
-
-function findBestFixture(fixtures, homeName, awayName) {
-    if (!Array.isArray(fixtures) || !fixtures.length) {
-        return null;
-    }
-
-    let best = null;
-    let bestScore = -1;
-
-    for (const fixture of fixtures) {
-        if (!fixture?.teams?.home || !fixture?.teams?.away) {
-            continue;
-        }
-
-        const homeScore = teamNameScore(
-            homeName,
-            fixture.teams.home.name
-        );
-
-        const awayScore = teamNameScore(
-            awayName,
-            fixture.teams.away.name
-        );
-
-        const directScore =
-            (homeScore * 0.5) +
-            (awayScore * 0.5);
-
-        if (directScore > bestScore) {
-            bestScore = directScore;
-
-            best = {
-                fixture,
-                score: directScore
-            };
-        }
-    }
-
-    return best && best.score >= 0.45
-        ? best.fixture
-        : null;
-}
-
-async function resolveFixture(input) {
-    let fixture = null;
-
-    // --------------------------------------------------------
-    // 1. Direct fixture ID
-    // --------------------------------------------------------
-
-    if (input.fixtureId) {
-        fixture = await getFixtureById(input.fixtureId);
-
-        if (fixture) {
-            return fixture;
-        }
-    }
-
-    // --------------------------------------------------------
-    // 2. Search fixture by date and team names
-    // --------------------------------------------------------
-
-    const requestedDate =
-        dateOnly(input.date) ||
-        dateOnly(new Date());
-
-    if (requestedDate) {
-        try {
-            const data = await apiGet("/fixtures", {
-                date: requestedDate,
-                timezone: TIMEZONE
-            });
-
-            const fixtures = apiResponse(data);
-
-            fixture = findBestFixture(
-                fixtures,
-                input.homeName,
-                input.awayName
-            );
-
-            if (fixture) {
-                return fixture;
-            }
-        } catch (error) {
-            // Continue to fallback resolution.
-        }
-    }
-
-    // --------------------------------------------------------
-    // 3. Search teams individually if fixture lookup failed
-    // --------------------------------------------------------
-
-    let homeTeamId = input.homeTeamId;
-    let awayTeamId = input.awayTeamId;
-
-    if (!homeTeamId && input.homeName) {
-        homeTeamId = await resolveTeamId(input.homeName);
-    }
-
-    if (!awayTeamId && input.awayName) {
-        awayTeamId = await resolveTeamId(input.awayName);
-    }
-
-    // --------------------------------------------------------
-    // 4. If IDs are available, search fixtures by both teams
-    // --------------------------------------------------------
-
-    if (homeTeamId && awayTeamId) {
-        try {
-            const teamFixtures = await apiGet("/fixtures", {
-                team: homeTeamId,
-                last: 20,
-                timezone: TIMEZONE
-            });
-
-            const fixtures = apiResponse(teamFixtures);
-
-            const candidate = fixtures.find((f) => {
-                const h = safeNumber(f?.teams?.home?.id);
-                const a = safeNumber(f?.teams?.away?.id);
-
-                return (
-                    (h === homeTeamId && a === awayTeamId) ||
-                    (h === awayTeamId && a === homeTeamId)
-                );
-            });
-
-            if (candidate) {
-                return candidate;
-            }
-        } catch (error) {
-            // Continue.
-        }
-    }
-
-    return null;
-}
-
-// ------------------------------------------------------------
-// TEAM ID RESOLUTION
-// ------------------------------------------------------------
-
-async function resolveTeamId(teamName) {
-    if (!teamName) return null;
-
-    try {
-        const data = await apiGet("/teams", {
-            search: teamName
-        });
-
-        const teams = apiResponse(data);
-
-        if (!teams.length) return null;
-
-        let best = null;
-        let bestScore = 0;
-
-        for (const item of teams) {
-            const team = item?.team || item;
-
-            const score = teamNameScore(
-                teamName,
-                team?.name
-            );
-
-            if (score > bestScore) {
-                bestScore = score;
-
-                best = safeNumber(team?.id, 0) || null;
-            }
-        }
-
-        return best;
-    } catch (error) {
-        return null;
-    }
-}
-
-// ------------------------------------------------------------
-// RECENT FIXTURES
-// ------------------------------------------------------------
-
-async function getRecentFixtures(teamId, count = 5) {
-    if (!teamId) return [];
-
-    try {
-        const data = await apiGet("/fixtures", {
-            team: teamId,
-            last: count,
-            timezone: TIMEZONE
-        });
-
-        const fixtures = apiResponse(data)
-            .filter(isFinishedFixture)
-            .sort(
-                (a, b) =>
-                    fixtureDateValue(a) -
-                    fixtureDateValue(b)
-            );
-
-        return fixtures.slice(-count);
-    } catch (error) {
-        return [];
-    }
-}
-
-// ------------------------------------------------------------
-// STANDINGS
-// ------------------------------------------------------------
-
-function flattenStandings(response) {
-    const result = [];
-
-    for (const group of response || []) {
-        if (Array.isArray(group)) {
-            result.push(...group);
-            continue;
-        }
-
-        if (Array.isArray(group?.league?.standings)) {
-            for (const table of group.league.standings) {
-                if (Array.isArray(table)) {
-                    result.push(...table);
-                }
-            }
-        }
-    }
-
-    return result;
-}
-
-async function getStandings(leagueId, season) {
-    if (!leagueId || !season) {
-        return [];
-    }
-
-    try {
-        const data = await apiGet("/standings", {
-            league: leagueId,
-            season
-        });
-
-        return flattenStandings(apiResponse(data));
-    } catch (error) {
-        return [];
-    }
-}
-
-function findStanding(standings, teamId) {
-    return standings.find(
-        (row) =>
-            safeNumber(row?.team?.id) ===
-            safeNumber(teamId)
-    ) || null;
-}
-
-// ------------------------------------------------------------
-// TEAM SEASON STATISTICS
-// ------------------------------------------------------------
-
-async function getTeamStatistics(leagueId, season, teamId) {
-    if (!leagueId || !season || !teamId) {
-        return null;
-    }
-
-    try {
-        const data = await apiGet("/teams/statistics", {
-            league: leagueId,
-            season,
-            team: teamId
-        });
-
-        return apiResponse(data)[0] || null;
-    } catch (error) {
-        return null;
-    }
-}
-
-// ------------------------------------------------------------
-// H2H
-// ------------------------------------------------------------
-
-async function getH2H(homeTeamId, awayTeamId) {
-    if (!homeTeamId || !awayTeamId) {
-        return [];
-    }
-
-    try {
-        const data = await apiGet(
-            "/fixtures/headtohead",
-            {
-                h2h: `${homeTeamId}-${awayTeamId}`,
-                last: 5,
-                timezone: TIMEZONE
-            }
-        );
-
-        return apiResponse(data)
-            .filter(isFinishedFixture)
-            .sort(
-                (a, b) =>
-                    fixtureDateValue(a) -
-                    fixtureDateValue(b)
-            )
-            .slice(-5);
-    } catch (error) {
-        return [];
-    }
-}
-
-// ------------------------------------------------------------
-// SIGNAL 1
-// LAST 5 MATCHES — 45%
-//
-// Recency:
-// oldest  10%
-// second   15%
-// third    20%
-// fourth   25%
-// newest   30%
-//
-// The form rating combines:
-// - points
-// - goal difference
-// - goals scored
-// - goals conceded
-//
-// No home advantage is added here.
-// ------------------------------------------------------------
-
-function calculateFormRating(fixtures, teamId) {
-    if (!fixtures.length) {
-        return null;
-    }
-
-    let weightedPoints = 0;
-    let weightedGD = 0;
-    let weightedGF = 0;
-    let weightedGA = 0;
-    let totalWeight = 0;
-
-    fixtures.forEach((fixture, index) => {
-        const homeId = safeNumber(
-            fixture?.teams?.home?.id
-        );
-
-        const awayId = safeNumber(
-            fixture?.teams?.away?.id
-        );
-
-        const homeGoals = safeNumber(
-            fixture?.goals?.home,
-            NaN
-        );
-
-        const awayGoals = safeNumber(
-            fixture?.goals?.away,
-            NaN
-        );
-
-        if (
-            !Number.isFinite(homeGoals) ||
-            !Number.isFinite(awayGoals)
-        ) {
-            return;
-        }
-
-        const isHome = homeId === safeNumber(teamId);
-
-        const gf = isHome
-            ? homeGoals
-            : awayGoals;
-
-        const ga = isHome
-            ? awayGoals
-            : homeGoals;
-
-        let points = 0;
-
-        if (gf > ga) points = 3;
-        else if (gf === ga) points = 1;
-
-        const gd = gf - ga;
-
-        const weight =
-            RECENCY_WEIGHTS[
-                Math.min(
-                    index,
-                    RECENCY_WEIGHTS.length - 1
-                )
-            ];
-
-        weightedPoints += points * weight;
-        weightedGD += clamp(gd, -4, 4) * weight;
-        weightedGF += clamp(gf, 0, 5) * weight;
-        weightedGA += clamp(ga, 0, 5) * weight;
-
-        totalWeight += weight;
-    });
-
-    if (!totalWeight) return null;
-
-    weightedPoints /= totalWeight;
-    weightedGD /= totalWeight;
-    weightedGF /= totalWeight;
-    weightedGA /= totalWeight;
-
-    // 70% result points
-    // 20% goal difference
-    // 10% attacking/defensive output
-    const resultComponent =
-        (weightedPoints / 3) * 0.70;
-
-    const gdComponent =
-        ((weightedGD + 4) / 8) * 0.20;
-
-    const goalComponent =
-        clamp(
-            ((weightedGF - weightedGA) + 5) / 10,
-            0,
-            1
-        ) * 0.10;
-
-    const rating =
-        resultComponent +
-        gdComponent +
-        goalComponent;
-
-    return {
-        rating,
-        weightedPoints,
-        weightedGD,
-        weightedGF,
-        weightedGA,
-        matches: fixtures.length
-    };
-}
-
-function formSignal(homeFixtures, awayFixtures) {
-    const home = calculateFormRating(
-        homeFixtures,
-        homeFixtures[0]?.teams?.home?.id ||
-        homeFixtures[0]?.teams?.away?.id
-    );
-
-    const away = calculateFormRating(
-        awayFixtures,
-        awayFixtures[0]?.teams?.home?.id ||
-        awayFixtures[0]?.teams?.away?.id
-    );
-
-    if (!home || !away) {
-        return {
-            probabilities: normalizeProbabilityObject(
-                33.33,
-                33.34,
-                33.33
-            ),
-            available: false,
-            explanation: "Insufficient last-five-match data."
-        };
-    }
-
-    return {
-        probabilities: ratingDifferenceToProbabilities(
-            home.rating - away.rating
-        ),
-        available: true,
-        homeRating: home.rating,
-        awayRating: away.rating,
-        homeDetails: home,
-        awayDetails: away
-    };
-}
-
-// ------------------------------------------------------------
-// Generic rating → H/D/A probability
-//
-// IMPORTANT:
-// There is NO home advantage in this function.
-//
-// Positive difference = home stronger.
-// Negative difference = away stronger.
-// ------------------------------------------------------------
-
-function ratingDifferenceToProbabilities(difference) {
-    const d = clamp(
-        safeNumber(difference),
-        -1.5,
-        1.5
-    );
-
-    const scale = 0.55;
-
-    const homeRaw = Math.exp(d / scale);
-    const awayRaw = Math.exp(-d / scale);
-
-    // Neutral draw component.
-    const drawRaw = 1;
-
-    return normalizeProbabilityObject(
-        homeRaw,
-        drawRaw,
-        awayRaw
-    );
-}
-
-// ------------------------------------------------------------
-// SIGNAL 2
-// CURRENT LEAGUE STANDINGS — 30%
-// ------------------------------------------------------------
-
-function standingStrength(row) {
-    if (!row) return null;
-
-    const rank = safeNumber(row.rank, 0);
-    const points = safeNumber(row.points, 0);
-    const goalDiff = safeNumber(row.goalsDiff, 0);
-
-    const played = Math.max(
-        1,
-        safeNumber(
-            row.all?.played ??
-            row.all?.games ??
-            row.all?.played,
-            1
-        )
-    );
-
-    const pointsPerGame =
-        points / played;
-
-    const gdPerGame =
-        goalDiff / played;
-
-    return {
-        rank,
-        points,
-        pointsPerGame,
-        goalDiff,
-        gdPerGame
-    };
-}
-
-function standingsSignal(
-    homeStanding,
-    awayStanding
-) {
-    const home = standingStrength(
-        homeStanding
-    );
-
-    const away = standingStrength(
-        awayStanding
-    );
-
-    if (!home || !away) {
-        return {
-            probabilities: normalizeProbabilityObject(
-                33.33,
-                33.34,
-                33.33
-            ),
-            available: false,
-            explanation:
-                "Current league standings unavailable."
-        };
-    }
-
-    // Points per game is primary.
-    // Goal difference per game provides secondary separation.
-    const ppgDifference =
-        clamp(
-            home.pointsPerGame -
-            away.pointsPerGame,
-            -3,
-            3
-        );
-
-    const gdDifference =
-        clamp(
-            home.gdPerGame -
-            away.gdPerGame,
-            -3,
-            3
-        );
-
-    const rankDifference =
-        clamp(
-            away.rank - home.rank,
-            -20,
-            20
-        );
-
-    const rating =
-        (ppgDifference / 3) * 0.60 +
-        (gdDifference / 3) * 0.25 +
-        (rankDifference / 20) * 0.15;
-
-    return {
-        probabilities:
-            ratingDifferenceToProbabilities(
-                rating
-            ),
-        available: true,
-        home: home,
-        away: away,
-        rating
-    };
-}
-
-// ------------------------------------------------------------
-// SIGNAL 3
-// SEASON HOME/AWAY STRENGTH — 5%
-// ------------------------------------------------------------
-
-function splitStrength(row, side) {
-    if (!row) return null;
-
-    const source = row[side];
-
-    if (!source) return null;
-
-    const played = Math.max(
-        1,
-        safeNumber(
-            source.played ??
-            source.games,
-            1
-        )
-    );
-
-    const wins = safeNumber(
-        source.win ??
-        source.wins,
+    const rank = num(
+        standing?.rank ??
+        standing?.position,
         0
     );
 
-    const draws = safeNumber(
-        source.draw ??
-        source.draws,
+    const totalTeams = num(
+        analysis?.standings?.totalTeams ??
+        analysis?.standings?.tableSize ??
+        analysis?.tableSize,
         0
     );
 
-    const losses = safeNumber(
-        source.lose ??
-        source.losses,
-        0
-    );
+    if (rank > 0 && totalTeams > 1) {
 
-    const gf = safeNumber(
-        source.goals?.for ??
-        source.goals?.for?.total ??
-        0
-    );
-
-    const ga = safeNumber(
-        source.goals?.against ??
-        source.goals?.against?.total ??
-        0
-    );
-
-    const points =
-        wins * 3 +
-        draws;
-
-    const ppg =
-        points / played;
-
-    const gd =
-        (gf - ga) / played;
-
-    const winRate =
-        wins / played;
-
-    return {
-        played,
-        wins,
-        draws,
-        losses,
-        gf,
-        ga,
-        ppg,
-        gd,
-        winRate
-    };
-}
-
-function seasonStrengthSignal(
-    homeStanding,
-    awayStanding,
-    homeStats,
-    awayStats
-) {
-    let homeSplit =
-        splitStrength(
-            homeStanding,
-            "home"
+        return clamp(
+            1 - ((rank - 1) / (totalTeams - 1))
         );
 
-    let awaySplit =
-        splitStrength(
-            awayStanding,
-            "away"
-        );
-
-    // Fallback to team statistics if standings split
-    // is unavailable.
-    if (!homeSplit && homeStats) {
-        homeSplit =
-            statisticsSplitStrength(
-                homeStats,
-                "home"
-            );
     }
 
-    if (!awaySplit && awayStats) {
-        awaySplit =
-            statisticsSplitStrength(
-                awayStats,
-                "away"
-            );
-    }
-
-    if (!homeSplit || !awaySplit) {
-        return {
-            probabilities:
-                normalizeProbabilityObject(
-                    33.33,
-                    33.34,
-                    33.33
-                ),
-            available: false
-        };
-    }
-
-    const ppgDifference =
-        clamp(
-            homeSplit.ppg -
-            awaySplit.ppg,
-            -3,
-            3
-        );
-
-    const gdDifference =
-        clamp(
-            homeSplit.gd -
-            awaySplit.gd,
-            -3,
-            3
-        );
-
-    const winRateDifference =
-        clamp(
-            homeSplit.winRate -
-            awaySplit.winRate,
-            -1,
-            1
-        );
-
-    const rating =
-        (ppgDifference / 3) * 0.55 +
-        (gdDifference / 3) * 0.25 +
-        winRateDifference * 0.20;
-
-    return {
-        probabilities:
-            ratingDifferenceToProbabilities(
-                rating
-            ),
-        available: true,
-        home: homeSplit,
-        away: awaySplit,
-        rating
-    };
+    return 0.5;
 }
 
-function statisticsSplitStrength(
-    stats,
-    side
-) {
-    const fixtures =
-        stats?.fixtures?.played?.[side];
 
-    const wins =
-        stats?.fixtures?.wins?.[side];
+// ============================================================
+// SEASON HOME/AWAY STRENGTH
+// ============================================================
 
-    const draws =
-        stats?.fixtures?.draws?.[side];
+function extractSeasonVenueScore(analysis, venue) {
 
-    const losses =
-        stats?.fixtures?.loses?.[side];
+    const season =
+        analysis?.seasonStrength ||
+        analysis?.seasonVenueStrength ||
+        analysis?.venueStrength ||
+        analysis?.seasonStats ||
+        {};
 
-    const gf =
-        stats?.goals?.for?.average?.[side];
 
-    const ga =
-        stats?.goals?.against?.average?.[side];
+    const directScore =
+        venue === "home"
+            ? season?.home?.score
+            : season?.away?.score;
 
-    const played = Math.max(
-        1,
-        safeNumber(fixtures, 1)
-    );
+    const directNumber = Number(directScore);
 
-    const w = safeNumber(wins, 0);
-    const d = safeNumber(draws, 0);
-    const l = safeNumber(losses, 0);
+    if (Number.isFinite(directNumber)) {
 
-    const points =
-        w * 3 + d;
-
-    const ppg =
-        points / played;
-
-    const avgGF =
-        safeNumber(gf, 0);
-
-    const avgGA =
-        safeNumber(ga, 0);
-
-    return {
-        played,
-        wins: w,
-        draws: d,
-        losses: l,
-        gf: avgGF * played,
-        ga: avgGA * played,
-        ppg,
-        gd: avgGF - avgGA,
-        winRate: w / played
-    };
-}
-
-// ------------------------------------------------------------
-// SIGNAL 4
-// EXPECTED GOALS / GOAL MODEL — 10%
-//
-// Uses Poisson distribution.
-// ------------------------------------------------------------
-
-function extractGoalAverage(stats, type, side) {
-    if (!stats) return null;
-
-    const value =
-        stats?.goals?.[type]?.average?.[side];
-
-    const n = Number(value);
-
-    return Number.isFinite(n)
-        ? n
-        : null;
-}
-
-function recentGoalAverage(
-    fixtures,
-    teamId
-) {
-    if (!fixtures.length) {
-        return null;
-    }
-
-    const gf = [];
-    const ga = [];
-
-    for (const fixture of fixtures) {
-        const homeId =
-            safeNumber(
-                fixture?.teams?.home?.id
-            );
-
-        const awayId =
-            safeNumber(
-                fixture?.teams?.away?.id
-            );
-
-        const homeGoals =
-            safeNumber(
-                fixture?.goals?.home,
-                NaN
-            );
-
-        const awayGoals =
-            safeNumber(
-                fixture?.goals?.away,
-                NaN
-            );
-
-        if (
-            !Number.isFinite(homeGoals) ||
-            !Number.isFinite(awayGoals)
-        ) {
-            continue;
+        if (directNumber >= 0 && directNumber <= 1) {
+            return directNumber;
         }
 
-        if (homeId === safeNumber(teamId)) {
-            gf.push(homeGoals);
-            ga.push(awayGoals);
-        } else if (
-            awayId === safeNumber(teamId)
-        ) {
-            gf.push(awayGoals);
-            ga.push(homeGoals);
+        if (directNumber > 1 && directNumber <= 100) {
+            return directNumber / 100;
+        }
+
+    }
+
+
+    const venueData =
+        venue === "home"
+            ? season?.home
+            : season?.away;
+
+
+    if (venueData) {
+
+        const wins = num(venueData.wins);
+        const draws = num(venueData.draws);
+        const losses = num(venueData.losses);
+
+        const played =
+            num(venueData.played) ||
+            (wins + draws + losses);
+
+        if (played > 0) {
+
+            const ppg =
+                ((wins * 3) + draws) /
+                played;
+
+            return clamp(
+                ppg / 3
+            );
+
         }
     }
 
-    if (!gf.length) return null;
 
-    return {
-        gf: average(gf),
-        ga: average(ga)
-    };
+    return 0.5;
 }
 
-function poissonProbability(
-    lambda,
-    goals
+
+// ============================================================
+// RECENT VENUE FORM
+// ============================================================
+
+function extractRecentVenueScore(
+    analysis,
+    venue
 ) {
-    if (
-        lambda < 0 ||
-        !Number.isFinite(lambda)
-    ) {
-        return 0;
+
+    const venueForm =
+        analysis?.venueForm ||
+        analysis?.recentVenueForm ||
+        analysis?.recentHomeAwayForm ||
+        {};
+
+
+    const data =
+        venue === "home"
+            ? venueForm?.home
+            : venueForm?.away;
+
+
+    if (!data) {
+        return 0.5;
     }
 
-    let factorial = 1;
 
-    for (let i = 2; i <= goals; i++) {
-        factorial *= i;
-    }
+    const directCandidates = [
+        data.score,
+        data.formScore,
+        data.recentScore,
+        data.ppgScore
+    ];
 
-    return (
-        Math.exp(-lambda) *
-        Math.pow(lambda, goals) /
-        factorial
-    );
-}
 
-function poissonOutcomeProbabilities(
-    homeXG,
-    awayXG
-) {
-    let homeWin = 0;
-    let draw = 0;
-    let awayWin = 0;
+    for (const value of directCandidates) {
 
-    for (let hg = 0; hg <= 8; hg++) {
-        for (let ag = 0; ag <= 8; ag++) {
-            const probability =
-                poissonProbability(
-                    homeXG,
-                    hg
-                ) *
-                poissonProbability(
-                    awayXG,
-                    ag
-                );
+        const n = Number(value);
 
-            if (hg > ag) {
-                homeWin += probability;
-            } else if (hg === ag) {
-                draw += probability;
-            } else {
-                awayWin += probability;
+        if (Number.isFinite(n)) {
+
+            if (n >= 0 && n <= 1) {
+                return n;
+            }
+
+            if (n > 1 && n <= 100) {
+                return n / 100;
             }
         }
     }
 
-    return normalizeProbabilityObject(
-        homeWin,
-        draw,
-        awayWin
-    );
+
+    const wins = num(data.wins);
+    const draws = num(data.draws);
+    const losses = num(data.losses);
+
+    const played =
+        num(data.played) ||
+        (wins + draws + losses);
+
+
+    if (played > 0) {
+
+        return clamp(
+            ((wins * 3) + draws) /
+            (played * 3)
+        );
+
+    }
+
+
+    return 0.5;
 }
 
-function calculateExpectedGoals(
-    homeStats,
-    awayStats,
-    homeRecent,
-    awayRecent
+
+// ============================================================
+// GOAL MODEL
+// ============================================================
+//
+// Returns expected-goal advantage for HOME.
+//
+// The analyze endpoint can provide a prepared xG / goal model.
+//
+// If not available, use season venue goal averages:
+//
+// Home expected goals:
+//   average(home attack, away defence)
+//
+// Away expected goals:
+//   average(away attack, home defence)
+//
+// This is intentionally a goal-model signal rather than
+// simply choosing the team with more goals scored.
+// ============================================================
+
+function extractGoalModel(
+    homeAnalysis,
+    awayAnalysis
 ) {
-    const homeAttack =
-        extractGoalAverage(
-            homeStats,
-            "for",
-            "home"
-        );
 
-    const homeDefense =
-        extractGoalAverage(
-            homeStats,
-            "against",
-            "home"
-        );
+    const homeModel =
+        homeAnalysis?.expectedGoalsModel ||
+        homeAnalysis?.goalModel ||
+        homeAnalysis?.xGModel ||
+        {};
 
-    const awayAttack =
-        extractGoalAverage(
-            awayStats,
-            "for",
-            "away"
-        );
+    const awayModel =
+        awayAnalysis?.expectedGoalsModel ||
+        awayAnalysis?.goalModel ||
+        awayAnalysis?.xGModel ||
+        {};
 
-    const awayDefense =
-        extractGoalAverage(
-            awayStats,
-            "against",
-            "away"
-        );
 
-    let homeXG = null;
-    let awayXG = null;
+    let homeXG = Number(
+        homeModel?.for ??
+        homeModel?.expectedGoals ??
+        homeModel?.xG ??
+        homeModel?.homeXG
+    );
 
-    if (
-        Number.isFinite(homeAttack) &&
-        Number.isFinite(awayDefense)
-    ) {
-        homeXG =
-            (homeAttack + awayDefense) / 2;
-    }
 
-    if (
-        Number.isFinite(awayAttack) &&
-        Number.isFinite(homeDefense)
-    ) {
-        awayXG =
-            (awayAttack + homeDefense) / 2;
-    }
+    let awayXG = Number(
+        awayModel?.for ??
+        awayModel?.expectedGoals ??
+        awayModel?.xG ??
+        awayModel?.awayXG
+    );
 
-    // Recent form goal data can stabilize sparse
-    // season data.
-    if (
-        Number.isFinite(homeXG) &&
-        homeRecent
-    ) {
-        homeXG =
-            (homeXG * 0.75) +
-            (homeRecent.gf * 0.25);
-    }
 
-    if (
-        Number.isFinite(awayXG) &&
-        awayRecent
-    ) {
-        awayXG =
-            (awayXG * 0.75) +
-            (awayRecent.gf * 0.25);
-    }
+    // --------------------------------------------------------
+    // Fallback to season venue goal averages
+    // --------------------------------------------------------
 
     if (!Number.isFinite(homeXG)) {
+
+        const homeSeason =
+            homeAnalysis?.seasonStrength ||
+            homeAnalysis?.seasonVenueStrength ||
+            homeAnalysis?.seasonStats ||
+            {};
+
+        const awaySeason =
+            awayAnalysis?.seasonStrength ||
+            awayAnalysis?.seasonVenueStrength ||
+            awayAnalysis?.seasonStats ||
+            {};
+
+        const homeVenue =
+            homeSeason?.home ||
+            {};
+
+        const awayVenue =
+            awaySeason?.away ||
+            {};
+
+        const homeAttack = num(
+            homeVenue.goalsForAvg ??
+            homeVenue.gfAvg ??
+            homeVenue.averageGoalsFor,
+            1.0
+        );
+
+        const awayDefence = num(
+            awayVenue.goalsAgainstAvg ??
+            awayVenue.gaAvg ??
+            awayVenue.averageGoalsAgainst,
+            1.0
+        );
+
         homeXG =
-            homeRecent?.gf ?? 1.2;
+            (homeAttack + awayDefence) / 2;
     }
+
 
     if (!Number.isFinite(awayXG)) {
+
+        const homeSeason =
+            homeAnalysis?.seasonStrength ||
+            homeAnalysis?.seasonVenueStrength ||
+            homeAnalysis?.seasonStats ||
+            {};
+
+        const awaySeason =
+            awayAnalysis?.seasonStrength ||
+            awayAnalysis?.seasonVenueStrength ||
+            awayAnalysis?.seasonStats ||
+            {};
+
+        const homeVenue =
+            homeSeason?.home ||
+            {};
+
+        const awayVenue =
+            awaySeason?.away ||
+            {};
+
+        const awayAttack = num(
+            awayVenue.goalsForAvg ??
+            awayVenue.gfAvg ??
+            awayVenue.averageGoalsFor,
+            1.0
+        );
+
+        const homeDefence = num(
+            homeVenue.goalsAgainstAvg ??
+            homeVenue.gaAvg ??
+            homeVenue.averageGoalsAgainst,
+            1.0
+        );
+
         awayXG =
-            awayRecent?.gf ?? 1.0;
+            (awayAttack + homeDefence) / 2;
     }
 
-    // Keep model in a realistic range.
-    homeXG = clamp(homeXG, 0.15, 4.5);
-    awayXG = clamp(awayXG, 0.15, 4.5);
+
+    homeXG = Math.max(0.05, homeXG);
+    awayXG = Math.max(0.05, awayXG);
+
+
+    // --------------------------------------------------------
+    // Convert expected goals into a 0-1 advantage.
+    //
+    // This is NOT yet the final match probability.
+    // --------------------------------------------------------
+
+    const total =
+        homeXG + awayXG;
+
+    if (!total) {
+
+        return {
+            homeXG,
+            awayXG,
+            homeScore: 0.5
+        };
+
+    }
+
+
+    const homeShare =
+        homeXG / total;
+
 
     return {
         homeXG,
         awayXG,
-        probabilities:
-            poissonOutcomeProbabilities(
-                homeXG,
-                awayXG
-            )
+        homeScore: clamp(homeShare)
     };
 }
 
-// ------------------------------------------------------------
-// SIGNAL 5
-// RECENT HOME/AWAY VENUE FORM — 5%
-//
-// Home team's last matches specifically at home.
-// Away team's last matches specifically away.
-// ------------------------------------------------------------
 
-function venueFixtures(
-    fixtures,
-    teamId,
-    venue
+// ============================================================
+// H2H SCORE
+// ============================================================
+
+function extractH2HScore(
+    homeAnalysis,
+    awayAnalysis
 ) {
-    return fixtures.filter((fixture) => {
-        const homeId =
-            safeNumber(
-                fixture?.teams?.home?.id
-            );
 
-        const awayId =
-            safeNumber(
-                fixture?.teams?.away?.id
-            );
+    const homeH2H =
+        homeAnalysis?.h2h ||
+        homeAnalysis?.headToHead ||
+        {};
 
-        if (venue === "home") {
-            return homeId === safeNumber(teamId);
+    const direct =
+        homeH2H?.score ??
+        homeH2H?.homeScore ??
+        homeH2H?.teamScore ??
+        homeH2H?.advantage;
+
+
+    const directNumber = Number(direct);
+
+    if (Number.isFinite(directNumber)) {
+
+        if (directNumber >= 0 && directNumber <= 1) {
+            return directNumber;
         }
 
-        if (venue === "away") {
-            return awayId === safeNumber(teamId);
+        if (directNumber > 1 && directNumber <= 100) {
+            return directNumber / 100;
         }
 
-        return false;
-    });
-}
-
-function venueRating(
-    fixtures,
-    teamId
-) {
-    if (!fixtures.length) return null;
-
-    let points = 0;
-    let gd = 0;
-    let count = 0;
-
-    for (const fixture of fixtures) {
-        const homeId =
-            safeNumber(
-                fixture?.teams?.home?.id
-            );
-
-        const awayId =
-            safeNumber(
-                fixture?.teams?.away?.id
-            );
-
-        const hg =
-            safeNumber(
-                fixture?.goals?.home,
-                NaN
-            );
-
-        const ag =
-            safeNumber(
-                fixture?.goals?.away,
-                NaN
-            );
-
-        if (
-            !Number.isFinite(hg) ||
-            !Number.isFinite(ag)
-        ) {
-            continue;
-        }
-
-        let gf;
-        let ga;
-
-        if (homeId === safeNumber(teamId)) {
-            gf = hg;
-            ga = ag;
-        } else if (
-            awayId === safeNumber(teamId)
-        ) {
-            gf = ag;
-            ga = hg;
-        } else {
-            continue;
-        }
-
-        if (gf > ga) points += 3;
-        else if (gf === ga) points += 1;
-
-        gd += clamp(gf - ga, -4, 4);
-
-        count++;
     }
 
-    if (!count) return null;
 
-    const ppg = points / count;
-    const gdPerGame = gd / count;
+    // --------------------------------------------------------
+    // Try to calculate from last-five H2H.
+    // --------------------------------------------------------
 
-    return (
-        (ppg / 3) * 0.70 +
-        ((gdPerGame + 4) / 8) * 0.30
-    );
+    const matches =
+        homeH2H?.lastFive ||
+        homeH2H?.matches ||
+        homeH2H?.fixtures ||
+        [];
+
+
+    if (!Array.isArray(matches) || !matches.length) {
+        return 0.5;
+    }
+
+
+    let points = 0;
+    let maxPoints = 0;
+
+
+    for (const match of matches.slice(0, 5)) {
+
+        const homeTeamId =
+            normalizeTeamId(
+                match?.teams?.home?.id ??
+                match?.homeTeamId
+            );
+
+        const awayTeamId =
+            normalizeTeamId(
+                match?.teams?.away?.id ??
+                match?.awayTeamId
+            );
+
+        const homeGoals =
+            num(
+                match?.goals?.home ??
+                match?.score?.fulltime?.home,
+                NaN
+            );
+
+        const awayGoals =
+            num(
+                match?.goals?.away ??
+                match?.score?.fulltime?.away,
+                NaN
+            );
+
+
+        if (
+            !Number.isFinite(homeGoals) ||
+            !Number.isFinite(awayGoals)
+        ) {
+            continue;
+        }
+
+
+        const weight = 1;
+
+        maxPoints += 3 * weight;
+
+
+        const homeIsTarget =
+            homeTeamId &&
+            homeTeamId === normalizeTeamId(
+                homeAnalysis?.team?.id ??
+                homeAnalysis?.teamId
+            );
+
+
+        const awayIsTarget =
+            awayTeamId &&
+            awayTeamId === normalizeTeamId(
+                homeAnalysis?.team?.id ??
+                homeAnalysis?.teamId
+            );
+
+
+        if (homeIsTarget) {
+
+            if (homeGoals > awayGoals) {
+                points += 3 * weight;
+            } else if (homeGoals === awayGoals) {
+                points += 1 * weight;
+            }
+
+        } else if (awayIsTarget) {
+
+            if (awayGoals > homeGoals) {
+                points += 3 * weight;
+            } else if (awayGoals === homeGoals) {
+                points += 1 * weight;
+            }
+
+        }
+
+    }
+
+
+    if (!maxPoints) {
+        return 0.5;
+    }
+
+
+    return clamp(points / maxPoints);
 }
 
-function venueFormSignal(
-    homeFixtures,
-    awayFixtures,
-    homeTeamId,
-    awayTeamId
+
+// ============================================================
+// SIGNAL EXTRACTION
+// ============================================================
+
+function buildSignals(
+    homeAnalysis,
+    awayAnalysis
 ) {
-    const homeVenue =
-        venueFixtures(
-            homeFixtures,
-            homeTeamId,
+
+    const recentHome =
+        extractRecentFormScore(
+            homeAnalysis
+        );
+
+    const recentAway =
+        extractRecentFormScore(
+            awayAnalysis
+        );
+
+
+    const standingHome =
+        extractStandingsScore(
+            homeAnalysis
+        );
+
+    const standingAway =
+        extractStandingsScore(
+            awayAnalysis
+        );
+
+
+    const seasonHome =
+        extractSeasonVenueScore(
+            homeAnalysis,
             "home"
         );
 
-    const awayVenue =
-        venueFixtures(
-            awayFixtures,
-            awayTeamId,
+    const seasonAway =
+        extractSeasonVenueScore(
+            awayAnalysis,
             "away"
         );
 
-    const homeRating =
-        venueRating(
-            homeVenue,
-            homeTeamId
+
+    const recentVenueHome =
+        extractRecentVenueScore(
+            homeAnalysis,
+            "home"
         );
 
-    const awayRating =
-        venueRating(
-            awayVenue,
-            awayTeamId
+    const recentVenueAway =
+        extractRecentVenueScore(
+            awayAnalysis,
+            "away"
         );
 
-    if (
-        homeRating === null ||
-        awayRating === null
-    ) {
-        return {
-            probabilities:
-                normalizeProbabilityObject(
-                    33.33,
-                    33.34,
-                    33.33
-                ),
-            available: false,
-            homeMatches: homeVenue.length,
-            awayMatches: awayVenue.length
-        };
-    }
 
-    const difference =
-        homeRating - awayRating;
+    const goalModel =
+        extractGoalModel(
+            homeAnalysis,
+            awayAnalysis
+        );
+
+
+    const h2hHome =
+        extractH2HScore(
+            homeAnalysis,
+            awayAnalysis
+        );
+
+
+    const h2hAway =
+        1 - h2hHome;
+
 
     return {
-        probabilities:
-            ratingDifferenceToProbabilities(
-                difference
-            ),
-        available: true,
-        homeRating,
-        awayRating,
-        homeMatches: homeVenue.length,
-        awayMatches: awayVenue.length
+
+        recentForm: {
+            home: recentHome,
+            away: recentAway
+        },
+
+        standings: {
+            home: standingHome,
+            away: standingAway
+        },
+
+        seasonVenue: {
+            home: seasonHome,
+            away: seasonAway
+        },
+
+        expectedGoals: {
+            home: goalModel.homeScore,
+            away: 1 - goalModel.homeScore,
+            homeXG: goalModel.homeXG,
+            awayXG: goalModel.awayXG
+        },
+
+        recentVenueForm: {
+            home: recentVenueHome,
+            away: recentVenueAway
+        },
+
+        h2h: {
+            home: h2hHome,
+            away: h2hAway
+        }
+
     };
 }
 
-// ------------------------------------------------------------
-// SIGNAL 6
-// LAST 5 H2H — 5%
+
+// ============================================================
+// CONVERT TEAM SCORES TO MATCH PROBABILITY
+// ============================================================
 //
-// H2H is deliberately kept low at 5% so old rivalry history
-// cannot overpower current form and standings.
-// ------------------------------------------------------------
+// Every signal gives us a relative strength:
+//
+// homeStrength
+// awayStrength
+//
+// We convert those into a normalized home/away share.
+//
+// Draw probability is calculated separately from:
+//
+// 1. similarity between the teams
+// 2. expected-goal total
+//
+// This prevents every match from becoming H/A only.
+// ============================================================
 
-function h2hSignal(
-    fixtures,
-    homeTeamId,
-    awayTeamId
+function normalizeTwoWay(home, away) {
+
+    home = clamp(home);
+    away = clamp(away);
+
+    const total = home + away;
+
+    if (total <= 0) {
+        return {
+            home: 0.5,
+            away: 0.5
+        };
+    }
+
+    return {
+        home: home / total,
+        away: away / total
+    };
+}
+
+
+// ============================================================
+// DRAW MODEL
+// ============================================================
+
+function calculateDrawProbability(
+    signals,
+    homeXG,
+    awayXG
 ) {
-    if (!fixtures.length) {
-        return {
-            probabilities:
-                normalizeProbabilityObject(
-                    33.33,
-                    33.34,
-                    33.33
-                ),
-            available: false
-        };
-    }
 
-    let homeWins = 0;
-    let draws = 0;
-    let awayWins = 0;
-
-    const weights = [
-        0.10,
-        0.15,
-        0.20,
-        0.25,
-        0.30
-    ];
-
-    let totalWeight = 0;
-
-    fixtures.forEach((fixture, index) => {
-        const homeId =
-            safeNumber(
-                fixture?.teams?.home?.id
-            );
-
-        const awayId =
-            safeNumber(
-                fixture?.teams?.away?.id
-            );
-
-        const hg =
-            safeNumber(
-                fixture?.goals?.home,
-                NaN
-            );
-
-        const ag =
-            safeNumber(
-                fixture?.goals?.away,
-                NaN
-            );
-
-        if (
-            !Number.isFinite(hg) ||
-            !Number.isFinite(ag)
-        ) {
-            return;
-        }
-
-        const weight =
-            weights[
-                Math.min(
-                    index,
-                    weights.length - 1
-                )
-            ];
-
-        let outcome = null;
-
-        // Outcome is always from the perspective of
-        // the current home team.
-        if (homeId === safeNumber(homeTeamId)) {
-            if (hg > ag) outcome = "H";
-            else if (hg === ag) outcome = "D";
-            else outcome = "A";
-        } else if (
-            awayId === safeNumber(homeTeamId)
-        ) {
-            if (ag > hg) outcome = "H";
-            else if (ag === hg) outcome = "D";
-            else outcome = "A";
-        }
-
-        if (outcome === "H") homeWins += weight;
-        if (outcome === "D") draws += weight;
-        if (outcome === "A") awayWins += weight;
-
-        totalWeight += weight;
-    });
-
-    if (!totalWeight) {
-        return {
-            probabilities:
-                normalizeProbabilityObject(
-                    33.33,
-                    33.34,
-                    33.33
-                ),
-            available: false
-        };
-    }
-
-    return {
-        probabilities:
-            normalizeProbabilityObject(
-                homeWins,
-                draws,
-                awayWins
-            ),
-        available: true,
-        matches: fixtures.length,
-        homeWins: round(
-            homeWins / totalWeight * 100,
-            2
+    const closenessValues = [
+        Math.abs(
+            signals.recentForm.home -
+            signals.recentForm.away
         ),
-        draws: round(
-            draws / totalWeight * 100,
-            2
+
+        Math.abs(
+            signals.standings.home -
+            signals.standings.away
         ),
-        awayWins: round(
-            awayWins / totalWeight * 100,
-            2
+
+        Math.abs(
+            signals.seasonVenue.home -
+            signals.seasonVenue.away
+        ),
+
+        Math.abs(
+            signals.expectedGoals.home -
+            signals.expectedGoals.away
+        ),
+
+        Math.abs(
+            signals.recentVenueForm.home -
+            signals.recentVenueForm.away
+        ),
+
+        Math.abs(
+            signals.h2h.home -
+            signals.h2h.away
         )
-    };
-}
-
-// ------------------------------------------------------------
-// DATA QUALITY
-// ------------------------------------------------------------
-
-function calculateDataCoverage(signals) {
-    const entries = [
-        signals.form,
-        signals.standings,
-        signals.seasonStrength,
-        signals.xg,
-        signals.venueForm,
-        signals.h2h
     ];
 
-    const available = entries.filter(
-        (signal) =>
-            signal &&
-            signal.available !== false
-    ).length;
+
+    const closeness =
+        1 - average(closenessValues);
+
+
+    const totalXG =
+        Math.max(
+            0,
+            num(homeXG) +
+            num(awayXG)
+        );
+
+
+    // Lower expected total generally increases
+    // the possibility of a draw.
+    const goalDrawFactor =
+        clamp(
+            1 -
+            ((totalXG - 1.8) / 2.5)
+        );
+
+
+    // Balanced teams + lower scoring environment.
+    let draw =
+        0.18 +
+        (closeness * 0.16) +
+        (goalDrawFactor * 0.08);
+
+
+    return clamp(
+        draw,
+        0.12,
+        0.38
+    );
+}
+
+
+// ============================================================
+// FINAL PROBABILITY ENGINE
+// ============================================================
+
+function calculateProbabilities(
+    signals,
+    homeXG,
+    awayXG
+) {
+
+    let homeStrength =
+        (signals.recentForm.home *
+            WEIGHTS.recentForm) +
+
+        (signals.standings.home *
+            WEIGHTS.standings) +
+
+        (signals.seasonVenue.home *
+            WEIGHTS.seasonVenue) +
+
+        (signals.expectedGoals.home *
+            WEIGHTS.expectedGoals) +
+
+        (signals.recentVenueForm.home *
+            WEIGHTS.recentVenueForm) +
+
+        (signals.h2h.home *
+            WEIGHTS.h2h);
+
+
+    let awayStrength =
+        (signals.recentForm.away *
+            WEIGHTS.recentForm) +
+
+        (signals.standings.away *
+            WEIGHTS.standings) +
+
+        (signals.seasonVenue.away *
+            WEIGHTS.seasonVenue) +
+
+        (signals.expectedGoals.away *
+            WEIGHTS.expectedGoals) +
+
+        (signals.recentVenueForm.away *
+            WEIGHTS.recentVenueForm) +
+
+        (signals.h2h.away *
+            WEIGHTS.h2h);
+
+
+    const twoWay =
+        normalizeTwoWay(
+            homeStrength,
+            awayStrength
+        );
+
+
+    const drawProbability =
+        calculateDrawProbability(
+            signals,
+            homeXG,
+            awayXG
+        );
+
+
+    // Remaining probability is divided between H/A
+    // according to the six-signal strength calculation.
+    const nonDraw =
+        1 - drawProbability;
+
+
+    let homeProbability =
+        twoWay.home * nonDraw;
+
+    let awayProbability =
+        twoWay.away * nonDraw;
+
+
+    // --------------------------------------------------------
+    // Final normalization
+    // --------------------------------------------------------
+
+    const total =
+        homeProbability +
+        drawProbability +
+        awayProbability;
+
+
+    homeProbability =
+        homeProbability / total;
+
+    awayProbability =
+        awayProbability / total;
+
+
+    const finalDraw =
+        drawProbability / total;
+
 
     return {
-        available,
-        total: entries.length,
-        percentage:
-            round(
-                available /
-                entries.length *
-                100,
-                1
-            )
+
+        home:
+            clamp(homeProbability),
+
+        draw:
+            clamp(finalDraw),
+
+        away:
+            clamp(awayProbability),
+
+        rawStrength: {
+            home: homeStrength,
+            away: awayStrength
+        }
+
     };
 }
 
-// ------------------------------------------------------------
-// SIGNAL EXPLANATION
-// ------------------------------------------------------------
 
-function signalWinner(probabilities) {
+// ============================================================
+// PREDICTION LABEL
+// ============================================================
+
+function getPredictionLabel(
+    probabilities,
+    homeName,
+    awayName
+) {
+
+    const candidates = [
+        {
+            key: "home",
+            probability: probabilities.home,
+            label: homeName,
+            market: "HOME WIN"
+        },
+        {
+            key: "draw",
+            probability: probabilities.draw,
+            label: "Draw",
+            market: "DRAW"
+        },
+        {
+            key: "away",
+            probability: probabilities.away,
+            label: awayName,
+            market: "AWAY WIN"
+        }
+    ];
+
+
+    candidates.sort(
+        (a, b) =>
+            b.probability -
+            a.probability
+    );
+
+
     const winner =
-        getHighestOutcome(probabilities);
+        candidates[0];
+
 
     return {
-        outcome: winner.prediction,
+        result: winner.key,
+        market: winner.market,
+        team: winner.label,
         probability: winner.probability
     };
 }
 
-function buildSignalSummary(signals) {
-    return {
-        form: {
-            weight: 45,
-            winner:
-                signalWinner(
-                    signals.form.probabilities
-                ),
-            probabilities:
-                signals.form.probabilities,
-            available:
-                signals.form.available
-        },
 
-        standings: {
-            weight: 30,
-            winner:
-                signalWinner(
-                    signals.standings.probabilities
-                ),
-            probabilities:
-                signals.standings.probabilities,
-            available:
-                signals.standings.available
-        },
+// ============================================================
+// CONFIDENCE
+// ============================================================
+//
+// This is NOT a prediction probability.
+// It describes the separation between the highest and
+// second-highest outcome.
+//
+// No "guaranteed" language.
+// ============================================================
 
-        seasonStrength: {
-            weight: 5,
-            winner:
-                signalWinner(
-                    signals.seasonStrength.probabilities
-                ),
-            probabilities:
-                signals.seasonStrength.probabilities,
-            available:
-                signals.seasonStrength.available
-        },
+function calculateConfidence(
+    probabilities
+) {
 
-        xg: {
-            weight: 10,
-            winner:
-                signalWinner(
-                    signals.xg.probabilities
-                ),
-            probabilities:
-                signals.xg.probabilities,
-            available:
-                signals.xg.available
-        },
-
-        venueForm: {
-            weight: 5,
-            winner:
-                signalWinner(
-                    signals.venueForm.probabilities
-                ),
-            probabilities:
-                signals.venueForm.probabilities,
-            available:
-                signals.venueForm.available
-        },
-
-        h2h: {
-            weight: 5,
-            winner:
-                signalWinner(
-                    signals.h2h.probabilities
-                ),
-            probabilities:
-                signals.h2h.probabilities,
-            available:
-                signals.h2h.available
-        }
-    };
-}
-
-// ------------------------------------------------------------
-// MAIN PREDICTION
-// ------------------------------------------------------------
-
-async function buildPrediction(body) {
-    const input = extractInput(body);
-
-    // --------------------------------------------------------
-    // Resolve fixture
-    // --------------------------------------------------------
-
-    const fixture =
-        await resolveFixture(input);
-
-    if (!fixture) {
-        throw new Error(
-            "Could not resolve the fixture. Provide a valid fixture ID or home/away team names with the match date."
-        );
-    }
-
-    const fixtureId =
-        safeNumber(
-            fixture?.fixture?.id,
-            input.fixtureId
-        );
-
-    const homeTeam =
-        fixture?.teams?.home;
-
-    const awayTeam =
-        fixture?.teams?.away;
-
-    const homeTeamId =
-        safeNumber(
-            homeTeam?.id,
-            input.homeTeamId
-        );
-
-    const awayTeamId =
-        safeNumber(
-            awayTeam?.id,
-            input.awayTeamId
-        );
-
-    if (!homeTeamId || !awayTeamId) {
-        throw new Error(
-            "Home and away team IDs could not be resolved from the fixture."
-        );
-    }
-
-    const leagueId =
-        safeNumber(
-            fixture?.league?.id,
-            body?.match?.leagueId
-        );
-
-    const season =
-        safeNumber(
-            fixture?.league?.season,
-            body?.match?.season
-        );
-
-    const homeName =
-        homeTeam?.name ||
-        input.homeName ||
-        "Home Team";
-
-    const awayName =
-        awayTeam?.name ||
-        input.awayName ||
-        "Away Team";
-
-    // --------------------------------------------------------
-    // Collect data
-    //
-    // We intentionally DO NOT request injuries or lineups
-    // because V4.0 does not allow those variables to affect
-    // the prediction.
-    // --------------------------------------------------------
-
-    const [
-        homeFixtures,
-        awayFixtures,
-        standings,
-        homeStats,
-        awayStats,
-        h2h
-    ] = await Promise.all([
-        getRecentFixtures(
-            homeTeamId,
-            5
-        ),
-
-        getRecentFixtures(
-            awayTeamId,
-            5
-        ),
-
-        getStandings(
-            leagueId,
-            season
-        ),
-
-        getTeamStatistics(
-            leagueId,
-            season,
-            homeTeamId
-        ),
-
-        getTeamStatistics(
-            leagueId,
-            season,
-            awayTeamId
-        ),
-
-        getH2H(
-            homeTeamId,
-            awayTeamId
-        )
-    ]);
-
-    // --------------------------------------------------------
-    // Standings rows
-    // --------------------------------------------------------
-
-    const homeStanding =
-        findStanding(
-            standings,
-            homeTeamId
-        );
-
-    const awayStanding =
-        findStanding(
-            standings,
-            awayTeamId
-        );
-
-    // --------------------------------------------------------
-    // Recent goals
-    // --------------------------------------------------------
-
-    const homeRecentGoals =
-        recentGoalAverage(
-            homeFixtures,
-            homeTeamId
-        );
-
-    const awayRecentGoals =
-        recentGoalAverage(
-            awayFixtures,
-            awayTeamId
-        );
-
-    // --------------------------------------------------------
-    // Calculate each signal
-    // --------------------------------------------------------
-
-    const form = formSignal(
-        homeFixtures,
-        awayFixtures
+    const values = [
+        probabilities.home,
+        probabilities.draw,
+        probabilities.away
+    ].sort(
+        (a, b) => b - a
     );
 
-    // formSignal needs team IDs, but the fixtures are already
-    // resolved. Recalculate explicitly to guarantee correct
-    // team perspective.
-    const homeFormRating =
-        calculateFormRating(
-            homeFixtures,
-            homeTeamId
-        );
 
-    const awayFormRating =
-        calculateFormRating(
-            awayFixtures,
-            awayTeamId
-        );
+    const separation =
+        values[0] - values[1];
 
-    const formSignalFinal =
-        (
-            homeFormRating &&
-            awayFormRating
-        )
-            ? {
-                probabilities:
-                    ratingDifferenceToProbabilities(
-                        homeFormRating.rating -
-                        awayFormRating.rating
-                    ),
-                available: true,
-                homeRating:
-                    homeFormRating.rating,
-                awayRating:
-                    awayFormRating.rating,
-                homeDetails:
-                    homeFormRating,
-                awayDetails:
-                    awayFormRating
-            }
-            : form;
 
-    const standingsResult =
-        standingsSignal(
-            homeStanding,
-            awayStanding
-        );
-
-    const seasonStrength =
-        seasonStrengthSignal(
-            homeStanding,
-            awayStanding,
-            homeStats,
-            awayStats
-        );
-
-    const xgResult =
-        calculateExpectedGoals(
-            homeStats,
-            awayStats,
-            homeRecentGoals,
-            awayRecentGoals
-        );
-
-    const xgSignal = {
-        probabilities:
-            xgResult.probabilities,
-        available:
-            xgResult.homeXG !== null &&
-            xgResult.awayXG !== null,
-        homeXG:
-            xgResult.homeXG,
-        awayXG:
-            xgResult.awayXG
-    };
-
-    const venueForm =
-        venueFormSignal(
-            homeFixtures,
-            awayFixtures,
-            homeTeamId,
-            awayTeamId
-        );
-
-    const h2hSignalResult =
-        h2hSignal(
-            h2h,
-            homeTeamId,
-            awayTeamId
-        );
-
-    // --------------------------------------------------------
-    // FINAL SIGNAL COLLECTION
-    // --------------------------------------------------------
-
-    const signals = {
-        form: formSignalFinal,
-        standings: standingsResult,
-        seasonStrength,
-        xg: xgSignal,
-        venueForm,
-        h2h: h2hSignalResult
-    };
-
-    // --------------------------------------------------------
-    // FINAL 100% MODEL
-    // --------------------------------------------------------
-
-    const finalProbabilities =
-        blendProbabilitySignals([
-            {
-                weight: WEIGHTS.form,
-                probabilities:
-                    signals.form.probabilities
-            },
-            {
-                weight: WEIGHTS.standings,
-                probabilities:
-                    signals.standings.probabilities
-            },
-            {
-                weight: WEIGHTS.seasonStrength,
-                probabilities:
-                    signals.seasonStrength.probabilities
-            },
-            {
-                weight: WEIGHTS.xg,
-                probabilities:
-                    signals.xg.probabilities
-            },
-            {
-                weight: WEIGHTS.venueForm,
-                probabilities:
-                    signals.venueForm.probabilities
-            },
-            {
-                weight: WEIGHTS.h2h,
-                probabilities:
-                    signals.h2h.probabilities
-            }
-        ]);
-
-    // --------------------------------------------------------
-    // SELECT HIGHEST PROBABILITY
-    // --------------------------------------------------------
-
-    const result =
-        getHighestOutcome(
-            finalProbabilities
-        );
-
-    const confidence =
-        confidenceFromProbability(
-            result.probability
-        );
-
-    // --------------------------------------------------------
-    // Probability agreement
-    //
-    // Measures how many weighted signals support the final
-    // selected outcome.
-    // --------------------------------------------------------
-
-    const signalList = [
-        signals.form,
-        signals.standings,
-        signals.seasonStrength,
-        signals.xg,
-        signals.venueForm,
-        signals.h2h
-    ];
-
-    let supportingWeight = 0;
-    let totalSignalWeight = 0;
-
-    const selectedCode =
-        result.prediction === "Home Win"
-            ? "home"
-            : result.prediction === "Draw"
-                ? "draw"
-                : "away";
-
-    for (let i = 0; i < signalList.length; i++) {
-        const signal = signalList[i];
-
-        const weight =
-            Object.values(WEIGHTS)[i];
-
-        totalSignalWeight += weight;
-
-        if (
-            signal &&
-            signal.probabilities &&
-            signalWinner(
-                signal.probabilities
-            ).outcome === result.prediction
-        ) {
-            supportingWeight += weight;
-        }
+    if (separation >= 0.30) {
+        return "HIGH";
     }
 
-    const agreement =
-        totalSignalWeight > 0
-            ? round(
-                supportingWeight /
-                totalSignalWeight *
-                100,
-                1
-            )
-            : 0;
-
-    // --------------------------------------------------------
-    // DATA COVERAGE
-    // --------------------------------------------------------
-
-    const coverage =
-        calculateDataCoverage(
-            signals
-        );
-
-    // --------------------------------------------------------
-    // STANDINGS DISPLAY
-    // --------------------------------------------------------
-
-    const standingsOutput = {
-        available:
-            Boolean(
-                homeStanding &&
-                awayStanding
-            ),
-
-        home: homeStanding
-            ? {
-                position:
-                    homeStanding.rank ?? null,
-                points:
-                    homeStanding.points ?? null,
-                played:
-                    homeStanding.all?.played ??
-                    null,
-                goalDifference:
-                    homeStanding.goalsDiff ??
-                    null,
-                form:
-                    homeStanding.form ??
-                    null
-            }
-            : null,
-
-        away: awayStanding
-            ? {
-                position:
-                    awayStanding.rank ?? null,
-                points:
-                    awayStanding.points ?? null,
-                played:
-                    awayStanding.all?.played ??
-                    null,
-                goalDifference:
-                    awayStanding.goalsDiff ??
-                    null,
-                form:
-                    awayStanding.form ??
-                    null
-            }
-            : null
-    };
-
-    // --------------------------------------------------------
-    // FORM DISPLAY
-    // --------------------------------------------------------
-
-    function simpleForm(
-        fixtures,
-        teamId
-    ) {
-        return fixtures.map(
-            (fixture) =>
-                outcomeCodeForFixture(
-                    fixture,
-                    teamId
-                )
-        );
+    if (separation >= 0.15) {
+        return "MEDIUM";
     }
 
-    // --------------------------------------------------------
-    // FINAL RESPONSE
-    // --------------------------------------------------------
-
-    return {
-        success: true,
-
-        version: "V4.0",
-
-        engine: "TOMSONSTAKES GLOBAL FOOTBALL PREDICTION ENGINE",
-
-        fixture: {
-            id: fixtureId,
-            date:
-                fixture?.fixture?.date ||
-                null,
-
-            timestamp:
-                fixture?.fixture?.timestamp ||
-                null,
-
-            timezone: TIMEZONE,
-
-            venue:
-                fixture?.fixture?.venue?.name ||
-                null,
-
-            city:
-                fixture?.fixture?.venue?.city ||
-                null,
-
-            status:
-                fixture?.fixture?.status?.short ||
-                null
-        },
-
-        league: {
-            id: leagueId || null,
-            name:
-                fixture?.league?.name ||
-                null,
-            country:
-                fixture?.league?.country ||
-                null,
-            season:
-                season || null,
-            round:
-                fixture?.league?.round ||
-                null
-        },
-
-        teams: {
-            home: {
-                id: homeTeamId,
-                name: homeName,
-                logo:
-                    homeTeam?.logo ||
-                    null,
-
-                recentForm:
-                    simpleForm(
-                        homeFixtures,
-                        homeTeamId
-                    )
-            },
-
-            away: {
-                id: awayTeamId,
-                name: awayName,
-                logo:
-                    awayTeam?.logo ||
-                    null,
-
-                recentForm:
-                    simpleForm(
-                        awayFixtures,
-                        awayTeamId
-                    )
-            }
-        },
-
-        prediction: result.prediction,
-
-        probability: result.probability,
-
-        confidence,
-
-        probabilities: {
-            home:
-                finalProbabilities.home,
-
-            draw:
-                finalProbabilities.draw,
-
-            away:
-                finalProbabilities.away
-        },
-
-        // Compatibility aliases for different frontend versions.
-        homeProbability:
-            finalProbabilities.home,
-
-        drawProbability:
-            finalProbabilities.draw,
-
-        awayProbability:
-            finalProbabilities.away,
-
-        agreement,
-
-        dataCoverage: coverage,
-
-        model: {
-            weights: {
-                last5RecencyWeighted: 45,
-                currentLeagueStandings: 30,
-                seasonHomeAwayStrength: 5,
-                expectedGoalsGoalModel: 10,
-                recentVenueForm: 5,
-                last5H2H: 5
-            },
-
-            totalWeight: 100,
-
-            rules: {
-                artificialHomeBias: false,
-                apiPredictionSignal: false,
-                injuriesAffectPrediction: false,
-                lineupsAffectPrediction: false,
-                highestProbabilitySelected: true
-            }
-        },
-
-        signals: buildSignalSummary(
-            signals
-        ),
-
-        formAnalysis: {
-            home: {
-                matches:
-                    homeFixtures.length,
-                rating:
-                    homeFormRating
-                        ? round(
-                            homeFormRating.rating,
-                            4
-                        )
-                        : null,
-
-                weightedPoints:
-                    homeFormRating
-                        ? round(
-                            homeFormRating.weightedPoints,
-                            3
-                        )
-                        : null,
-
-                weightedGoalDifference:
-                    homeFormRating
-                        ? round(
-                            homeFormRating.weightedGD,
-                            3
-                        )
-                        : null,
-
-                weightedGoalsFor:
-                    homeFormRating
-                        ? round(
-                            homeFormRating.weightedGF,
-                            3
-                        )
-                        : null,
-
-                weightedGoalsAgainst:
-                    homeFormRating
-                        ? round(
-                            homeFormRating.weightedGA,
-                            3
-                        )
-                        : null
-            },
-
-            away: {
-                matches:
-                    awayFixtures.length,
-
-                rating:
-                    awayFormRating
-                        ? round(
-                            awayFormRating.rating,
-                            4
-                        )
-                        : null,
-
-                weightedPoints:
-                    awayFormRating
-                        ? round(
-                            awayFormRating.weightedPoints,
-                            3
-                        )
-                        : null,
-
-                weightedGoalDifference:
-                    awayFormRating
-                        ? round(
-                            awayFormRating.weightedGD,
-                            3
-                        )
-                        : null,
-
-                weightedGoalsFor:
-                    awayFormRating
-                        ? round(
-                            awayFormRating.weightedGF,
-                            3
-                        )
-                        : null,
-
-                weightedGoalsAgainst:
-                    awayFormRating
-                        ? round(
-                            awayFormRating.weightedGA,
-                            3
-                        )
-                        : null
-            },
-
-            recencyWeights: {
-                oldest: 10,
-                secondOldest: 15,
-                middle: 20,
-                secondNewest: 25,
-                newest: 30
-            }
-        },
-
-        standings: standingsOutput,
-
-        expectedGoals: {
-            home:
-                round(
-                    xgResult.homeXG,
-                    2
-                ),
-
-            away:
-                round(
-                    xgResult.awayXG,
-                    2
-                ),
-
-            available:
-                xgSignal.available
-        },
-
-        venueForm: {
-            homeRating:
-                venueForm.homeRating ??
-                null,
-
-            awayRating:
-                venueForm.awayRating ??
-                null,
-
-            homeMatches:
-                venueForm.homeMatches ??
-                0,
-
-            awayMatches:
-                venueForm.awayMatches ??
-                0,
-
-            available:
-                venueForm.available
-        },
-
-        h2h: {
-            matches:
-                h2h.length,
-
-            available:
-                h2hSignalResult.available,
-
-            probabilities:
-                h2hSignalResult.probabilities
-        },
-
-        // These are deliberately INFORMATION ONLY.
-        // They do not affect the model.
-        context: {
-            injuriesUsedInPrediction: false,
-            lineupsUsedInPrediction: false,
-            injuriesNote:
-                "Injuries are not included in V4.0 probability calculations.",
-            lineupsNote:
-                "Lineups are not included in V4.0 probability calculations."
-        }
-    };
+    return "LOW";
 }
 
-// ------------------------------------------------------------
-// VERCEL HANDLER
-// ------------------------------------------------------------
+
+// ============================================================
+// FORMAT PERCENTAGE
+// ============================================================
+
+function percentage(value) {
+
+    return Number(
+        (clamp(value) * 100).toFixed(2)
+    );
+
+}
+
+
+// ============================================================
+// MAIN HANDLER
+// ============================================================
 
 export default async function handler(req, res) {
-    // --------------------------------------------------------
-    // CORS
-    // --------------------------------------------------------
-
-    res.setHeader(
-        "Access-Control-Allow-Origin",
-        "*"
-    );
-
-    res.setHeader(
-        "Access-Control-Allow-Methods",
-        "POST, OPTIONS"
-    );
-
-    res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type"
-    );
-
-    // --------------------------------------------------------
-    // OPTIONS
-    // --------------------------------------------------------
-
-    if (req.method === "OPTIONS") {
-        return res.status(200).end();
-    }
-
-    // --------------------------------------------------------
-    // METHOD
-    // --------------------------------------------------------
-
-    if (req.method !== "POST") {
-        return res.status(405).json({
-            success: false,
-            error:
-                "Method not allowed. Use POST."
-        });
-    }
 
     try {
-        // ----------------------------------------------------
-        // BODY
-        // ----------------------------------------------------
 
-        let body = req.body;
+        const apiKey =
+            process.env.APIFOOTBALL_KEY;
 
-        if (typeof body === "string") {
-            try {
-                body = JSON.parse(body);
-            } catch (error) {
-                return res.status(400).json({
-                    success: false,
-                    error:
-                        "Request body contains invalid JSON."
-                });
-            }
-        }
 
-        if (!body || typeof body !== "object") {
-            return res.status(400).json({
-                success: false,
+        if (!apiKey) {
+
+            return res.status(500).json({
                 error:
-                    "Request body is required."
+                    "API key is not configured."
             });
+
         }
 
-        // ----------------------------------------------------
-        // BUILD MODEL
-        // ----------------------------------------------------
-
-        const result =
-            await buildPrediction(body);
 
         // ----------------------------------------------------
-        // RETURN
+        // ACCEPTED INPUTS
+        //
+        // Preferred:
+        // ?fixture=123456
+        //
+        // Also supported:
+        // ?homeTeam=123&awayTeam=456&league=39&season=2026
+        //
         // ----------------------------------------------------
 
-        return res.status(200).json(result);
+        const {
+            fixture,
+            homeTeam,
+            awayTeam,
+            league,
+            season,
+            from,
+            to
+        } = req.query;
+
+
+        let fixtureId =
+            fixture
+                ? Number(fixture)
+                : null;
+
+
+        let homeTeamId =
+            normalizeTeamId(
+                homeTeam
+            );
+
+
+        let awayTeamId =
+            normalizeTeamId(
+                awayTeam
+            );
+
+
+        let resolvedLeague =
+            league
+                ? Number(league)
+                : null;
+
+
+        let resolvedSeason =
+            season
+                ? Number(season)
+                : null;
+
+
+        let homeName =
+            "Home Team";
+
+        let awayName =
+            "Away Team";
+
+
+        // ----------------------------------------------------
+        // IF FIXTURE ID WAS PROVIDED, RESOLVE THE MATCH.
+        // ----------------------------------------------------
+
+        if (fixtureId) {
+
+            if (
+                !Number.isInteger(fixtureId) ||
+                fixtureId <= 0
+            ) {
+
+                return res.status(400).json({
+                    error:
+                        "Invalid fixture ID."
+                });
+
+            }
+
+
+            const match =
+                await getFixture(
+                    fixtureId,
+                    apiKey
+                );
+
+
+            homeTeamId =
+                homeTeamId ||
+                normalizeTeamId(
+                    match?.teams?.home?.id
+                );
+
+
+            awayTeamId =
+                awayTeamId ||
+                normalizeTeamId(
+                    match?.teams?.away?.id
+                );
+
+
+            homeName =
+                match?.teams?.home?.name ||
+                homeName;
+
+
+            awayName =
+                match?.teams?.away?.name ||
+                awayName;
+
+
+            resolvedLeague =
+                resolvedLeague ||
+                num(
+                    match?.league?.id,
+                    null
+                );
+
+
+            resolvedSeason =
+                resolvedSeason ||
+                num(
+                    match?.league?.season,
+                    null
+                );
+
+        }
+
+
+        // ----------------------------------------------------
+        // VALIDATION
+        // ----------------------------------------------------
+
+        if (!homeTeamId) {
+
+            return res.status(400).json({
+                error:
+                    "Home team ID is required."
+            });
+
+        }
+
+
+        if (!awayTeamId) {
+
+            return res.status(400).json({
+                error:
+                    "Away team ID is required."
+            });
+
+        }
+
+
+        if (!resolvedLeague) {
+
+            return res.status(400).json({
+                error:
+                    "League ID is required. Provide ?league=ID or a valid fixture ID."
+            });
+
+        }
+
+
+        if (!resolvedSeason) {
+
+            return res.status(400).json({
+                error:
+                    "Season is required. Provide ?season=YYYY or a valid fixture ID."
+            });
+
+        }
+
+
+        // ----------------------------------------------------
+        // ANALYZE BOTH TEAMS
+        // ----------------------------------------------------
+
+        const [
+            homeAnalysis,
+            awayAnalysis
+        ] = await Promise.all([
+
+            callAnalyze({
+                req,
+                teamId: homeTeamId,
+                opponentId: awayTeamId,
+                league: resolvedLeague,
+                season: resolvedSeason,
+                from,
+                to
+            }),
+
+            callAnalyze({
+                req,
+                teamId: awayTeamId,
+                opponentId: homeTeamId,
+                league: resolvedLeague,
+                season: resolvedSeason,
+                from,
+                to
+            })
+
+        ]);
+
+
+        // ----------------------------------------------------
+        // BUILD SIX SIGNALS
+        // ----------------------------------------------------
+
+        const signals =
+            buildSignals(
+                homeAnalysis,
+                awayAnalysis
+            );
+
+
+        // ----------------------------------------------------
+        // CALCULATE FINAL PROBABILITIES
+        // ----------------------------------------------------
+
+        const goalModel =
+            signals.expectedGoals;
+
+
+        const probabilities =
+            calculateProbabilities(
+                signals,
+                goalModel.homeXG,
+                goalModel.awayXG
+            );
+
+
+        // ----------------------------------------------------
+        // FINAL PREDICTION
+        // ----------------------------------------------------
+
+        const prediction =
+            getPredictionLabel(
+                probabilities,
+                homeName,
+                awayName
+            );
+
+
+        const confidence =
+            calculateConfidence(
+                probabilities
+            );
+
+
+        // ----------------------------------------------------
+        // OPTIONAL SIMPLE SCORE ESTIMATE
+        //
+        // This is only a display estimate based on xG.
+        // It does NOT influence the 1X2 calculation.
+        // ----------------------------------------------------
+
+        const estimatedHomeGoals =
+            Math.max(
+                0,
+                Math.round(
+                    goalModel.homeXG
+                )
+            );
+
+
+        const estimatedAwayGoals =
+            Math.max(
+                0,
+                Math.round(
+                    goalModel.awayXG
+                )
+            );
+
+
+        // ----------------------------------------------------
+        // RESPONSE
+        // ----------------------------------------------------
+
+        return res.status(200).json({
+
+            success: true,
+
+            engine: {
+                name:
+                    "TOMSONSTAKES GLOBAL FOOTBALL PREDICTION ENGINE",
+
+                version:
+                    "V4.1",
+
+                method:
+                    "Six-signal weighted probability model",
+
+                injuriesUsed:
+                    false,
+
+                lineupsUsed:
+                    false,
+
+                bookmakerOddsUsed:
+                    false,
+
+                apiFootballPredictionUsed:
+                    false,
+
+                artificialHomeBias:
+                    false
+            },
+
+
+            fixture: {
+                id:
+                    fixtureId,
+
+                league:
+                    resolvedLeague,
+
+                season:
+                    resolvedSeason
+            },
+
+
+            match: {
+
+                home: {
+                    id:
+                        homeTeamId,
+
+                    name:
+                        homeName
+                },
+
+                away: {
+                    id:
+                        awayTeamId,
+
+                    name:
+                        awayName
+                }
+
+            },
+
+
+            weights: {
+
+                recentForm:
+                    WEIGHTS.recentForm,
+
+                standings:
+                    WEIGHTS.standings,
+
+                seasonVenue:
+                    WEIGHTS.seasonVenue,
+
+                expectedGoals:
+                    WEIGHTS.expectedGoals,
+
+                recentVenueForm:
+                    WEIGHTS.recentVenueForm,
+
+                h2h:
+                    WEIGHTS.h2h
+
+            },
+
+
+            signals: {
+
+                recentForm: {
+                    home:
+                        Number(
+                            signals.recentForm.home.toFixed(4)
+                        ),
+
+                    away:
+                        Number(
+                            signals.recentForm.away.toFixed(4)
+                        )
+                },
+
+
+                standings: {
+                    home:
+                        Number(
+                            signals.standings.home.toFixed(4)
+                        ),
+
+                    away:
+                        Number(
+                            signals.standings.away.toFixed(4)
+                        )
+                },
+
+
+                seasonVenue: {
+                    home:
+                        Number(
+                            signals.seasonVenue.home.toFixed(4)
+                        ),
+
+                    away:
+                        Number(
+                            signals.seasonVenue.away.toFixed(4)
+                        )
+                },
+
+
+                expectedGoals: {
+                    home:
+                        Number(
+                            signals.expectedGoals.home.toFixed(4)
+                        ),
+
+                    away:
+                        Number(
+                            signals.expectedGoals.away.toFixed(4)
+                        ),
+
+                    homeXG:
+                        Number(
+                            signals.expectedGoals.homeXG.toFixed(2)
+                        ),
+
+                    awayXG:
+                        Number(
+                            signals.expectedGoals.awayXG.toFixed(2)
+                        )
+                },
+
+
+                recentVenueForm: {
+                    home:
+                        Number(
+                            signals.recentVenueForm.home.toFixed(4)
+                        ),
+
+                    away:
+                        Number(
+                            signals.recentVenueForm.away.toFixed(4)
+                        )
+                },
+
+
+                h2h: {
+                    home:
+                        Number(
+                            signals.h2h.home.toFixed(4)
+                        ),
+
+                    away:
+                        Number(
+                            signals.h2h.away.toFixed(4)
+                        )
+                }
+
+            },
+
+
+            probability: {
+
+                home:
+                    percentage(
+                        probabilities.home
+                    ),
+
+                draw:
+                    percentage(
+                        probabilities.draw
+                    ),
+
+                away:
+                    percentage(
+                        probabilities.away
+                    )
+
+            },
+
+
+            prediction: {
+
+                result:
+                    prediction.result,
+
+                market:
+                    prediction.market,
+
+                team:
+                    prediction.team,
+
+                probability:
+                    percentage(
+                        prediction.probability
+                    ),
+
+                confidence
+
+            },
+
+
+            estimatedScore: {
+
+                home:
+                    estimatedHomeGoals,
+
+                away:
+                    estimatedAwayGoals
+
+            },
+
+
+            rawStrength: {
+
+                home:
+                    Number(
+                        probabilities.rawStrength.home.toFixed(4)
+                    ),
+
+                away:
+                    Number(
+                        probabilities.rawStrength.away.toFixed(4)
+                    )
+
+            },
+
+
+            generatedAt:
+                new Date().toISOString()
+
+        });
+
 
     } catch (error) {
 
         console.error(
-            "TomsonStakes V4.0 error:",
+            "TOMSONSTAKES predict error:",
             error
         );
 
-        return res.status(500).json({
-            success: false,
 
-            version: "V4.0",
+        return res.status(500).json({
+
+            success: false,
 
             error:
                 error?.message ||
-                "Analysis failed.",
+                "Prediction engine failed.",
 
-            prediction: null,
+            engine:
+                "TOMSONSTAKES V4.1"
 
-            probability: null,
-
-            probabilities: {
-                home: null,
-                draw: null,
-                away: null
-            },
-
-            confidence: "AVOID"
         });
+
     }
+
 }
