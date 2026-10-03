@@ -365,8 +365,6 @@ button:disabled {
 
 <div class="container">
 
-    <!-- HEADER -->
-
     <div class="header">
         <h1>🔥 TOMSONSTAKES ADMIN</h1>
 
@@ -453,8 +451,6 @@ button:disabled {
 
     <div class="main-layout">
 
-        <!-- FIXTURES -->
-
         <div>
 
             <div class="panel">
@@ -494,8 +490,6 @@ button:disabled {
 
         <div>
 
-            <!-- SELECTED PREDICTION -->
-
             <div class="panel">
 
                 <div class="panel-title">
@@ -512,8 +506,6 @@ button:disabled {
 
             </div>
 
-
-            <!-- MY PICKS -->
 
             <div class="panel">
 
@@ -545,6 +537,24 @@ button:disabled {
 
 
 <script>
+
+/* =====================================================
+   DATABASE ENUM / CHECK VALUES
+===================================================== */
+
+const PREDICTION_STATUS = {
+    DRAFT: "DRAFT",
+    PUBLISHED: "PUBLISHED",
+    UNPUBLISHED: "UNPUBLISHED"
+};
+
+const PREDICTION_RESULT = {
+    PENDING: "PENDING",
+    WIN: "WIN",
+    LOSS: "LOSS",
+    VOID: "VOID"
+};
+
 
 /* =====================================================
    TOP LEAGUES
@@ -687,13 +697,6 @@ async function loadFixtures() {
 
     try {
 
-        /*
-         * IMPORTANT:
-         *
-         * This keeps the same endpoint that was
-         * already successfully loading your matches.
-         */
-
         const url =
             "/api/fixtures?date=" +
             encodeURIComponent(date);
@@ -736,26 +739,6 @@ async function loadFixtures() {
             );
         }
 
-
-        /*
-         * Support the common API-Football format:
-         *
-         * {
-         *   response: [...]
-         * }
-         *
-         * Also support:
-         *
-         * {
-         *   fixtures: [...]
-         * }
-         *
-         * and:
-         *
-         * {
-         *   data: [...]
-         * }
-         */
 
         let fixtures = [];
 
@@ -862,11 +845,6 @@ function normalizeFixtures(
     return fixtures
         .map(function(item) {
 
-            /*
-             * If it is already API-Football format,
-             * keep it unchanged.
-             */
-
             if (
                 item.fixture &&
                 item.teams
@@ -875,11 +853,6 @@ function normalizeFixtures(
                 return item;
             }
 
-
-            /*
-             * Fallback for a simplified fixture
-             * returned by an existing custom API.
-             */
 
             return {
 
@@ -1367,7 +1340,10 @@ function selectFixture(
                 "",
 
             status:
-                "draft"
+                PREDICTION_STATUS.DRAFT,
+
+            result:
+                PREDICTION_RESULT.PENDING
 
         };
     }
@@ -1843,6 +1819,15 @@ function renderMyPicks() {
                             )}
                         </strong>
 
+                        <br>
+
+                        Result:
+                        <strong>
+                            ${escapeHtml(
+                                item.result
+                            )}
+                        </strong>
+
                     </div>
 
                     <button
@@ -1874,7 +1859,7 @@ function renderMyPicks() {
 async function saveCurrentPrediction() {
 
     await submitPrediction(
-        "draft"
+        PREDICTION_STATUS.DRAFT
     );
 }
 
@@ -1886,7 +1871,7 @@ async function saveCurrentPrediction() {
 async function publishCurrentPrediction() {
 
     await submitPrediction(
-        "published"
+        PREDICTION_STATUS.PUBLISHED
     );
 }
 
@@ -1969,6 +1954,40 @@ async function submitPrediction(
     }
 
 
+    /*
+     * Always normalize to the exact database
+     * values accepted by Supabase.
+     */
+
+    const normalizedStatus =
+        String(status)
+            .toUpperCase();
+
+
+    const normalizedResult =
+        PREDICTION_RESULT.PENDING;
+
+
+    if (
+        ![
+            PREDICTION_STATUS.DRAFT,
+            PREDICTION_STATUS.PUBLISHED,
+            PREDICTION_STATUS.UNPUBLISHED
+        ].includes(
+            normalizedStatus
+        )
+    ) {
+
+        statusBox.innerHTML = `
+            <div class="status status-error">
+                ❌ Invalid prediction status.
+            </div>
+        `;
+
+        return false;
+    }
+
+
     statusBox.innerHTML = `
         <div class="status status-info">
             ⏳ Saving prediction...
@@ -2037,16 +2056,18 @@ async function submitPrediction(
                             item.selection,
 
                         confidence:
-                            item.confidence,
+                            Number(
+                                item.confidence
+                            ),
 
                         analysis:
                             item.analysis,
 
                         status:
-                            status,
+                            normalizedStatus,
 
                         result:
-                            "PENDING"
+                            normalizedResult
 
                     })
                 }
@@ -2067,6 +2088,11 @@ async function submitPrediction(
 
         } catch {
 
+            console.error(
+                "Raw server response:",
+                raw
+            );
+
             throw new Error(
                 "Server returned an invalid response."
             );
@@ -2084,17 +2110,21 @@ async function submitPrediction(
 
 
         item.status =
-            status;
+            normalizedStatus;
+
+        item.result =
+            normalizedResult;
 
 
         statusBox.innerHTML = `
             <div class="status status-success">
                 ${
-                    status === "published"
+                    normalizedStatus ===
+                    PREDICTION_STATUS.PUBLISHED
                     ?
-                    "✅ Prediction published."
+                    "✅ Prediction published successfully."
                     :
-                    "💾 Prediction saved as draft."
+                    "💾 Prediction saved as draft successfully."
                 }
             </div>
         `;
@@ -2109,7 +2139,10 @@ async function submitPrediction(
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "Prediction save error:",
+            error
+        );
 
 
         statusBox.innerHTML = `
@@ -2248,6 +2281,11 @@ async function saveDailySlip(
 
         } catch {
 
+            console.error(
+                "Raw server response:",
+                raw
+            );
+
             throw new Error(
                 "Server returned an invalid response."
             );
@@ -2283,7 +2321,10 @@ async function saveDailySlip(
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "Daily slip save error:",
+            error
+        );
 
 
         statusBox.innerHTML = `
@@ -2346,10 +2387,6 @@ async function publishDailySlip() {
     }
 
 
-    /*
-     * Publish every selected prediction.
-     */
-
     let failed = false;
 
 
@@ -2363,7 +2400,7 @@ async function publishDailySlip() {
 
         const success =
             await submitPrediction(
-                "published"
+                PREDICTION_STATUS.PUBLISHED
             );
 
 
@@ -2381,11 +2418,6 @@ async function publishDailySlip() {
         return;
     }
 
-
-    /*
-     * Publish the daily slip
-     * separately.
-     */
 
     await saveDailySlip(
         true
