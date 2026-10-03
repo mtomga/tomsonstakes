@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -14,193 +15,188 @@
 
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
-    background: #0b1120;
-    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f3f4f6;
+    color: #111827;
 }
 
-.container {
-    width: 100%;
-    max-width: 1100px;
-    margin: auto;
-    padding: 16px;
-}
-
-/* =========================================================
+/* =========================
    HEADER
-========================================================= */
+========================= */
 
 .header {
+    background: #111827;
+    color: white;
+    padding: 22px 15px;
     text-align: center;
-    padding: 25px 10px 20px;
 }
 
 .logo {
-    font-size: 31px;
+    font-size: 30px;
     font-weight: 900;
     letter-spacing: .5px;
 }
 
-.subtitle {
-    margin-top: 7px;
+.tagline {
     color: #9ca3af;
     font-size: 13px;
-    letter-spacing: .7px;
+    margin-top: 6px;
 }
 
-.date-heading {
-    margin-top: 16px;
-    font-size: 15px;
-    font-weight: 700;
-    color: #d1d5db;
-}
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
+/* =========================
+   NAV
+========================= */
 
 .nav {
+    background: #1f2937;
     display: flex;
+    justify-content: center;
     gap: 8px;
-    background: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 12px;
-    padding: 7px;
-    margin-bottom: 20px;
+    padding: 10px;
 }
 
 .nav button {
-    flex: 1;
     border: none;
     background: transparent;
-    color: #9ca3af;
-    padding: 12px 10px;
-    border-radius: 8px;
-    font-weight: 800;
+    color: #d1d5db;
+    padding: 9px 15px;
+    border-radius: 7px;
+    font-weight: bold;
     cursor: pointer;
 }
 
 .nav button.active {
     background: #16a34a;
-    color: #fff;
+    color: white;
 }
 
-/* =========================================================
-   SECTIONS
-========================================================= */
+/* =========================
+   CONTAINER
+========================= */
 
-.section {
-    display: none;
+.container {
+    max-width: 1050px;
+    margin: auto;
+    padding: 18px;
 }
 
-.section.active {
-    display: block;
+/* =========================
+   DATE HEADER
+========================= */
+
+.date-header {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    text-align: center;
+    box-shadow: 0 3px 12px rgba(0,0,0,.06);
 }
+
+.date-header h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.date-header p {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 7px 0 15px;
+}
+
+.date-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.date-controls input {
+    padding: 11px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+}
+
+.btn {
+    border: none;
+    padding: 11px 17px;
+    border-radius: 8px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.btn-green {
+    background: #16a34a;
+    color: white;
+}
+
+.btn-blue {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-red {
+    background: #dc2626;
+    color: white;
+}
+
+.btn-gray {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+/* =========================
+   PUBLIC PREDICTION
+========================= */
 
 .section-title {
-    font-size: 23px;
+    font-size: 18px;
     font-weight: 900;
-    margin: 8px 0 5px;
+    margin: 22px 0 12px;
 }
-
-.section-subtitle {
-    color: #9ca3af;
-    font-size: 13px;
-    margin-bottom: 18px;
-}
-
-/* =========================================================
-   HERO
-========================================================= */
-
-.hero {
-    background: linear-gradient(
-        135deg,
-        #111827,
-        #172554
-    );
-    border: 1px solid #1f2937;
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 20px;
-}
-
-.hero-label {
-    color: #22c55e;
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 1.5px;
-}
-
-.hero h2 {
-    margin: 8px 0;
-    font-size: 27px;
-}
-
-.hero p {
-    color: #cbd5e1;
-    margin: 0;
-    line-height: 1.6;
-}
-
-/* =========================================================
-   PREDICTION CARD
-========================================================= */
 
 .prediction-card {
-    background: #fff;
-    color: #111827;
+    background: white;
     border-radius: 15px;
     padding: 18px;
-    margin-top: 13px;
-    box-shadow: 0 5px 18px rgba(0,0,0,.15);
+    margin-bottom: 14px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.07);
 }
 
 .prediction-top {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
     gap: 10px;
-}
-
-.prediction-league {
     color: #6b7280;
     font-size: 12px;
+}
+
+.league {
     font-weight: 800;
+    color: #374151;
 }
 
-.prediction-time {
-    color: #6b7280;
-    font-size: 12px;
-    font-weight: 800;
+.kickoff {
+    font-weight: 700;
 }
 
-.prediction-teams {
-    display: grid;
-    grid-template-columns: 1fr 55px 1fr;
-    align-items: center;
-    gap: 10px;
-    margin-top: 17px;
+.match {
+    text-align: center;
+    margin: 17px 0;
 }
 
-.prediction-team {
-    font-size: 16px;
+.team {
+    font-size: 17px;
     font-weight: 900;
 }
 
-.prediction-away {
-    text-align: right;
-}
-
-.prediction-vs {
-    text-align: center;
+.vs {
     color: #9ca3af;
     font-size: 12px;
-    font-weight: 900;
+    margin: 5px 0;
 }
 
 .pick-box {
-    margin-top: 16px;
     background: #111827;
     color: white;
     border-radius: 12px;
@@ -210,97 +206,97 @@ body {
 
 .pick-label {
     color: #9ca3af;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 1.5px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
 }
 
-.pick-value {
-    font-size: 25px;
+.pick {
+    font-size: 23px;
     font-weight: 900;
     margin-top: 6px;
 }
 
 .confidence {
     margin-top: 10px;
-    font-size: 13px;
-    color: #d1d5db;
+    color: #86efac;
+    font-weight: 800;
 }
 
 .analysis-text {
     margin-top: 15px;
-    color: #374151;
-    font-size: 13px;
+    color: #4b5563;
+    font-size: 14px;
     line-height: 1.6;
-    border-top: 1px solid #e5e7eb;
-    padding-top: 13px;
 }
 
-.prediction-status {
-    display: inline-block;
-    margin-top: 12px;
-    padding: 5px 9px;
-    border-radius: 999px;
+.result-row {
+    display: flex;
+    gap: 7px;
+    margin-top: 15px;
+}
+
+.result-row button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.win {
     background: #dcfce7;
     color: #166534;
-    font-size: 10px;
-    font-weight: 900;
 }
 
-/* =========================================================
-   EMPTY
-========================================================= */
-
-.empty {
-    background: #111827;
-    border: 1px dashed #374151;
-    border-radius: 14px;
-    padding: 35px 20px;
-    text-align: center;
-    color: #9ca3af;
+.loss {
+    background: #fee2e2;
+    color: #991b1b;
 }
 
-.empty strong {
-    display: block;
-    color: #fff;
-    font-size: 18px;
-    margin-bottom: 8px;
+.void {
+    background: #fef3c7;
+    color: #92400e;
 }
 
-/* =========================================================
+/* =========================
    ADMIN
-========================================================= */
+========================= */
 
 .admin-panel {
-    background: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 15px;
+    display: none;
+}
+
+.admin-box {
+    background: white;
+    border-radius: 14px;
     padding: 18px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.06);
+    margin-bottom: 18px;
 }
 
-.form-group {
-    margin-bottom: 15px;
+.admin-box h3 {
+    margin-top: 0;
 }
 
-.form-group label {
+label {
     display: block;
-    margin-bottom: 7px;
-    color: #d1d5db;
     font-size: 12px;
     font-weight: 800;
+    margin-top: 13px;
+    margin-bottom: 5px;
 }
 
 input,
 select,
 textarea {
     width: 100%;
-    border: 1px solid #374151;
-    background: #0b1120;
-    color: #fff;
-    border-radius: 9px;
-    padding: 13px;
-    font-size: 15px;
-    outline: none;
+    padding: 11px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-family: inherit;
 }
 
 textarea {
@@ -308,56 +304,20 @@ textarea {
     resize: vertical;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-    border-color: #16a34a;
-}
-
-.primary-button {
-    width: 100%;
-    background: #16a34a;
-    color: white;
-    border: none;
-    border-radius: 9px;
-    padding: 14px;
-    font-weight: 900;
-    cursor: pointer;
-}
-
-.secondary-button {
-    width: 100%;
-    background: #374151;
-    color: white;
-    border: none;
-    border-radius: 9px;
-    padding: 14px;
-    font-weight: 900;
-    cursor: pointer;
-    margin-top: 9px;
-}
-
-/* =========================================================
-   FIXTURE SEARCH
-========================================================= */
-
-.fixture-tools {
-    margin-top: 20px;
-    background: #0b1120;
-    border-radius: 12px;
-    padding: 15px;
-}
+/* =========================
+   FIXTURE LIST
+========================= */
 
 .fixture-list {
-    margin-top: 12px;
+    margin-top: 15px;
 }
 
 .fixture-option {
-    background: #1f2937;
-    border: 1px solid #374151;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
     border-radius: 10px;
-    padding: 13px;
-    margin-top: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
     cursor: pointer;
 }
 
@@ -366,670 +326,734 @@ textarea:focus {
 }
 
 .fixture-option.selected {
-    border-color: #16a34a;
-    background: #052e16;
-}
-
-.fixture-option-top {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
+    border: 2px solid #16a34a;
+    background: #f0fdf4;
 }
 
 .fixture-league {
-    color: #9ca3af;
+    color: #6b7280;
     font-size: 11px;
+}
+
+.fixture-teams {
+    font-weight: 800;
+    margin-top: 5px;
 }
 
 .fixture-time {
-    color: #22c55e;
+    color: #2563eb;
     font-size: 11px;
-    font-weight: 900;
+    margin-top: 4px;
 }
 
-.fixture-match {
-    margin-top: 7px;
-    font-weight: 900;
-}
-
-/* =========================================================
-   SELECTED MATCH
-========================================================= */
-
-.selected-match {
-    background: #052e16;
-    border: 1px solid #166534;
-    border-radius: 12px;
-    padding: 16px;
-    margin: 16px 0;
-}
-
-.selected-label {
-    color: #86efac;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 1.3px;
-}
-
-.selected-teams {
-    font-size: 19px;
-    font-weight: 900;
-    margin-top: 7px;
-}
-
-/* =========================================================
+/* =========================
    STATUS
-========================================================= */
+========================= */
 
 .status {
     padding: 12px;
-    border-radius: 9px;
-    margin-top: 12px;
+    border-radius: 8px;
+    margin-top: 10px;
     font-size: 13px;
-    line-height: 1.5;
 }
 
-.status-warning {
-    background: #422006;
-    color: #fed7aa;
+.success {
+    background: #dcfce7;
+    color: #166534;
 }
 
-.status-success {
-    background: #052e16;
-    color: #bbf7d0;
+.warning {
+    background: #fef3c7;
+    color: #92400e;
 }
 
-.status-error {
-    background: #450a0a;
-    color: #fecaca;
+.error {
+    background: #fee2e2;
+    color: #991b1b;
 }
 
-/* =========================================================
+/* =========================
    FOOTER
-========================================================= */
+========================= */
 
 .footer {
     text-align: center;
-    color: #6b7280;
+    color: #9ca3af;
     font-size: 11px;
     padding: 30px 10px;
 }
 
-/* =========================================================
-   RESPONSIVE
-========================================================= */
+/* =========================
+   MOBILE
+========================= */
 
-@media (max-width: 650px) {
-
-    .container {
-        padding: 11px;
-    }
+@media(max-width:650px) {
 
     .logo {
-        font-size: 27px;
+        font-size: 25px;
     }
 
-    .hero h2 {
-        font-size: 23px;
+    .container {
+        padding: 12px;
     }
 
-    .prediction-teams {
-        grid-template-columns: 1fr 40px 1fr;
+    .team {
+        font-size: 15px;
     }
 
-    .prediction-team {
-        font-size: 14px;
-    }
-
-    .nav button {
-        font-size: 12px;
-        padding: 11px 5px;
+    .pick {
+        font-size: 20px;
     }
 
 }
 
 </style>
+
 </head>
 
 <body>
 
-<div class="container">
+<header class="header">
 
-    <!-- =====================================================
-         HEADER
-    ====================================================== -->
+    <div class="logo">
+        🔥 TOMSONSTAKES
+    </div>
 
-    <header class="header">
+    <div class="tagline">
+        DAILY FOOTBALL PREDICTIONS
+    </div>
 
-        <div class="logo">
-            🔥 TOMSONSTAKES
-        </div>
-
-        <div class="subtitle">
-            DAILY FOOTBALL PREDICTIONS
-        </div>
-
-        <div
-            class="date-heading"
-            id="todayHeading"
-        ></div>
-
-    </header>
+</header>
 
 
-    <!-- =====================================================
-         NAVIGATION
-    ====================================================== -->
+<nav class="nav">
 
-    <nav class="nav">
-
-        <button
-            id="homeTab"
-            class="active"
-            type="button"
-        >
-            🏠 TODAY
-        </button>
-
-        <button
-            id="adminTab"
-            type="button"
-        >
-            ✍️ MY PICKS
-        </button>
-
-    </nav>
-
-
-    <!-- =====================================================
-         PUBLIC HOME
-    ====================================================== -->
-
-    <section
-        id="homeSection"
-        class="section active"
+    <button
+        id="homeTab"
+        class="active"
+        onclick="showHome()"
     >
+        🏠 Predictions
+    </button>
 
-        <div class="hero">
+    <button
+        id="adminTab"
+        onclick="showAdmin()"
+    >
+        ⚙️ Admin
+    </button>
 
-            <div class="hero-label">
-                TOMSONSTAKES DAILY EDITION
-            </div>
+</nav>
+
+
+<main class="container">
+
+    <!-- =========================================
+         PUBLIC HOME
+    ========================================== -->
+
+    <section id="homePanel">
+
+        <div class="date-header">
 
             <h2>
-                Today's Football Predictions
+                ⚽ Today's Predictions
             </h2>
 
-            <p>
-                Carefully selected matches and predictions
-                published by TomsonStakes.
+            <p id="publicDateLabel">
+                Loading predictions...
             </p>
+
+            <div class="date-controls">
+
+                <input
+                    type="date"
+                    id="publicDate"
+                >
+
+                <button
+                    class="btn btn-green"
+                    onclick="loadPublishedPredictions()"
+                >
+                    VIEW PREDICTIONS
+                </button>
+
+            </div>
 
         </div>
 
 
-        <div
-            id="publicPredictions"
-        ></div>
+        <div class="section-title">
+            🔥 TOMSON'S PICKS
+        </div>
+
+        <div id="publicPredictions">
+
+            <div class="status warning">
+                Loading predictions...
+            </div>
+
+        </div>
 
     </section>
 
 
-    <!-- =====================================================
-         ADMIN / MY PICKS
-    ====================================================== -->
+    <!-- =========================================
+         ADMIN
+    ========================================== -->
 
     <section
-        id="adminSection"
-        class="section"
+        id="adminPanel"
+        class="admin-panel"
     >
 
-        <div class="section-title">
-            ✍️ My Predictions
-        </div>
+        <div class="admin-box">
 
-        <div class="section-subtitle">
-            Select a fixture, enter your own prediction,
-            then publish it to today's TomsonStakes page.
-        </div>
+            <h3>
+                ⚙️ TomsonStakes Prediction Desk
+            </h3>
 
+            <p style="color:#6b7280;font-size:13px;">
+                Select your preferred fixtures and
+                enter your own predictions.
+            </p>
 
-        <div class="admin-panel">
+            <label>
+                Prediction Date
+            </label>
 
-            <div class="form-group">
-
-                <label>
-                    PREDICTION DATE
-                </label>
-
-                <input
-                    type="date"
-                    id="predictionDate"
-                >
-
-            </div>
-
+            <input
+                type="date"
+                id="adminDate"
+            >
 
             <button
-                class="primary-button"
-                id="loadFixturesButton"
-                type="button"
+                class="btn btn-blue"
+                style="width:100%;margin-top:12px;"
+                onclick="loadAdminFixtures()"
             >
-                ⚽ LOAD TODAY'S FIXTURES
+                🔎 LOAD FIXTURES
             </button>
 
-
             <div
-                id="adminStatus"
+                id="fixtureStatus"
             ></div>
 
-
             <div
-                id="fixtureTools"
-                class="fixture-tools"
-                style="display:none;"
-            >
+                id="fixtureList"
+                class="fixture-list"
+            ></div>
 
-                <div class="form-group">
+        </div>
 
-                    <label>
-                        SEARCH MATCH
-                    </label>
 
-                    <input
-                        type="text"
-                        id="fixtureSearch"
-                        placeholder="Search team or league..."
-                    >
+        <div
+            id="predictionForm"
+            class="admin-box"
+            style="display:none;"
+        >
 
-                </div>
-
-                <div
-                    id="fixtureList"
-                    class="fixture-list"
-                ></div>
-
-            </div>
-
+            <h3>
+                ✍️ Enter Your Prediction
+            </h3>
 
             <div
                 id="selectedMatch"
-                class="selected-match"
-                style="display:none;"
+                class="status success"
+            ></div>
+
+
+            <label>
+                Market
+            </label>
+
+            <select id="market">
+
+                <option value="Match Result">
+                    Match Result
+                </option>
+
+                <option value="Double Chance">
+                    Double Chance
+                </option>
+
+                <option value="Over/Under 0.5">
+                    Over/Under 0.5
+                </option>
+
+                <option value="Over/Under 1.5">
+                    Over/Under 1.5
+                </option>
+
+                <option value="Over/Under 2.5">
+                    Over/Under 2.5
+                </option>
+
+                <option value="Over/Under 3.5">
+                    Over/Under 3.5
+                </option>
+
+                <option value="Both Teams To Score">
+                    Both Teams To Score
+                </option>
+
+                <option value="Draw No Bet">
+                    Draw No Bet
+                </option>
+
+                <option value="Correct Score">
+                    Correct Score
+                </option>
+
+            </select>
+
+
+            <label>
+                My Prediction
+            </label>
+
+            <input
+                type="text"
+                id="selection"
+                placeholder="e.g. Home Win"
             >
 
-                <div class="selected-label">
-                    SELECTED MATCH
-                </div>
 
-                <div
-                    id="selectedTeams"
-                    class="selected-teams"
-                ></div>
+            <label>
+                Confidence
+            </label>
 
-                <div
-                    id="selectedLeague"
-                    style="color:#86efac;margin-top:5px;font-size:12px;"
-                ></div>
+            <select id="confidence">
 
-                <div
-                    id="selectedKickoff"
-                    style="color:#9ca3af;margin-top:5px;font-size:12px;"
-                ></div>
+                <option value="5">5/10</option>
+                <option value="6">6/10</option>
+                <option value="7">7/10</option>
+                <option value="8">8/10</option>
+                <option value="9">9/10</option>
+                <option value="10">10/10</option>
 
-            </div>
+            </select>
 
 
-            <!-- MARKET -->
+            <label>
+                My Analysis
+            </label>
 
-            <div class="form-group">
-
-                <label>
-                    MARKET
-                </label>
-
-                <select id="predictionMarket">
-
-                    <option value="">
-                        Select market
-                    </option>
-
-                    <option value="1X2">
-                        Match Result
-                    </option>
-
-                    <option value="DOUBLE_CHANCE">
-                        Double Chance
-                    </option>
-
-                    <option value="OVER_UNDER">
-                        Over / Under Goals
-                    </option>
-
-                    <option value="BTTS">
-                        Both Teams To Score
-                    </option>
-
-                    <option value="DRAW_NO_BET">
-                        Draw No Bet
-                    </option>
-
-                    <option value="OTHER">
-                        Other
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <!-- PREDICTION -->
-
-            <div class="form-group">
-
-                <label>
-                    MY PREDICTION
-                </label>
-
-                <input
-                    type="text"
-                    id="predictionSelection"
-                    placeholder="e.g. Arsenal Win"
-                >
-
-            </div>
-
-
-            <!-- CONFIDENCE -->
-
-            <div class="form-group">
-
-                <label>
-                    CONFIDENCE
-                </label>
-
-                <select id="predictionConfidence">
-
-                    <option value="">
-                        Select confidence
-                    </option>
-
-                    <option value="5">
-                        5 / 10
-                    </option>
-
-                    <option value="6">
-                        6 / 10
-                    </option>
-
-                    <option value="7">
-                        7 / 10
-                    </option>
-
-                    <option value="8">
-                        8 / 10
-                    </option>
-
-                    <option value="9">
-                        9 / 10
-                    </option>
-
-                    <option value="10">
-                        10 / 10
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <!-- ANALYSIS -->
-
-            <div class="form-group">
-
-                <label>
-                    MY ANALYSIS / NOTE
-                </label>
-
-                <textarea
-                    id="predictionAnalysis"
-                    placeholder="Write your reasoning or short analysis..."
-                ></textarea>
-
-            </div>
+            <textarea
+                id="analysis"
+                placeholder="Enter your reasoning for this prediction..."
+            ></textarea>
 
 
             <button
-                class="primary-button"
-                id="publishButton"
-                type="button"
+                class="btn btn-green"
+                style="width:100%;margin-top:15px;"
+                onclick="publishPrediction()"
             >
                 🚀 PUBLISH PREDICTION
             </button>
 
+            <div id="publishStatus"></div>
 
-            <button
-                class="secondary-button"
-                id="clearFormButton"
-                type="button"
-            >
-                CLEAR FORM
-            </button>
+        </div>
+
+
+        <div class="admin-box">
+
+            <h3>
+                📋 Published Predictions
+            </h3>
+
+            <div id="adminPredictions">
+
+                <div class="status warning">
+                    Select a date to view your published predictions.
+                </div>
+
+            </div>
 
         </div>
 
     </section>
 
+</main>
 
-    <footer class="footer">
 
-        TOMSONSTAKES © 2026
-        <br>
-        Daily Football Predictions
+<footer class="footer">
 
-    </footer>
+    TOMSONSTAKES © 2026
 
-</div>
+</footer>
 
 
 <script>
 
 /* =========================================================
-   STATE
+   GLOBAL STATE
 ========================================================= */
-
-let fixtures = [];
 
 let selectedFixture = null;
 
-
-/*
-    Temporary frontend storage.
-
-    IMPORTANT:
-    This is deliberately local for Phase 1.
-
-    Phase 2 will move this to:
-        /api/predictions
-    so published predictions become permanent.
-*/
-
-let publishedPredictions = [];
+let adminFixtures = [];
 
 
 /* =========================================================
-   INITIALIZATION
+   INITIALIZE
 ========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
-    initialize
+    () => {
+
+        const today =
+            new Date()
+            .toISOString()
+            .split("T")[0];
+
+        document.getElementById(
+            "publicDate"
+        ).value = today;
+
+        document.getElementById(
+            "adminDate"
+        ).value = today;
+
+        loadPublishedPredictions();
+
+    }
 );
 
 
-function initialize() {
+/* =========================================================
+   NAVIGATION
+========================================================= */
 
-    const today =
-        getTodayNigeriaDate();
-
-    document.getElementById(
-        "todayHeading"
-    ).textContent =
-        formatReadableDate(today);
+function showHome() {
 
     document.getElementById(
-        "predictionDate"
-    ).value = today;
+        "homePanel"
+    ).style.display = "block";
 
+    document.getElementById(
+        "adminPanel"
+    ).style.display = "none";
 
     document.getElementById(
         "homeTab"
-    ).addEventListener(
-        "click",
-        () => showSection("home")
-    );
-
+    ).classList.add("active");
 
     document.getElementById(
         "adminTab"
-    ).addEventListener(
-        "click",
-        () => showSection("admin")
-    );
+    ).classList.remove("active");
+
+}
 
 
-    document.getElementById(
-        "loadFixturesButton"
-    ).addEventListener(
-        "click",
-        loadFixtures
-    );
-
+function showAdmin() {
 
     document.getElementById(
-        "fixtureSearch"
-    ).addEventListener(
-        "input",
-        renderFixtureList
-    );
-
+        "homePanel"
+    ).style.display = "none";
 
     document.getElementById(
-        "publishButton"
-    ).addEventListener(
-        "click",
-        publishPrediction
-    );
-
+        "adminPanel"
+    ).style.display = "block";
 
     document.getElementById(
-        "clearFormButton"
-    ).addEventListener(
-        "click",
-        clearPredictionForm
-    );
+        "homeTab"
+    ).classList.remove("active");
 
+    document.getElementById(
+        "adminTab"
+    ).classList.add("active");
 
-    renderPublicPredictions();
+    loadAdminPublished();
 
 }
 
 
 /* =========================================================
-   SECTION SWITCH
+   LOAD PUBLIC PREDICTIONS
 ========================================================= */
 
-function showSection(section) {
-
-    const home =
-        document.getElementById(
-            "homeSection"
-        );
-
-    const admin =
-        document.getElementById(
-            "adminSection"
-        );
-
-    const homeTab =
-        document.getElementById(
-            "homeTab"
-        );
-
-    const adminTab =
-        document.getElementById(
-            "adminTab"
-        );
-
-
-    if (section === "home") {
-
-        home.classList.add("active");
-        admin.classList.remove("active");
-
-        homeTab.classList.add("active");
-        adminTab.classList.remove("active");
-
-    }
-
-    else {
-
-        home.classList.remove("active");
-        admin.classList.add("active");
-
-        homeTab.classList.remove("active");
-        adminTab.classList.add("active");
-
-    }
-
-}
-
-
-/* =========================================================
-   LOAD FIXTURES
-========================================================= */
-
-async function loadFixtures() {
+async function loadPublishedPredictions() {
 
     const date =
         document.getElementById(
-            "predictionDate"
+            "publicDate"
         ).value;
 
-
-    const status =
+    const box =
         document.getElementById(
-            "adminStatus"
+            "publicPredictions"
         );
 
-    const button =
+    const label =
         document.getElementById(
-            "loadFixturesButton"
+            "publicDateLabel"
         );
 
 
     if (!date) {
 
-        showAdminStatus(
-            "Please select a prediction date.",
-            "warning"
-        );
+        box.innerHTML =
+            `<div class="status warning">
+                Please select a date.
+            </div>`;
 
         return;
 
     }
 
 
-    button.disabled = true;
-
-    button.textContent =
-        "⏳ LOADING FIXTURES...";
+    label.textContent =
+        formatDate(date);
 
 
-    showAdminStatus(
-        "Connecting to the football fixture service...",
-        "warning"
-    );
+    box.innerHTML =
+        `<div class="status warning">
+            Loading Tomson's predictions...
+        </div>`;
+
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/predictions?date=${encodeURIComponent(date)}`
+            );
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Unable to load predictions."
+            );
+
+        }
+
+
+        if (
+            !data.predictions ||
+            data.predictions.length === 0
+        ) {
+
+            box.innerHTML =
+                `<div class="status warning">
+                    No predictions have been published
+                    for this date yet.
+                </div>`;
+
+            return;
+
+        }
+
+
+        box.innerHTML =
+            data.predictions
+                .map(
+                    buildPublicPrediction
+                )
+                .join("");
+
+
+    }
+
+    catch(error) {
+
+        box.innerHTML =
+            `<div class="status error">
+                ❌ ${escapeHtml(
+                    error.message
+                )}
+            </div>`;
+
+    }
+
+}
+
+
+/* =========================================================
+   PUBLIC PREDICTION CARD
+========================================================= */
+
+function buildPublicPrediction(
+    prediction
+) {
+
+    const result =
+        prediction.result ||
+        "PENDING";
+
+
+    return `
+
+        <article class="prediction-card">
+
+            <div class="prediction-top">
+
+                <span class="league">
+                    🏆
+                    ${escapeHtml(
+                        prediction.country || ""
+                    )}
+                    ${prediction.league
+                        ?
+                        " • " +
+                        escapeHtml(
+                            prediction.league
+                        )
+                        :
+                        ""
+                    }
+                </span>
+
+                <span class="kickoff">
+
+                    🕐
+                    ${formatKickoff(
+                        prediction.kickoff
+                    )}
+
+                </span>
+
+            </div>
+
+
+            <div class="match">
+
+                <div class="team">
+                    ${escapeHtml(
+                        prediction.home_team
+                    )}
+                </div>
+
+                <div class="vs">
+                    VS
+                </div>
+
+                <div class="team">
+                    ${escapeHtml(
+                        prediction.away_team
+                    )}
+                </div>
+
+            </div>
+
+
+            <div class="pick-box">
+
+                <div class="pick-label">
+                    TOMSON'S PREDICTION
+                </div>
+
+                <div class="pick">
+                    ${escapeHtml(
+                        prediction.selection
+                    )}
+                </div>
+
+                <div class="confidence">
+                    Confidence:
+                    ${escapeHtml(
+                        prediction.confidence
+                    )}/10
+                </div>
+
+            </div>
+
+
+            ${
+                prediction.analysis
+                ?
+                `
+                <div class="analysis-text">
+
+                    <strong>
+                        Analysis:
+                    </strong>
+
+                    ${escapeHtml(
+                        prediction.analysis
+                    )}
+
+                </div>
+                `
+                :
+                ""
+            }
+
+
+            <div class="status ${
+                result === "WIN"
+                ?
+                "success"
+                :
+                result === "LOSS"
+                ?
+                "error"
+                :
+                "warning"
+            }">
+
+                Result:
+                <strong>
+                    ${escapeHtml(result)}
+                </strong>
+
+            </div>
+
+        </article>
+
+    `;
+
+}
+
+
+/* =========================================================
+   LOAD FIXTURES FOR ADMIN
+========================================================= */
+
+async function loadAdminFixtures() {
+
+    const date =
+        document.getElementById(
+            "adminDate"
+        ).value;
+
+    const list =
+        document.getElementById(
+            "fixtureList"
+        );
+
+    const status =
+        document.getElementById(
+            "fixtureStatus"
+        );
+
+
+    if (!date) {
+
+        status.innerHTML =
+            `<div class="status warning">
+                Please select a date.
+            </div>`;
+
+        return;
+
+    }
+
+
+    list.innerHTML = "";
+
+    status.innerHTML =
+        `<div class="status warning">
+            🔎 Loading fixtures...
+        </div>`;
 
 
     try {
@@ -1039,7 +1063,6 @@ async function loadFixtures() {
                 `/api/fixtures?date=${encodeURIComponent(date)}`
             );
 
-
         const data =
             await response.json();
 
@@ -1047,200 +1070,69 @@ async function loadFixtures() {
         if (!response.ok) {
 
             throw new Error(
-                data.message ||
                 data.error ||
+                data.message ||
                 "Unable to load fixtures."
             );
 
         }
 
 
+        adminFixtures =
+            Array.isArray(data.response)
+            ?
+            data.response
+            :
+            [];
+
+
         if (
-            !data.response ||
-            !Array.isArray(
-                data.response
-            )
+            adminFixtures.length === 0
         ) {
 
-            throw new Error(
-                "Invalid fixture response."
-            );
+            status.innerHTML =
+                `<div class="status warning">
+                    No fixtures found for
+                    ${escapeHtml(date)}.
+                </div>`;
+
+            return;
 
         }
 
 
-        fixtures =
-            data.response.filter(
-                fixture =>
-                    getFixtureState(
-                        fixture
-                    ) === "upcoming"
-            );
+        status.innerHTML =
+            `<div class="status success">
+                ${adminFixtures.length}
+                fixtures loaded.
+                Select a match below.
+            </div>`;
 
 
-        document.getElementById(
-            "fixtureTools"
-        ).style.display = "block";
-
-
-        renderFixtureList();
-
-
-        showAdminStatus(
-            `${fixtures.length} upcoming fixtures loaded. Select the match you want to predict.`,
-            "success"
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "LOAD FIXTURES ERROR:",
-            error
-        );
-
-
-        showAdminStatus(
-            error.message,
-            "error"
-        );
-
-    }
-
-    finally {
-
-        button.disabled = false;
-
-        button.textContent =
-            "⚽ LOAD TODAY'S FIXTURES";
-
-    }
-
-}
-
-
-/* =========================================================
-   RENDER FIXTURE LIST
-========================================================= */
-
-function renderFixtureList() {
-
-    const list =
-        document.getElementById(
-            "fixtureList"
-        );
-
-
-    const search =
-        String(
-            document.getElementById(
-                "fixtureSearch"
-            ).value || ""
-        )
-        .trim()
-        .toLowerCase();
-
-
-    const filtered =
-        fixtures.filter(
-            fixture => {
-
-                const home =
-                    fixture.teams?.home?.name ||
-                    "";
-
-                const away =
-                    fixture.teams?.away?.name ||
-                    "";
-
-                const league =
-                    fixture.league?.name ||
-                    "";
-
-                const country =
-                    fixture.league?.country ||
-                    "";
-
-
-                const text =
-                    `${home} ${away} ${league} ${country}`
-                    .toLowerCase();
-
-
-                return text.includes(
-                    search
-                );
-
-            }
-        );
-
-
-    if (!filtered.length) {
-
-        list.innerHTML = `
-            <div class="empty">
-                No matching fixtures found.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    list.innerHTML =
-        filtered
-        .slice(0, 100)
-        .map(
-            fixture =>
-                buildFixtureOption(
-                    fixture
+        list.innerHTML =
+            adminFixtures
+                .map(
+                    (fixture, index) =>
+                        buildFixtureOption(
+                            fixture,
+                            index
+                        )
                 )
-        )
-        .join("");
+                .join("");
 
 
-    list
-        .querySelectorAll(
-            ".fixture-option"
-        )
-        .forEach(
-            element => {
+    }
 
-                element.addEventListener(
-                    "click",
-                    () => {
+    catch(error) {
 
-                        const fixtureId =
-                            Number(
-                                element.dataset.fixtureId
-                            );
+        status.innerHTML =
+            `<div class="status error">
+                ❌ ${escapeHtml(
+                    error.message
+                )}
+            </div>`;
 
-
-                        const fixture =
-                            fixtures.find(
-                                item =>
-                                    Number(
-                                        item.fixture?.id
-                                    ) ===
-                                    fixtureId
-                            );
-
-
-                        if (fixture) {
-
-                            selectFixture(
-                                fixture
-                            );
-
-                        }
-
-                    }
-                );
-
-            }
-        );
+    }
 
 }
 
@@ -1250,86 +1142,59 @@ function renderFixtureList() {
 ========================================================= */
 
 function buildFixtureOption(
-    fixture
+    fixture,
+    index
 ) {
-
-    const id =
-        Number(
-            fixture.fixture?.id
-        );
-
 
     const home =
         fixture.teams?.home?.name ||
         "Home";
 
-
     const away =
         fixture.teams?.away?.name ||
         "Away";
-
 
     const league =
         fixture.league?.name ||
         "Unknown League";
 
-
     const country =
         fixture.league?.country ||
         "";
 
-
     const kickoff =
         formatKickoff(
-            fixture.fixture?.date,
-            fixture.fixture?.timestamp
+            fixture.fixture?.date
         );
-
-
-    const selected =
-        selectedFixture &&
-        Number(
-            selectedFixture.fixture?.id
-        ) === id;
 
 
     return `
 
         <div
-            class="fixture-option ${selected ? "selected" : ""}"
-            data-fixture-id="${id}"
+            class="fixture-option"
+            onclick="selectFixture(${index})"
+            id="fixture-option-${index}"
         >
 
-            <div class="fixture-option-top">
+            <div class="fixture-league">
 
-                <div class="fixture-league">
-
-                    ${escapeHtml(
-                        country
-                    )}
-                    •
-                    ${escapeHtml(
-                        league
-                    )}
-
-                </div>
-
-                <div class="fixture-time">
-
-                    ${escapeHtml(
-                        kickoff
-                    )}
-
-                </div>
+                ${escapeHtml(country)}
+                •
+                ${escapeHtml(league)}
 
             </div>
 
-
-            <div class="fixture-match">
+            <div class="fixture-teams">
 
                 ${escapeHtml(home)}
                 vs
                 ${escapeHtml(away)}
+
+            </div>
+
+            <div class="fixture-time">
+
+                🕐 ${escapeHtml(kickoff)}
 
             </div>
 
@@ -1344,80 +1209,101 @@ function buildFixtureOption(
    SELECT FIXTURE
 ========================================================= */
 
-function selectFixture(
-    fixture
-) {
+function selectFixture(index) {
 
     selectedFixture =
-        fixture;
+        adminFixtures[index];
+
+
+    document
+        .querySelectorAll(
+            ".fixture-option"
+        )
+        .forEach(
+            element =>
+                element.classList.remove(
+                    "selected"
+                )
+        );
+
+
+    const option =
+        document.getElementById(
+            `fixture-option-${index}`
+        );
+
+    if (option) {
+
+        option.classList.add(
+            "selected"
+        );
+
+    }
 
 
     const home =
-        fixture.teams?.home?.name ||
-        "Home Team";
-
+        selectedFixture.teams?.home?.name ||
+        "Home";
 
     const away =
-        fixture.teams?.away?.name ||
-        "Away Team";
-
-
-    const league =
-        fixture.league?.name ||
-        "Unknown League";
-
-
-    const country =
-        fixture.league?.country ||
-        "";
-
-
-    const kickoff =
-        formatKickoff(
-            fixture.fixture?.date,
-            fixture.fixture?.timestamp
-        );
+        selectedFixture.teams?.away?.name ||
+        "Away";
 
 
     document.getElementById(
         "selectedMatch"
-    ).style.display = "block";
+    ).innerHTML = `
+
+        Selected:
+
+        <strong>
+            ${escapeHtml(home)}
+            vs
+            ${escapeHtml(away)}
+        </strong>
+
+        <br>
+
+        ${escapeHtml(
+            selectedFixture.league?.name ||
+            ""
+        )}
+
+        •
+        ${escapeHtml(
+            formatKickoff(
+                selectedFixture.fixture?.date
+            )
+        )}
+
+    `;
 
 
     document.getElementById(
-        "selectedTeams"
-    ).textContent =
-        `${home} vs ${away}`;
+        "predictionForm"
+    ).style.display =
+        "block";
 
 
     document.getElementById(
-        "selectedLeague"
-    ).textContent =
-        `${country} • ${league}`;
-
-
-    document.getElementById(
-        "selectedKickoff"
-    ).textContent =
-        `Kickoff: ${kickoff}`;
-
-
-    renderFixtureList();
+        "predictionForm"
+    ).scrollIntoView({
+        behavior: "smooth"
+    });
 
 }
 
 
 /* =========================================================
-   PUBLISH PREDICTION
+   PUBLISH
 ========================================================= */
 
-function publishPrediction() {
+async function publishPrediction() {
 
     if (!selectedFixture) {
 
-        showAdminStatus(
-            "Please select a fixture first.",
-            "warning"
+        alert(
+            "Please select a fixture first."
         );
 
         return;
@@ -1425,117 +1311,95 @@ function publishPrediction() {
     }
 
 
-    const market =
+    const date =
         document.getElementById(
-            "predictionMarket"
+            "adminDate"
         ).value;
 
+    const market =
+        document.getElementById(
+            "market"
+        ).value;
 
     const selection =
         document.getElementById(
-            "predictionSelection"
+            "selection"
         ).value.trim();
-
 
     const confidence =
         Number(
             document.getElementById(
-                "predictionConfidence"
+                "confidence"
             ).value
         );
 
-
     const analysis =
         document.getElementById(
-            "predictionAnalysis"
+            "analysis"
         ).value.trim();
 
 
-    if (!market) {
-
-        showAdminStatus(
-            "Please select a prediction market.",
-            "warning"
+    const statusBox =
+        document.getElementById(
+            "publishStatus"
         );
-
-        return;
-
-    }
 
 
     if (!selection) {
 
-        showAdminStatus(
-            "Please enter your prediction.",
-            "warning"
-        );
+        statusBox.innerHTML =
+            `<div class="status warning">
+                Enter your prediction.
+            </div>`;
 
         return;
 
     }
 
 
-    if (
-        !Number.isFinite(
-            confidence
-        ) ||
-        confidence < 5 ||
-        confidence > 10
-    ) {
+    const home =
+        selectedFixture.teams?.home?.name ||
+        "";
 
-        showAdminStatus(
-            "Please select your confidence level.",
-            "warning"
-        );
-
-        return;
-
-    }
+    const away =
+        selectedFixture.teams?.away?.name ||
+        "";
 
 
-    const prediction = {
+    const payload = {
 
-        id:
-            Date.now(),
+        prediction_date:
+            date,
 
-        date:
-            document.getElementById(
-                "predictionDate"
-            ).value,
-
-        fixtureId:
+        fixture_id:
             selectedFixture.fixture?.id ||
             null,
 
-        home:
-            selectedFixture.teams?.home?.name ||
-            "",
+        home_team:
+            home,
 
-        away:
-            selectedFixture.teams?.away?.name ||
-            "",
+        away_team:
+            away,
 
-        homeId:
+        home_team_id:
             selectedFixture.teams?.home?.id ||
             null,
 
-        awayId:
+        away_team_id:
             selectedFixture.teams?.away?.id ||
+            null,
+
+        country:
+            selectedFixture.league?.country ||
             null,
 
         league:
             selectedFixture.league?.name ||
-            "",
-
-        country:
-            selectedFixture.league?.country ||
-            "",
+            null,
 
         kickoff:
-            formatKickoff(
-                selectedFixture.fixture?.date,
-                selectedFixture.fixture?.timestamp
-            ),
+            selectedFixture.fixture?.date ||
+            null,
 
         market,
 
@@ -1548,347 +1412,278 @@ function publishPrediction() {
         status:
             "PUBLISHED",
 
-        publishedAt:
-            new Date().toISOString()
+        result:
+            "PENDING"
 
     };
 
 
-    publishedPredictions.unshift(
-        prediction
-    );
+    statusBox.innerHTML =
+        `<div class="status warning">
+            🚀 Publishing prediction...
+        </div>`;
 
 
-    renderPublicPredictions();
+    try {
+
+        const response =
+            await fetch(
+                "/api/predictions",
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify(
+                            payload
+                        )
+
+                }
+            );
 
 
-    showAdminStatus(
-        "Prediction published successfully.",
-        "success"
-    );
+        const data =
+            await response.json();
 
 
-    clearPredictionForm(
-        false
-    );
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                data.message ||
+                "Publishing failed."
+            );
+
+        }
 
 
-    showSection(
-        "home"
-    );
+        statusBox.innerHTML =
+            `<div class="status success">
+                ✅ Prediction published successfully.
+            </div>`;
 
-}
 
-
-/* =========================================================
-   PUBLIC PREDICTIONS
-========================================================= */
-
-function renderPublicPredictions() {
-
-    const container =
         document.getElementById(
-            "publicPredictions"
-        );
+            "selection"
+        ).value = "";
+
+        document.getElementById(
+            "analysis"
+        ).value = "";
 
 
-    if (
-        !publishedPredictions.length
-    ) {
+        selectedFixture = null;
 
-        container.innerHTML = `
 
-            <div class="empty">
+        loadAdminPublished();
 
-                <strong>
-                    No predictions published yet.
-                </strong>
+        loadPublishedPredictions();
 
-                Today's TomsonStakes picks will
-                appear here after you publish them
-                from the <b>MY PICKS</b> section.
-
-            </div>
-
-        `;
-
-        return;
 
     }
 
+    catch(error) {
 
-    const today =
-        getTodayNigeriaDate();
-
-
-    const todayPredictions =
-        publishedPredictions.filter(
-            prediction =>
-                prediction.date === today
-        );
-
-
-    if (
-        !todayPredictions.length
-    ) {
-
-        container.innerHTML = `
-
-            <div class="empty">
-
-                <strong>
-                    No predictions for today yet.
-                </strong>
-
-                Select your matches and publish
-                your picks from <b>MY PICKS</b>.
-
-            </div>
-
-        `;
-
-        return;
+        statusBox.innerHTML =
+            `<div class="status error">
+                ❌ ${escapeHtml(
+                    error.message
+                )}
+            </div>`;
 
     }
-
-
-    container.innerHTML = `
-
-        <div class="section-title">
-            🔥 Today's Picks
-        </div>
-
-        <div class="section-subtitle">
-            Published by TomsonStakes
-        </div>
-
-        ${todayPredictions
-            .map(
-                prediction =>
-                    buildPredictionCard(
-                        prediction
-                    )
-            )
-            .join("")}
-
-    `;
 
 }
 
 
 /* =========================================================
-   PREDICTION CARD
+   ADMIN PUBLISHED
 ========================================================= */
 
-function buildPredictionCard(
+async function loadAdminPublished() {
+
+    const date =
+        document.getElementById(
+            "adminDate"
+        ).value;
+
+    const box =
+        document.getElementById(
+            "adminPredictions"
+        );
+
+
+    if (!date) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/predictions?date=${encodeURIComponent(date)}`
+            );
+
+        const data =
+            await response.json();
+
+
+        if (
+            !data.predictions ||
+            data.predictions.length === 0
+        ) {
+
+            box.innerHTML =
+                `<div class="status warning">
+                    No published predictions for this date.
+                </div>`;
+
+            return;
+
+        }
+
+
+        box.innerHTML =
+            data.predictions
+                .map(
+                    buildAdminPrediction
+                )
+                .join("");
+
+    }
+
+    catch(error) {
+
+        box.innerHTML =
+            `<div class="status error">
+                ❌ ${escapeHtml(
+                    error.message
+                )}
+            </div>`;
+
+    }
+
+}
+
+
+/* =========================================================
+   ADMIN PREDICTION
+========================================================= */
+
+function buildAdminPrediction(
     prediction
 ) {
 
     return `
 
-        <article class="prediction-card">
+        <div class="prediction-card">
 
             <div class="prediction-top">
 
-                <div class="prediction-league">
-
+                <span>
                     ${escapeHtml(
-                        prediction.country
+                        prediction.league || ""
                     )}
+                </span>
 
-                    •
-                    
-                    ${escapeHtml(
-                        prediction.league
+                <span>
+                    #${escapeHtml(
+                        prediction.id
                     )}
-
-                </div>
-
-                <div class="prediction-time">
-
-                    🕐
-                    ${escapeHtml(
-                        prediction.kickoff
-                    )}
-
-                </div>
+                </span>
 
             </div>
 
+            <div class="match">
 
-            <div class="prediction-teams">
-
-                <div class="prediction-team">
-
+                <div class="team">
                     ${escapeHtml(
-                        prediction.home
+                        prediction.home_team
                     )}
-
                 </div>
 
-                <div class="prediction-vs">
+                <div class="vs">
                     VS
                 </div>
 
-                <div class="prediction-team prediction-away">
-
+                <div class="team">
                     ${escapeHtml(
-                        prediction.away
+                        prediction.away_team
                     )}
-
                 </div>
 
             </div>
-
 
             <div class="pick-box">
 
                 <div class="pick-label">
-                    TOMSONSTAKES PICK
+                    ${escapeHtml(
+                        prediction.market
+                    )}
                 </div>
 
-                <div class="pick-value">
-
+                <div class="pick">
                     ${escapeHtml(
                         prediction.selection
                     )}
-
                 </div>
 
                 <div class="confidence">
 
                     Confidence:
-                    <strong>
-                        ${prediction.confidence}/10
-                    </strong>
-
-                </div>
-
-            </div>
-
-
-            ${
-                prediction.analysis
-                ?
-                `
-                <div class="analysis-text">
-
-                    <strong>
-                        Tomson's Analysis
-                    </strong>
-
-                    <br>
-
                     ${escapeHtml(
-                        prediction.analysis
-                    )}
+                        prediction.confidence
+                    )}/10
 
                 </div>
-                `
-                :
-                ""
-            }
 
-
-            <div class="prediction-status">
-                PUBLISHED
             </div>
 
-        </article>
 
-    `;
+            <div class="result-row">
 
-}
+                <button
+                    class="win"
+                    onclick="updateResult(
+                        ${prediction.id},
+                        'WIN'
+                    )"
+                >
+                    ✓ WIN
+                </button>
 
+                <button
+                    class="loss"
+                    onclick="updateResult(
+                        ${prediction.id},
+                        'LOSS'
+                    )"
+                >
+                    ✕ LOSS
+                </button>
 
-/* =========================================================
-   CLEAR FORM
-========================================================= */
+                <button
+                    class="void"
+                    onclick="updateResult(
+                        ${prediction.id},
+                        'VOID'
+                    )"
+                >
+                    VOID
+                </button>
 
-function clearPredictionForm(
-    clearFixture = true
-) {
-
-    document.getElementById(
-        "predictionMarket"
-    ).value = "";
-
-
-    document.getElementById(
-        "predictionSelection"
-    ).value = "";
-
-
-    document.getElementById(
-        "predictionConfidence"
-    ).value = "";
-
-
-    document.getElementById(
-        "predictionAnalysis"
-    ).value = "";
-
-
-    if (clearFixture) {
-
-        selectedFixture =
-            null;
-
-
-        document.getElementById(
-            "selectedMatch"
-        ).style.display =
-            "none";
-
-
-        renderFixtureList();
-
-    }
-
-}
-
-
-/* =========================================================
-   ADMIN STATUS
-========================================================= */
-
-function showAdminStatus(
-    message,
-    type
-) {
-
-    const element =
-        document.getElementById(
-            "adminStatus"
-        );
-
-
-    let className =
-        "status-warning";
-
-
-    if (type === "success") {
-
-        className =
-            "status-success";
-
-    }
-
-    else if (type === "error") {
-
-        className =
-            "status-error";
-
-    }
-
-
-    element.innerHTML = `
-
-        <div class="status ${className}">
-
-            ${escapeHtml(
-                message
-            )}
+            </div>
 
         </div>
 
@@ -1898,126 +1693,148 @@ function showAdminStatus(
 
 
 /* =========================================================
-   FIXTURE STATE
+   UPDATE RESULT
 ========================================================= */
 
-function getFixtureState(
-    fixture
+async function updateResult(
+    id,
+    result
 ) {
 
-    const status =
-        String(
-            fixture.fixture?.status?.short ||
-            "NS"
-        ).toUpperCase();
-
-
-    const finished = [
-        "FT",
-        "AET",
-        "PEN",
-        "AWD",
-        "WO"
-    ];
-
-
-    const live = [
-        "1H",
-        "HT",
-        "2H",
-        "ET",
-        "BT",
-        "P"
-    ];
-
-
     if (
-        finished.includes(
-            status
+        !confirm(
+            `Mark this prediction as ${result}?`
         )
     ) {
 
-        return "finished";
+        return;
 
     }
 
 
-    if (
-        live.includes(
-            status
-        )
-    ) {
+    try {
 
-        return "live";
+        const response =
+            await fetch(
+                "/api/predictions",
+                {
+
+                    method:
+                        "PATCH",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            id,
+
+                            result
+
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Unable to update result."
+            );
+
+        }
+
+
+        loadAdminPublished();
+
+        loadPublishedPredictions();
 
     }
 
+    catch(error) {
 
-    if (
-        [
-            "PST",
-            "CANC",
-            "ABD",
-            "SUSP",
-            "INT"
-        ].includes(
-            status
-        )
-    ) {
-
-        return "unavailable";
+        alert(
+            error.message
+        );
 
     }
-
-
-    return "upcoming";
 
 }
 
 
 /* =========================================================
-   KICKOFF
+   FORMAT DATE
+========================================================= */
+
+function formatDate(
+    value
+) {
+
+    if (!value) {
+
+        return "";
+
+    }
+
+
+    const date =
+        new Date(
+            `${value}T00:00:00`
+        );
+
+
+    return date.toLocaleDateString(
+        "en-NG",
+        {
+
+            weekday: "long",
+
+            year: "numeric",
+
+            month: "long",
+
+            day: "numeric"
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   FORMAT KICKOFF
 ========================================================= */
 
 function formatKickoff(
-    isoDate,
-    timestamp
+    value
 ) {
+
+    if (!value) {
+
+        return "Time unavailable";
+
+    }
+
 
     try {
 
-        let date;
-
-
-        if (timestamp) {
-
-            date =
-                new Date(
-                    Number(timestamp) *
-                    1000
-                );
-
-        }
-
-        else if (isoDate) {
-
-            date =
-                new Date(
-                    isoDate
-                );
-
-        }
-
-        else {
-
-            return "Time unavailable";
-
-        }
-
-
-        return date.toLocaleTimeString(
+        return new Date(
+            value
+        ).toLocaleTimeString(
             "en-NG",
             {
+
                 timeZone:
                     "Africa/Lagos",
 
@@ -2045,100 +1862,6 @@ function formatKickoff(
 
 
 /* =========================================================
-   NIGERIA DATE
-========================================================= */
-
-function getTodayNigeriaDate() {
-
-    const parts =
-        new Intl.DateTimeFormat(
-            "en-CA",
-            {
-                timeZone:
-                    "Africa/Lagos",
-
-                year:
-                    "numeric",
-
-                month:
-                    "2-digit",
-
-                day:
-                    "2-digit"
-            }
-        ).formatToParts(
-            new Date()
-        );
-
-
-    const map = {};
-
-    parts.forEach(
-        part => {
-
-            map[
-                part.type
-            ] =
-                part.value;
-
-        }
-    );
-
-
-    return `${map.year}-${map.month}-${map.day}`;
-
-}
-
-
-/* =========================================================
-   READABLE DATE
-========================================================= */
-
-function formatReadableDate(
-    dateString
-) {
-
-    try {
-
-        const date =
-            new Date(
-                `${dateString}T12:00:00`
-            );
-
-
-        return date.toLocaleDateString(
-            "en-NG",
-            {
-                weekday:
-                    "long",
-
-                day:
-                    "numeric",
-
-                month:
-                    "long",
-
-                year:
-                    "numeric",
-
-                timeZone:
-                    "Africa/Lagos"
-
-            }
-        );
-
-    }
-
-    catch {
-
-        return dateString;
-
-    }
-
-}
-
-
-/* =========================================================
    ESCAPE HTML
 ========================================================= */
 
@@ -2149,22 +1872,27 @@ function escapeHtml(
     return String(
         value ?? ""
     )
+
     .replace(
         /&/g,
         "&amp;"
     )
+
     .replace(
         /</g,
         "&lt;"
     )
+
     .replace(
         />/g,
         "&gt;"
     )
+
     .replace(
         /"/g,
         "&quot;"
     )
+
     .replace(
         /'/g,
         "&#039;"
