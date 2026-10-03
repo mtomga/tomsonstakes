@@ -12,80 +12,140 @@
 
 <title>TomsonStakes Admin</title>
 
-
 <style>
-
-/* =========================================================
-   GLOBAL
-========================================================= */
 
 * {
     box-sizing: border-box;
 }
 
 body {
+
     margin: 0;
-    font-family: Arial, sans-serif;
-    background: #111827;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    background: #0f172a;
+
     color: #ffffff;
 }
 
 .container {
-    max-width: 1100px;
+
+    width: 100%;
+
+    max-width: 1250px;
+
     margin: auto;
+
     padding: 20px;
 }
 
 
-/* =========================================================
+/* =====================================================
    HEADER
-========================================================= */
+===================================================== */
 
 .header {
-    text-align: center;
-    padding: 25px 10px;
+
+    background: #111827;
+
+    border-radius: 16px;
+
+    padding: 24px;
+
+    margin-bottom: 20px;
+
+    border: 1px solid #1f2937;
 }
 
 .header h1 {
+
     margin: 0;
-    font-size: 32px;
+
+    font-size: 30px;
+
     font-weight: 900;
 }
 
-.subtitle {
+.header p {
+
+    margin: 7px 0 0;
+
     color: #9ca3af;
-    margin-top: 8px;
-    font-size: 13px;
-    letter-spacing: .5px;
+
+    font-size: 14px;
 }
 
 
-/* =========================================================
+/* =====================================================
    PANELS
-========================================================= */
+===================================================== */
 
 .panel {
-    background: #1f2937;
-    border-radius: 14px;
+
+    background: #1e293b;
+
+    border-radius: 15px;
+
     padding: 20px;
+
     margin-bottom: 20px;
+
+    border: 1px solid #334155;
 }
 
-.panel h2 {
-    margin-top: 0;
+.panel-title {
+
+    font-size: 19px;
+
+    font-weight: 900;
+
+    margin-bottom: 16px;
 }
 
 
-/* =========================================================
+/* =====================================================
    FORM
-========================================================= */
+===================================================== */
+
+.form-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 15px;
+}
+
+.form-group {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 7px;
+}
+
+.form-group.full {
+
+    grid-column: 1 / -1;
+}
 
 label {
-    display: block;
-    color: #d1d5db;
-    font-size: 13px;
+
+    font-size: 12px;
+
+    color: #cbd5e1;
+
     font-weight: 800;
-    margin-bottom: 7px;
+
+    text-transform: uppercase;
+
+    letter-spacing: .5px;
 }
 
 input,
@@ -94,40 +154,47 @@ textarea {
 
     width: 100%;
 
-    padding: 13px;
+    border: 1px solid #475569;
 
-    border: none;
+    background: #0f172a;
 
-    border-radius: 8px;
+    color: #ffffff;
 
-    font-size: 15px;
+    border-radius: 9px;
 
-    margin-bottom: 15px;
+    padding: 12px;
 
-    background: #ffffff;
+    font-size: 14px;
 
-    color: #111827;
+    outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+
+    border-color: #22c55e;
 }
 
 textarea {
 
-    min-height: 140px;
+    min-height: 100px;
 
     resize: vertical;
 }
 
 
-/* =========================================================
+/* =====================================================
    BUTTONS
-========================================================= */
+===================================================== */
 
 button {
 
     border: none;
 
-    border-radius: 8px;
+    border-radius: 9px;
 
-    padding: 13px 18px;
+    padding: 12px 17px;
 
     font-size: 14px;
 
@@ -138,75 +205,107 @@ button {
 
 button:disabled {
 
-    opacity: .6;
+    opacity: .55;
 
     cursor: wait;
 }
 
-.load-button {
-
-    width: 100%;
+.btn-green {
 
     background: #16a34a;
 
     color: white;
 }
 
-.publish-button {
+.btn-green:hover {
 
-    width: 100%;
-
-    background: #16a34a;
-
-    color: white;
-
-    font-size: 16px;
+    background: #15803d;
 }
 
-.draft-button {
+.btn-blue {
 
-    width: 100%;
-
-    background: #374151;
+    background: #2563eb;
 
     color: white;
+}
 
-    margin-top: 10px;
+.btn-blue:hover {
+
+    background: #1d4ed8;
+}
+
+.btn-orange {
+
+    background: #ea580c;
+
+    color: white;
+}
+
+.btn-red {
+
+    background: #dc2626;
+
+    color: white;
+}
+
+.btn-gray {
+
+    background: #475569;
+
+    color: white;
+}
+
+.button-row {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+    margin-top: 15px;
 }
 
 
-/* =========================================================
+/* =====================================================
    STATUS
-========================================================= */
+===================================================== */
 
 .status {
 
-    padding: 12px;
+    padding: 13px;
 
-    border-radius: 8px;
+    border-radius: 9px;
 
     margin-top: 12px;
 
-    font-weight: bold;
+    font-weight: 700;
 
-    line-height: 1.5;
+    font-size: 13px;
 }
 
-.success {
+.status-info {
+
+    background: #dbeafe;
+
+    color: #1e40af;
+}
+
+.status-success {
 
     background: #dcfce7;
 
     color: #166534;
 }
 
-.warning {
+.status-warning {
 
     background: #fef3c7;
 
     color: #92400e;
 }
 
-.error {
+.status-error {
 
     background: #fee2e2;
 
@@ -214,31 +313,144 @@ button:disabled {
 }
 
 
-/* =========================================================
-   MATCH CARD
-========================================================= */
+/* =====================================================
+   SLIP
+===================================================== */
 
-.match {
+.slip-box {
+
+    background: #0f172a;
+
+    border: 1px solid #334155;
+
+    border-radius: 13px;
+
+    padding: 18px;
+}
+
+
+/* =====================================================
+   FIXTURE HEADER
+===================================================== */
+
+.fixture-toolbar {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 10px;
+
+    flex-wrap: wrap;
+
+    margin-bottom: 15px;
+}
+
+.fixture-count {
+
+    color: #94a3b8;
+
+    font-size: 13px;
+}
+
+
+/* =====================================================
+   LEAGUE
+===================================================== */
+
+.league-section {
+
+    margin-bottom: 20px;
+
+    border: 1px solid #334155;
+
+    border-radius: 13px;
+
+    overflow: hidden;
+
+    background: #111827;
+}
+
+.league-header {
+
+    padding: 15px;
+
+    background: #1f2937;
+
+    border-left: 5px solid #22c55e;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.league-name {
+
+    font-size: 17px;
+
+    font-weight: 900;
+}
+
+.league-country {
+
+    color: #94a3b8;
+
+    font-size: 12px;
+
+    margin-top: 4px;
+}
+
+.league-priority {
+
+    background: #16a34a;
+
+    color: white;
+
+    padding: 5px 8px;
+
+    border-radius: 999px;
+
+    font-size: 10px;
+
+    font-weight: 900;
+}
+
+
+/* =====================================================
+   FIXTURE
+===================================================== */
+
+.fixture {
 
     background: #ffffff;
 
     color: #111827;
 
-    border-radius: 13px;
+    margin: 10px;
 
-    padding: 16px;
+    border-radius: 12px;
 
-    margin-top: 12px;
+    padding: 15px;
 
-    border: 3px solid transparent;
+    border: 2px solid transparent;
 }
 
-.match.selected {
+.fixture.selected {
 
-    border-color: #16a34a;
+    border-color: #22c55e;
+
+    box-shadow:
+        0 0 0 2px
+        rgba(34,197,94,.15);
 }
 
-.match-header {
+.fixture-top {
 
     display: flex;
 
@@ -246,34 +458,35 @@ button:disabled {
 
     gap: 10px;
 
-    color: #6b7280;
+    color: #64748b;
 
-    font-size: 12px;
+    font-size: 11px;
 
-    font-weight: bold;
+    font-weight: 700;
 }
 
-.teams {
+.fixture-teams {
 
     display: grid;
 
-    grid-template-columns: 1fr 70px 1fr;
+    grid-template-columns:
+        1fr 70px 1fr;
 
     align-items: center;
 
     gap: 10px;
 
-    margin-top: 15px;
+    margin-top: 12px;
 }
 
 .team {
 
     font-weight: 900;
 
-    font-size: 16px;
+    font-size: 14px;
 }
 
-.team-away {
+.away {
 
     text-align: right;
 }
@@ -282,7 +495,7 @@ button:disabled {
 
     text-align: center;
 
-    color: #6b7280;
+    color: #64748b;
 
     font-weight: 900;
 }
@@ -291,139 +504,187 @@ button:disabled {
 
     text-align: center;
 
-    margin-top: 12px;
+    margin-top: 9px;
 
-    color: #6b7280;
+    font-size: 12px;
 
-    font-size: 13px;
+    color: #475569;
 
-    font-weight: bold;
+    font-weight: 800;
 }
 
-.match-meta {
+.fixture-actions {
+
+    display: flex;
+
+    justify-content: flex-end;
 
     margin-top: 12px;
-
-    padding-top: 10px;
-
-    border-top: 1px solid #e5e7eb;
-
-    color: #9ca3af;
-
-    font-size: 10px;
-
-    line-height: 1.7;
 }
 
 .select-button {
-
-    width: 100%;
-
-    margin-top: 14px;
 
     background: #2563eb;
 
     color: white;
 }
 
-.selected .select-button {
+.selected-button {
 
     background: #16a34a;
+
+    color: white;
 }
 
 
-/* =========================================================
-   SELECTED MATCH
-========================================================= */
+/* =====================================================
+   MY PICKS
+===================================================== */
 
-.selected-match {
+.my-picks {
 
-    background: #111827;
+    position: sticky;
 
-    border: 1px solid #374151;
+    top: 10px;
+}
 
-    padding: 14px;
+.pick-card {
 
-    border-radius: 10px;
+    background: #0f172a;
 
-    margin-bottom: 20px;
+    border: 1px solid #334155;
+
+    border-radius: 11px;
+
+    padding: 13px;
+
+    margin-bottom: 10px;
+}
+
+.pick-number {
+
+    color: #22c55e;
+
+    font-size: 11px;
+
+    font-weight: 900;
+}
+
+.pick-teams {
+
+    margin-top: 5px;
+
+    font-weight: 900;
+
+    font-size: 14px;
+}
+
+.pick-info {
+
+    margin-top: 7px;
+
+    color: #cbd5e1;
+
+    font-size: 12px;
 
     line-height: 1.6;
 }
 
-.selected-match-title {
+.pick-remove {
 
-    color: #9ca3af;
+    margin-top: 9px;
+
+    background: #7f1d1d;
+
+    color: white;
+
+    padding: 7px 10px;
 
     font-size: 11px;
-
-    text-transform: uppercase;
-
-    letter-spacing: 1px;
-
-    font-weight: bold;
-}
-
-.selected-match-teams {
-
-    font-size: 19px;
-
-    font-weight: 900;
-
-    margin-top: 5px;
 }
 
 
-/* =========================================================
-   CONFIDENCE
-========================================================= */
+/* =====================================================
+   LAYOUT
+===================================================== */
 
-.confidence-row {
+.main-layout {
 
     display: grid;
 
-    grid-template-columns: 1fr 100px;
+    grid-template-columns:
+        minmax(0, 1fr)
+        330px;
 
-    gap: 10px;
+    gap: 20px;
 
     align-items: start;
 }
 
 
-/* =========================================================
-   HIDDEN
-========================================================= */
+/* =====================================================
+   EMPTY
+===================================================== */
 
-.hidden {
+.empty {
 
-    display: none;
+    text-align: center;
+
+    padding: 35px 15px;
+
+    color: #94a3b8;
 }
 
 
-/* =========================================================
-   MOBILE
-========================================================= */
+/* =====================================================
+   RESPONSIVE
+===================================================== */
 
-@media (max-width: 650px) {
+@media (max-width: 850px) {
+
+    .main-layout {
+
+        grid-template-columns: 1fr;
+    }
+
+    .my-picks {
+
+        position: static;
+    }
+
+}
+
+@media (max-width: 600px) {
 
     .container {
-        padding: 12px;
+
+        padding: 10px;
     }
 
-    .header h1 {
-        font-size: 27px;
+    .form-grid {
+
+        grid-template-columns: 1fr;
     }
 
-    .teams {
-        grid-template-columns: 1fr 45px 1fr;
+    .form-group.full {
+
+        grid-column: auto;
+    }
+
+    .fixture-teams {
+
+        grid-template-columns:
+            1fr 50px 1fr;
     }
 
     .team {
-        font-size: 13px;
+
+        font-size: 12px;
     }
 
-    .confidence-row {
-        grid-template-columns: 1fr;
+    .header h1 {
+
+        font-size: 25px;
     }
 
 }
@@ -434,7 +695,6 @@ button:disabled {
 
 
 <body>
-
 
 <div class="container">
 
@@ -449,276 +709,321 @@ button:disabled {
         🔥 TOMSONSTAKES ADMIN
     </h1>
 
-    <div class="subtitle">
-        FOOTBALL PREDICTION MANAGEMENT PANEL
+    <p>
+        Select matches, create your predictions,
+        and publish the daily betting slip.
+    </p>
+
+</div>
+
+
+<!-- =====================================================
+     DAILY SLIP
+===================================================== -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        🎟️ DAILY BETTING SLIP
+    </div>
+
+    <div class="form-grid">
+
+        <div class="form-group">
+
+            <label>
+                Prediction Date
+            </label>
+
+            <input
+                type="date"
+                id="predictionDate"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Booking Code
+            </label>
+
+            <input
+                type="text"
+                id="bookingCode"
+                placeholder="e.g. TS8K4P92"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Bookmaker
+            </label>
+
+            <input
+                type="text"
+                id="bookmaker"
+                placeholder="e.g. Bet9ja"
+            >
+
+        </div>
+
+    </div>
+
+
+    <div class="button-row">
+
+        <button
+            class="btn-blue"
+            id="loadButton"
+            onclick="loadFixtures()"
+        >
+            ⚽ LOAD MATCHES
+        </button>
+
+
+        <button
+            class="btn-green"
+            onclick="saveDailySlip(false)"
+        >
+            💾 SAVE SLIP
+        </button>
+
+
+        <button
+            class="btn-orange"
+            onclick="publishDailySlip()"
+        >
+            🚀 PUBLISH DAILY SLIP
+        </button>
+
+    </div>
+
+
+    <div id="slipStatus"></div>
+
+</div>
+
+
+
+<!-- =====================================================
+     MAIN LAYOUT
+===================================================== -->
+
+<div class="main-layout">
+
+
+<!-- =====================================================
+     FIXTURES
+===================================================== -->
+
+<div>
+
+    <div class="panel">
+
+        <div class="fixture-toolbar">
+
+            <div class="panel-title"
+                 style="margin:0">
+
+                ⚽ AVAILABLE MATCHES
+
+            </div>
+
+            <div
+                class="fixture-count"
+                id="fixtureCount"
+            >
+                No matches loaded
+            </div>
+
+        </div>
+
+
+        <div id="fixtureStatus"></div>
+
+
+        <div id="fixtures">
+
+            <div class="empty">
+
+                Select a prediction date and
+                click <strong>LOAD MATCHES</strong>.
+
+            </div>
+
+        </div>
+
     </div>
 
 </div>
 
 
-<!-- =====================================================
-     LOAD FIXTURES
-===================================================== -->
-
-<div class="panel">
-
-    <h2>
-        📅 Select Match Date
-    </h2>
-
-    <label>
-        Match Date
-    </label>
-
-    <input
-        type="date"
-        id="matchDate"
-    >
-
-    <button
-        class="load-button"
-        id="loadButton"
-        onclick="loadFixtures()"
-    >
-        ⚽ LOAD MATCHES
-    </button>
-
-    <div id="loadStatus"></div>
-
-</div>
-
 
 <!-- =====================================================
-     MATCH LIST
+     MY PICKS
 ===================================================== -->
 
-<div
-    id="matchesPanel"
-    class="panel hidden"
->
+<div class="my-picks">
 
-    <h2>
-        ⚽ Available Matches
-    </h2>
+    <div class="panel">
 
-    <div
-        id="matches"
-    ></div>
+        <div class="panel-title">
 
-</div>
+            🔥 MY PICKS
 
+            <span
+                id="pickCount"
+                style="
+                    color:#22c55e;
+                    font-size:14px;
+                "
+            >
+                0
+            </span>
 
-<!-- =====================================================
-     PREDICTION FORM
-===================================================== -->
-
-<div
-    id="predictionPanel"
-    class="panel hidden"
->
-
-    <h2>
-        📝 Create Prediction
-    </h2>
+        </div>
 
 
-    <!-- SELECTED MATCH -->
+        <div id="selectedMatchForm">
 
-    <div
-        class="selected-match"
-        id="selectedMatch"
-    ></div>
+            <div class="empty">
 
+                Select a match from the
+                fixture list.
 
-    <!-- MARKET -->
+            </div>
 
-    <label>
-        Market
-    </label>
+        </div>
 
-    <select
-        id="market"
-    >
-
-        <option value="1X2">
-            1X2
-        </option>
-
-        <option value="Home Win">
-            Home Win
-        </option>
-
-        <option value="Draw">
-            Draw
-        </option>
-
-        <option value="Away Win">
-            Away Win
-        </option>
-
-        <option value="Double Chance">
-            Double Chance
-        </option>
-
-        <option value="Over 0.5 Goals">
-            Over 0.5 Goals
-        </option>
-
-        <option value="Over 1.5 Goals">
-            Over 1.5 Goals
-        </option>
-
-        <option value="Over 2.5 Goals">
-            Over 2.5 Goals
-        </option>
-
-        <option value="Over 3.5 Goals">
-            Over 3.5 Goals
-        </option>
-
-        <option value="Under 1.5 Goals">
-            Under 1.5 Goals
-        </option>
-
-        <option value="Under 2.5 Goals">
-            Under 2.5 Goals
-        </option>
-
-        <option value="Under 3.5 Goals">
-            Under 3.5 Goals
-        </option>
-
-        <option value="BTTS">
-            Both Teams To Score
-        </option>
-
-        <option value="BTTS No">
-            BTTS — No
-        </option>
-
-        <option value="Correct Score">
-            Correct Score
-        </option>
-
-        <option value="Other">
-            Other
-        </option>
-
-    </select>
+    </div>
 
 
-    <!-- SELECTION -->
+    <div class="panel">
 
-    <label>
-        Your Prediction / Selection
-    </label>
+        <div class="panel-title">
 
-    <input
-        type="text"
-        id="selection"
-        placeholder="e.g. Arsenal Win"
-    >
+            📋 SELECTED PREDICTIONS
 
+        </div>
 
-    <!-- CONFIDENCE -->
+        <div id="myPicks">
 
-    <label>
-        Confidence (%)
-    </label>
+            <div class="empty">
 
-    <input
-        type="number"
-        id="confidence"
-        min="1"
-        max="100"
-        placeholder="e.g. 82"
-    >
+                No matches selected yet.
 
+            </div>
 
-    <!-- ANALYSIS -->
+        </div>
 
-    <label>
-        Analysis / Reason
-    </label>
-
-    <textarea
-        id="analysis"
-        placeholder="Enter your reasoning for this prediction..."
-    ></textarea>
-
-
-    <!-- PUBLISH -->
-
-    <button
-        class="publish-button"
-        id="publishButton"
-        onclick="savePrediction('published')"
-    >
-        🚀 PUBLISH PREDICTION
-    </button>
-
-
-    <!-- DRAFT -->
-
-    <button
-        class="draft-button"
-        id="draftButton"
-        onclick="savePrediction('draft')"
-    >
-        💾 SAVE AS DRAFT
-    </button>
-
-
-    <div
-        id="saveStatus"
-    ></div>
+    </div>
 
 </div>
 
 
 </div>
+
+
+</div>
+
 
 
 <script>
 
-
 /* =========================================================
-   GLOBAL STATE
+   TOP LEAGUES
 ========================================================= */
 
-let fixtures = [];
+const TOP_LEAGUES = [
 
-let selectedFixture = null;
+    "Premier League",
+    "La Liga",
+    "Bundesliga",
+    "Serie A",
+    "Ligue 1",
+
+    "UEFA Champions League",
+    "UEFA Europa League",
+    "UEFA Conference League",
+
+    "Eredivisie",
+    "Primeira Liga",
+    "Saudi Pro League",
+    "Belgian Pro League",
+    "Süper Lig",
+    "Scottish Premiership",
+
+    "Brasileirão Série A",
+    "Liga Profesional Argentina",
+    "Liga MX",
+    "MLS",
+    "J1 League",
+
+    "Championship",
+    "2. Bundesliga",
+    "Serie B",
+    "Ligue 2",
+    "LaLiga 2",
+
+    "Copa Libertadores",
+    "Copa Sudamericana",
+
+    "CAF Champions League",
+    "CAF Confederation Cup"
+
+];
 
 
 /* =========================================================
-   DEFAULT DATE
+   STATE
 ========================================================= */
 
-(function setDefaultDate() {
+let allFixtures = [];
 
-    const now =
-        new Date();
+let selectedFixtures = {};
 
-    const year =
-        now.getFullYear();
+let activeFixtureId = null;
 
-    const month =
-        String(
-            now.getMonth() + 1
-        ).padStart(2, "0");
 
-    const day =
-        String(
-            now.getDate()
-        ).padStart(2, "0");
+/* =========================================================
+   INITIAL DATE
+========================================================= */
 
-    document.getElementById(
-        "matchDate"
-    ).value =
-        `${year}-${month}-${day}`;
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-})();
+        const dateInput =
+            document.getElementById(
+                "predictionDate"
+            );
+
+        const today =
+            new Date();
+
+        const year =
+            today.getFullYear();
+
+        const month =
+            String(
+                today.getMonth() + 1
+            ).padStart(2, "0");
+
+        const day =
+            String(
+                today.getDate()
+            ).padStart(2, "0");
+
+        dateInput.value =
+            `${year}-${month}-${day}`;
+
+    }
+);
 
 
 /* =========================================================
@@ -729,35 +1034,30 @@ async function loadFixtures() {
 
     const date =
         document.getElementById(
-            "matchDate"
+            "predictionDate"
         ).value;
-
-    const status =
-        document.getElementById(
-            "loadStatus"
-        );
 
     const button =
         document.getElementById(
             "loadButton"
         );
 
-    const matches =
+    const fixturesBox =
         document.getElementById(
-            "matches"
+            "fixtures"
         );
 
+    const status =
+        document.getElementById(
+            "fixtureStatus"
+        );
 
     if (!date) {
 
         status.innerHTML = `
-
-            <div class="status warning">
-
-                ⚠️ Please select a match date.
-
+            <div class="status status-warning">
+                ⚠️ Select a prediction date first.
             </div>
-
         `;
 
         return;
@@ -767,19 +1067,13 @@ async function loadFixtures() {
 
     button.disabled = true;
 
-
-    status.innerHTML = `
-
-        <div class="status warning">
-
+    fixturesBox.innerHTML = `
+        <div class="empty">
             🔎 Loading football fixtures...
-
         </div>
-
     `;
 
-
-    matches.innerHTML = "";
+    status.innerHTML = "";
 
 
     try {
@@ -797,8 +1091,8 @@ async function loadFixtures() {
         if (!response.ok) {
 
             throw new Error(
-                data.message ||
                 data.error ||
+                data.message ||
                 "Unable to load fixtures."
             );
 
@@ -813,110 +1107,58 @@ async function loadFixtures() {
             data.response.length === 0
         ) {
 
-            document
-                .getElementById(
-                    "matchesPanel"
-                )
-                .classList.remove(
-                    "hidden"
-                );
+            allFixtures = [];
 
-
-            status.innerHTML = `
-
-                <div class="status warning">
-
+            fixturesBox.innerHTML = `
+                <div class="empty">
                     ⚠️ No football fixtures
                     found for
-
-                    ${escapeHtml(date)}.
-
+                    <strong>
+                        ${escapeHtml(date)}
+                    </strong>.
                 </div>
-
             `;
+
+            document.getElementById(
+                "fixtureCount"
+            ).textContent =
+                "0 matches";
 
             return;
 
         }
 
 
-        fixtures =
+        allFixtures =
             data.response;
-
-
-        selectedFixture =
-            null;
-
-
-        document
-            .getElementById(
-                "predictionPanel"
-            )
-            .classList.add(
-                "hidden"
-            );
 
 
         renderFixtures();
 
 
-        document
-            .getElementById(
-                "matchesPanel"
-            )
-            .classList.remove(
-                "hidden"
-            );
-
-
-        status.innerHTML = `
-
-            <div class="status success">
-
-                ✓ Successfully loaded
-
-                ${fixtures.length}
-
-                football fixtures.
-
-            </div>
-
-        `;
-
     }
-
 
     catch (error) {
 
         console.error(
-            "LOAD FIXTURES ERROR:",
             error
         );
 
-
-        status.innerHTML = `
-
-            <div class="status error">
-
+        fixturesBox.innerHTML = `
+            <div class="status status-error">
                 ❌ Unable to load fixtures.
-
                 <br><br>
-
                 ${escapeHtml(
                     error.message
                 )}
-
             </div>
-
         `;
 
     }
 
-
     finally {
 
-        button.disabled =
-            false;
+        button.disabled = false;
 
     }
 
@@ -929,228 +1171,469 @@ async function loadFixtures() {
 
 function renderFixtures() {
 
-    const container =
+    const box =
         document.getElementById(
-            "matches"
+            "fixtures"
         );
 
 
-    container.innerHTML = "";
+    const grouped =
+        groupByLeague(
+            allFixtures
+        );
+
+
+    const leagues =
+        Object.values(
+            grouped
+        ).sort(
+            sortLeague
+        );
+
+
+    let html = "";
+
+
+    leagues.forEach(
+        league => {
+
+            html +=
+                buildLeagueHTML(
+                    league
+                );
+
+        }
+    );
+
+
+    box.innerHTML =
+        html;
+
+
+    document.getElementById(
+        "fixtureCount"
+    ).textContent =
+        `${allFixtures.length} matches`;
+
+}
+
+
+/* =========================================================
+   GROUP BY LEAGUE
+========================================================= */
+
+function groupByLeague(
+    fixtures
+) {
+
+    const groups = {};
 
 
     fixtures.forEach(
-        (match, index) => {
-
-
-            const home =
-                match.teams?.home?.name ||
-                "Home Team";
-
-
-            const away =
-                match.teams?.away?.name ||
-                "Away Team";
-
-
-            const country =
-                match.league?.country ||
-                "Unknown Country";
-
-
-            const league =
-                match.league?.name ||
-                "Unknown Competition";
-
-
-            const round =
-                match.league?.round ||
-                "";
-
-
-            const fixtureId =
-                match.fixture?.id ||
-                "";
-
-
-            const homeId =
-                match.teams?.home?.id ||
-                "";
-
-
-            const awayId =
-                match.teams?.away?.id ||
-                "";
-
+        match => {
 
             const leagueId =
                 match.league?.id ||
-                "";
+                match.league?.name ||
+                "unknown";
 
 
-            const season =
-                match.league?.season ||
-                "";
+            if (
+                !groups[leagueId]
+            ) {
+
+                groups[leagueId] = {
+
+                    id:
+                        leagueId,
+
+                    name:
+                        match.league?.name ||
+                        "Unknown League",
+
+                    country:
+                        match.league?.country ||
+                        "Other",
+
+                    round:
+                        match.league?.round ||
+                        "",
+
+                    fixtures: []
+
+                };
+
+            }
 
 
-            const kickoff =
-                formatKickoff(
-                    match.fixture?.date,
-                    match.fixture?.timestamp
-                );
+            groups[leagueId]
+                .fixtures
+                .push(match);
+
+        }
+    );
 
 
-            const card =
-                document.createElement(
-                    "div"
-                );
+    return groups;
+
+}
 
 
-            card.className =
-                "match";
+/* =========================================================
+   LEAGUE SORT
+========================================================= */
+
+function sortLeague(
+    a,
+    b
+) {
+
+    const priorityA =
+        getLeaguePriority(
+            a.name
+        );
+
+    const priorityB =
+        getLeaguePriority(
+            b.name
+        );
 
 
-            card.id =
-                `match-${index}`;
+    if (
+        priorityA !==
+        priorityB
+    ) {
+
+        return (
+            priorityA -
+            priorityB
+        );
+
+    }
 
 
-            card.innerHTML = `
+    const countryCompare =
+        a.country.localeCompare(
+            b.country
+        );
 
-                <div class="match-header">
 
-                    <span>
+    if (
+        countryCompare !== 0
+    ) {
 
-                        🌍
-                        ${escapeHtml(
-                            country
-                        )}
+        return countryCompare;
 
-                    </span>
+    }
 
-                    <span>
+
+    return a.name.localeCompare(
+        b.name
+    );
+
+}
+
+
+/* =========================================================
+   LEAGUE PRIORITY
+========================================================= */
+
+function getLeaguePriority(
+    name
+) {
+
+    const normalized =
+        normalizeLeagueName(
+            name
+        );
+
+
+    for (
+        let i = 0;
+        i < TOP_LEAGUES.length;
+        i++
+    ) {
+
+        const target =
+            normalizeLeagueName(
+                TOP_LEAGUES[i]
+            );
+
+
+        if (
+            normalized === target ||
+            normalized.includes(target) ||
+            target.includes(normalized)
+        ) {
+
+            return i;
+
+        }
+
+    }
+
+
+    return 1000;
+
+}
+
+
+/* =========================================================
+   LEAGUE HTML
+========================================================= */
+
+function buildLeagueHTML(
+    league
+) {
+
+    const priority =
+        getLeaguePriority(
+            league.name
+        );
+
+
+    const sortedFixtures =
+        [...league.fixtures]
+            .sort(
+                sortFixture
+            );
+
+
+    let html = `
+
+        <section class="league-section">
+
+            <div class="league-header">
+
+                <div>
+
+                    <div class="league-name">
 
                         🏆
                         ${escapeHtml(
-                            league
-                        )}
-
-                    </span>
-
-                </div>
-
-
-                <div class="teams">
-
-                    <div class="team">
-
-                        ${escapeHtml(
-                            home
+                            league.name
                         )}
 
                     </div>
 
-
-                    <div class="vs">
-
-                        VS
-
-                    </div>
-
-
-                    <div class="team team-away">
+                    <div class="league-country">
 
                         ${escapeHtml(
-                            away
+                            league.country
                         )}
+
+                        ${
+                            league.round
+                            ?
+                            ` • ${escapeHtml(
+                                league.round
+                            )}`
+                            :
+                            ""
+                        }
 
                     </div>
 
                 </div>
 
+                ${
+                    priority < 1000
+                    ?
+                    `
+                    <div class="league-priority">
+                        TOP LEAGUE
+                    </div>
+                    `
+                    :
+                    ""
+                }
 
-                <div class="kickoff">
+            </div>
 
-                    🕐
+    `;
+
+
+    sortedFixtures.forEach(
+        match => {
+
+            html +=
+                buildFixtureHTML(
+                    match
+                );
+
+        }
+    );
+
+
+    html += `
+        </section>
+    `;
+
+
+    return html;
+
+}
+
+
+/* =========================================================
+   FIXTURE SORT
+========================================================= */
+
+function sortFixture(
+    a,
+    b
+) {
+
+    const timeA =
+        Number(
+            a.fixture?.timestamp ||
+            0
+        );
+
+    const timeB =
+        Number(
+            b.fixture?.timestamp ||
+            0
+        );
+
+
+    return timeA - timeB;
+
+}
+
+
+/* =========================================================
+   FIXTURE HTML
+========================================================= */
+
+function buildFixtureHTML(
+    match
+) {
+
+    const id =
+        match.fixture?.id;
+
+
+    const selected =
+        Boolean(
+            selectedFixtures[id]
+        );
+
+
+    const home =
+        match.teams?.home?.name ||
+        "Home Team";
+
+
+    const away =
+        match.teams?.away?.name ||
+        "Away Team";
+
+
+    const kickoff =
+        formatKickoff(
+            match.fixture?.date,
+            match.fixture?.timestamp
+        );
+
+
+    return `
+
+        <div
+            class="fixture ${
+                selected
+                ? "selected"
+                : ""
+            }"
+            id="fixture-${id}"
+        >
+
+            <div class="fixture-top">
+
+                <span>
+                    Fixture #${escapeHtml(
+                        String(id)
+                    )}
+                </span>
+
+                <span>
                     ${escapeHtml(
                         kickoff
                     )}
+                </span>
+
+            </div>
+
+
+            <div class="fixture-teams">
+
+                <div class="team">
+
+                    ${escapeHtml(
+                        home
+                    )}
 
                 </div>
 
 
-                <div class="match-meta">
+                <div class="vs">
+                    VS
+                </div>
 
-                    Fixture ID:
+
+                <div class="team away">
+
                     ${escapeHtml(
-                        String(
-                            fixtureId
-                        )
+                        away
                     )}
-
-                    <br>
-
-                    Team IDs:
-                    ${escapeHtml(
-                        String(homeId)
-                    )}
-                    —
-                    ${escapeHtml(
-                        String(awayId)
-                    )}
-
-                    <br>
-
-                    League ID:
-                    ${escapeHtml(
-                        String(leagueId)
-                    )}
-
-                    |
-
-                    Season:
-                    ${escapeHtml(
-                        String(season)
-                    )}
-
-                    ${
-                        round
-                        ?
-                        `
-                        <br>
-
-                        Round:
-                        ${escapeHtml(
-                            round
-                        )}
-                        `
-                        :
-                        ""
-                    }
 
                 </div>
 
+            </div>
+
+
+            <div class="kickoff">
+
+                🕐
+                ${escapeHtml(
+                    kickoff
+                )}
+
+            </div>
+
+
+            <div class="fixture-actions">
 
                 <button
-                    class="select-button"
+                    class="${
+                        selected
+                        ?
+                        "selected-button"
+                        :
+                        "select-button"
+                    }"
                     onclick="
                         selectFixture(
-                            ${index}
+                            ${id}
                         )
                     "
                 >
 
-                    🎯 SELECT THIS MATCH
+                    ${
+                        selected
+                        ?
+                        "✓ SELECTED"
+                        :
+                        "SELECT"
+                    }
 
                 </button>
 
-            `;
+            </div>
 
+        </div>
 
-            container.appendChild(
-                card
-            );
-
-        }
-    );
+    `;
 
 }
 
@@ -1160,284 +1643,20 @@ function renderFixtures() {
 ========================================================= */
 
 function selectFixture(
-    index
+    fixtureId
 ) {
 
-    selectedFixture =
-        fixtures[index];
-
-
-    document
-        .querySelectorAll(
-            ".match"
-        )
-        .forEach(
-            element => {
-
-                element.classList.remove(
-                    "selected"
-                );
-
-            }
+    const match =
+        allFixtures.find(
+            item =>
+                Number(
+                    item.fixture?.id
+                ) ===
+                Number(fixtureId)
         );
 
 
-    const selectedCard =
-        document.getElementById(
-            `match-${index}`
-        );
-
-
-    if (selectedCard) {
-
-        selectedCard.classList.add(
-            "selected"
-        );
-
-    }
-
-
-    const home =
-        selectedFixture
-            ?.teams
-            ?.home
-            ?.name ||
-        "Home Team";
-
-
-    const away =
-        selectedFixture
-            ?.teams
-            ?.away
-            ?.name ||
-        "Away Team";
-
-
-    const country =
-        selectedFixture
-            ?.league
-            ?.country ||
-        "";
-
-
-    const league =
-        selectedFixture
-            ?.league
-            ?.name ||
-        "";
-
-
-    const round =
-        selectedFixture
-            ?.league
-            ?.round ||
-        "";
-
-
-    const kickoff =
-        formatKickoff(
-            selectedFixture
-                ?.fixture
-                ?.date,
-
-            selectedFixture
-                ?.fixture
-                ?.timestamp
-        );
-
-
-    document.getElementById(
-        "selectedMatch"
-    ).innerHTML = `
-
-        <div class="selected-match-title">
-
-            SELECTED MATCH
-
-        </div>
-
-
-        <div class="selected-match-teams">
-
-            ${escapeHtml(home)}
-
-            <span
-                style="
-                    color:#9ca3af;
-                    margin:0 8px;
-                "
-            >
-                VS
-            </span>
-
-            ${escapeHtml(away)}
-
-        </div>
-
-
-        <div
-            style="
-                color:#9ca3af;
-                font-size:12px;
-                margin-top:8px;
-            "
-        >
-
-            🌍
-            ${escapeHtml(country)}
-
-            &nbsp; • &nbsp;
-
-            🏆
-            ${escapeHtml(league)}
-
-            ${
-                round
-                ?
-                `&nbsp; • &nbsp;
-                 ${escapeHtml(round)}`
-                :
-                ""
-            }
-
-            <br>
-
-            🕐
-            ${escapeHtml(kickoff)}
-
-        </div>
-
-    `;
-
-
-    document
-        .getElementById(
-            "predictionPanel"
-        )
-        .classList.remove(
-            "hidden"
-        );
-
-
-    document
-        .getElementById(
-            "predictionPanel"
-        )
-        .scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        });
-
-}
-
-
-/* =========================================================
-   SAVE PREDICTION
-========================================================= */
-
-async function savePrediction(
-    status
-) {
-
-
-    /* -----------------------------------------------------
-       CHECK MATCH
-    ----------------------------------------------------- */
-
-    if (!selectedFixture) {
-
-        showSaveStatus(
-            "⚠️ Please select a match first.",
-            "warning"
-        );
-
-        return;
-
-    }
-
-
-    /* -----------------------------------------------------
-       FORM VALUES
-    ----------------------------------------------------- */
-
-    const market =
-        document
-            .getElementById(
-                "market"
-            )
-            .value;
-
-
-    const selection =
-        document
-            .getElementById(
-                "selection"
-            )
-            .value
-            .trim();
-
-
-    const confidence =
-        Number(
-            document
-                .getElementById(
-                    "confidence"
-                )
-                .value
-        );
-
-
-    const analysis =
-        document
-            .getElementById(
-                "analysis"
-            )
-            .value
-            .trim();
-
-
-    const predictionDate =
-        document
-            .getElementById(
-                "matchDate"
-            )
-            .value;
-
-
-    /* -----------------------------------------------------
-       VALIDATION
-    ----------------------------------------------------- */
-
-    if (!predictionDate) {
-
-        showSaveStatus(
-            "⚠️ Match date is required.",
-            "warning"
-        );
-
-        return;
-
-    }
-
-
-    if (!market) {
-
-        showSaveStatus(
-            "⚠️ Please select a market.",
-            "warning"
-        );
-
-        return;
-
-    }
-
-
-    if (!selection) {
-
-        showSaveStatus(
-            "⚠️ Enter your prediction / selection.",
-            "warning"
-        );
+    if (!match) {
 
         return;
 
@@ -1445,168 +1664,866 @@ async function savePrediction(
 
 
     if (
-        !Number.isFinite(
-            confidence
-        ) ||
-        confidence < 1 ||
-        confidence > 100
+        selectedFixtures[fixtureId]
     ) {
 
-        showSaveStatus(
-            "⚠️ Confidence must be between 1 and 100.",
-            "warning"
-        );
+        activeFixtureId =
+            fixtureId;
+
+        renderSelectedForm();
 
         return;
 
     }
 
 
-    /* -----------------------------------------------------
-       BUTTON
-    ----------------------------------------------------- */
+    selectedFixtures[fixtureId] = {
 
-    const button =
-        status === "published"
-            ?
-            document.getElementById(
-                "publishButton"
-            )
-            :
-            document.getElementById(
-                "draftButton"
-            );
-
-
-    button.disabled =
-        true;
-
-
-    showSaveStatus(
-        "💾 Saving prediction...",
-        "warning"
-    );
-
-
-    /* -----------------------------------------------------
-       FIXTURE DATA
-    ----------------------------------------------------- */
-
-    const match =
-        selectedFixture;
-
-
-    const fixtureId =
-        match.fixture?.id ||
-        null;
-
-
-    const homeTeam =
-        match.teams?.home?.name ||
-        "";
-
-
-    const awayTeam =
-        match.teams?.away?.name ||
-        "";
-
-
-    const homeTeamId =
-        match.teams?.home?.id ||
-        null;
-
-
-    const awayTeamId =
-        match.teams?.away?.id ||
-        null;
-
-
-    const country =
-        match.league?.country ||
-        null;
-
-
-    const league =
-        match.league?.name ||
-        null;
-
-
-    const kickoff =
-        match.fixture?.date ||
-        null;
-
-
-    /* -----------------------------------------------------
-       PAYLOAD — MATCHES public.predictions
-    ----------------------------------------------------- */
-
-    const payload = {
-
-        prediction_date:
-            predictionDate,
-
-        fixture_id:
-            fixtureId,
-
-        home_team:
-            homeTeam,
-
-        away_team:
-            awayTeam,
-
-        home_team_id:
-            homeTeamId,
-
-        away_team_id:
-            awayTeamId,
-
-        country:
-            country,
-
-        league:
-            league,
-
-        kickoff:
-            kickoff,
+        match,
 
         market:
-            market,
+            "Match Winner",
 
         selection:
-            selection,
+            match.teams?.home?.name ||
+            "",
 
         confidence:
-            confidence,
+            5,
 
         analysis:
-            analysis ||
-            null,
+            "",
 
         status:
-            status,
-
-        result:
-            "pending",
-
-        published_at:
-            status === "published"
-                ?
-                new Date().toISOString()
-                :
-                null
+            "draft"
 
     };
 
 
-    console.log(
-        "TOMSONSTAKES PREDICTION PAYLOAD:",
-        payload
+    activeFixtureId =
+        fixtureId;
+
+
+    renderFixtures();
+
+    renderSelectedForm();
+
+    renderMyPicks();
+
+}
+
+
+/* =========================================================
+   SELECTED MATCH FORM
+========================================================= */
+
+function renderSelectedForm() {
+
+    const box =
+        document.getElementById(
+            "selectedMatchForm"
+        );
+
+
+    if (
+        !activeFixtureId ||
+        !selectedFixtures[
+            activeFixtureId
+        ]
+    ) {
+
+        box.innerHTML = `
+            <div class="empty">
+                Select a match from the
+                fixture list.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    const item =
+        selectedFixtures[
+            activeFixtureId
+        ];
+
+
+    const match =
+        item.match;
+
+
+    const home =
+        match.teams?.home?.name ||
+        "Home";
+
+
+    const away =
+        match.teams?.away?.name ||
+        "Away";
+
+
+    const league =
+        match.league?.name ||
+        "";
+
+
+    const kickoff =
+        formatKickoff(
+            match.fixture?.date,
+            match.fixture?.timestamp
+        );
+
+
+    box.innerHTML = `
+
+        <div class="pick-card">
+
+            <div class="pick-number">
+
+                SELECTED MATCH
+
+            </div>
+
+
+            <div class="pick-teams">
+
+                ${escapeHtml(
+                    home
+                )}
+
+                <span
+                    style="
+                        color:#64748b;
+                    "
+                >
+                    vs
+                </span>
+
+                ${escapeHtml(
+                    away
+                )}
+
+            </div>
+
+
+            <div class="pick-info">
+
+                🏆 ${escapeHtml(
+                    league
+                )}
+
+                <br>
+
+                🕐 ${escapeHtml(
+                    kickoff
+                )}
+
+            </div>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Market
+            </label>
+
+            <select
+                id="editMarket"
+                onchange="
+                    updateActivePick()
+                "
+            >
+
+                <option
+                    value="Match Winner"
+                    ${
+                        item.market ===
+                        "Match Winner"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    Match Winner
+                </option>
+
+                <option
+                    value="Double Chance"
+                    ${
+                        item.market ===
+                        "Double Chance"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    Double Chance
+                </option>
+
+                <option
+                    value="Over 0.5 Goals"
+                    ${
+                        item.market ===
+                        "Over 0.5 Goals"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    Over 0.5 Goals
+                </option>
+
+                <option
+                    value="Over 1.5 Goals"
+                    ${
+                        item.market ===
+                        "Over 1.5 Goals"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    Over 1.5 Goals
+                </option>
+
+                <option
+                    value="Over 2.5 Goals"
+                    ${
+                        item.market ===
+                        "Over 2.5 Goals"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    Over 2.5 Goals
+                </option>
+
+                <option
+                    value="Under 2.5 Goals"
+                    ${
+                        item.market ===
+                        "Under 2.5 Goals"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    Under 2.5 Goals
+                </option>
+
+                <option
+                    value="Under 3.5 Goals"
+                    ${
+                        item.market ===
+                        "Under 3.5 Goals"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    Under 3.5 Goals
+                </option>
+
+                <option
+                    value="BTTS"
+                    ${
+                        item.market ===
+                        "BTTS"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    BTTS
+                </option>
+
+                <option
+                    value="BTTS - No"
+                    ${
+                        item.market ===
+                        "BTTS - No"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    BTTS - No
+                </option>
+
+                <option
+                    value="Custom"
+                    ${
+                        item.market ===
+                        "Custom"
+                        ?
+                        "selected"
+                        :
+                        ""
+                    }
+                >
+                    Custom
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="form-group"
+             style="margin-top:12px">
+
+            <label>
+                Your Prediction
+            </label>
+
+            <input
+                type="text"
+                id="editSelection"
+                value="${escapeHtml(
+                    item.selection
+                )}"
+                placeholder="e.g. Arsenal"
+                oninput="
+                    updateActivePick()
+                "
+            >
+
+        </div>
+
+
+        <div class="form-group"
+             style="margin-top:12px">
+
+            <label>
+                Confidence
+            </label>
+
+            <select
+                id="editConfidence"
+                onchange="
+                    updateActivePick()
+                "
+            >
+
+                ${buildConfidenceOptions(
+                    item.confidence
+                )}
+
+            </select>
+
+        </div>
+
+
+        <div class="form-group"
+             style="margin-top:12px">
+
+            <label>
+                Analysis
+            </label>
+
+            <textarea
+                id="editAnalysis"
+                placeholder="Enter your football analysis..."
+                oninput="
+                    updateActivePick()
+                "
+            >${escapeHtml(
+                item.analysis
+            )}</textarea>
+
+        </div>
+
+
+        <div class="button-row">
+
+            <button
+                class="btn-green"
+                onclick="
+                    saveCurrentPrediction()
+                "
+            >
+                💾 SAVE DRAFT
+            </button>
+
+
+            <button
+                class="btn-orange"
+                onclick="
+                    publishCurrentPrediction()
+                "
+            >
+                🚀 PUBLISH
+            </button>
+
+
+            <button
+                class="btn-red"
+                onclick="
+                    removeActivePick()
+                "
+            >
+                REMOVE
+            </button>
+
+        </div>
+
+
+        <div id="predictionStatus"></div>
+
+    `;
+
+}
+
+
+/* =========================================================
+   CONFIDENCE OPTIONS
+========================================================= */
+
+function buildConfidenceOptions(
+    selected
+) {
+
+    let html = "";
+
+
+    for (
+        let i = 5;
+        i <= 10;
+        i++
+    ) {
+
+        html += `
+
+            <option
+                value="${i}"
+                ${
+                    Number(selected) === i
+                    ?
+                    "selected"
+                    :
+                    ""
+                }
+            >
+                ${i}/10
+            </option>
+
+        `;
+
+    }
+
+
+    return html;
+
+}
+
+
+/* =========================================================
+   UPDATE ACTIVE PICK
+========================================================= */
+
+function updateActivePick() {
+
+    if (
+        !activeFixtureId ||
+        !selectedFixtures[
+            activeFixtureId
+        ]
+    ) {
+
+        return;
+
+    }
+
+
+    const item =
+        selectedFixtures[
+            activeFixtureId
+        ];
+
+
+    const market =
+        document.getElementById(
+            "editMarket"
+        );
+
+    const selection =
+        document.getElementById(
+            "editSelection"
+        );
+
+    const confidence =
+        document.getElementById(
+            "editConfidence"
+        );
+
+    const analysis =
+        document.getElementById(
+            "editAnalysis"
+        );
+
+
+    if (market) {
+
+        item.market =
+            market.value;
+
+    }
+
+
+    if (selection) {
+
+        item.selection =
+            selection.value;
+
+    }
+
+
+    if (confidence) {
+
+        item.confidence =
+            Number(
+                confidence.value
+            );
+
+    }
+
+
+    if (analysis) {
+
+        item.analysis =
+            analysis.value;
+
+    }
+
+
+    renderMyPicks();
+
+}
+
+
+/* =========================================================
+   MY PICKS
+========================================================= */
+
+function renderMyPicks() {
+
+    const box =
+        document.getElementById(
+            "myPicks"
+        );
+
+
+    const picks =
+        Object.values(
+            selectedFixtures
+        );
+
+
+    document.getElementById(
+        "pickCount"
+    ).textContent =
+        picks.length;
+
+
+    if (!picks.length) {
+
+        box.innerHTML = `
+            <div class="empty">
+                No matches selected yet.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    let html = "";
+
+
+    picks.forEach(
+        (item, index) => {
+
+            const match =
+                item.match;
+
+
+            const home =
+                match.teams?.home?.name ||
+                "Home";
+
+
+            const away =
+                match.teams?.away?.name ||
+                "Away";
+
+
+            html += `
+
+                <div class="pick-card">
+
+                    <div class="pick-number">
+
+                        PICK #${index + 1}
+
+                    </div>
+
+
+                    <div class="pick-teams">
+
+                        ${escapeHtml(
+                            home
+                        )}
+
+                        vs
+
+                        ${escapeHtml(
+                            away
+                        )}
+
+                    </div>
+
+
+                    <div class="pick-info">
+
+                        Market:
+                        <strong>
+                            ${escapeHtml(
+                                item.market
+                            )}
+                        </strong>
+
+                        <br>
+
+                        Pick:
+                        <strong>
+                            ${escapeHtml(
+                                item.selection
+                            )}
+                        </strong>
+
+                        <br>
+
+                        Confidence:
+                        <strong>
+                            ${item.confidence}/10
+                        </strong>
+
+                        <br>
+
+                        Status:
+                        <strong>
+                            ${escapeHtml(
+                                item.status
+                            )}
+                        </strong>
+
+                    </div>
+
+
+                    <button
+                        class="pick-remove"
+                        onclick="
+                            selectFixture(
+                                ${match.fixture?.id}
+                            )
+                        "
+                    >
+                        EDIT
+                    </button>
+
+                </div>
+
+            `;
+
+        }
     );
 
 
-    /* -----------------------------------------------------
-       SEND TO API
-    ----------------------------------------------------- */
+    box.innerHTML =
+        html;
+
+}
+
+
+/* =========================================================
+   REMOVE ACTIVE
+========================================================= */
+
+function removeActivePick() {
+
+    if (
+        !activeFixtureId
+    ) {
+
+        return;
+
+    }
+
+
+    delete selectedFixtures[
+        activeFixtureId
+    ];
+
+
+    activeFixtureId =
+        null;
+
+
+    renderFixtures();
+
+    renderMyPicks();
+
+    renderSelectedForm();
+
+}
+
+
+/* =========================================================
+   SAVE CURRENT PREDICTION
+========================================================= */
+
+async function saveCurrentPrediction() {
+
+    await submitCurrentPrediction(
+        "draft"
+    );
+
+}
+
+
+/* =========================================================
+   PUBLISH CURRENT PREDICTION
+========================================================= */
+
+async function publishCurrentPrediction() {
+
+    await submitCurrentPrediction(
+        "published"
+    );
+
+}
+
+
+/* =========================================================
+   SUBMIT PREDICTION
+========================================================= */
+
+async function submitCurrentPrediction(
+    status
+) {
+
+    if (
+        !activeFixtureId ||
+        !selectedFixtures[
+            activeFixtureId
+        ]
+    ) {
+
+        return;
+
+    }
+
+
+    updateActivePick();
+
+
+    const item =
+        selectedFixtures[
+            activeFixtureId
+        ];
+
+
+    const match =
+        item.match;
+
+
+    const date =
+        document.getElementById(
+            "predictionDate"
+        ).value;
+
+
+    const bookingCode =
+        document.getElementById(
+            "bookingCode"
+        ).value.trim();
+
+
+    const bookmaker =
+        document.getElementById(
+            "bookmaker"
+        ).value.trim();
+
+
+    const statusBox =
+        document.getElementById(
+            "predictionStatus"
+        );
+
+
+    if (!date) {
+
+        statusBox.innerHTML = `
+            <div class="status status-error">
+                Prediction date is required.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    if (!item.selection.trim()) {
+
+        statusBox.innerHTML = `
+            <div class="status status-error">
+                Enter your prediction selection.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    if (
+        item.confidence < 5 ||
+        item.confidence > 10
+    ) {
+
+        statusBox.innerHTML = `
+            <div class="status status-error">
+                Confidence must be between 5 and 10.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    statusBox.innerHTML = `
+        <div class="status status-info">
+            ⏳ Saving prediction...
+        </div>
+    `;
+
 
     try {
 
@@ -1626,31 +2543,77 @@ async function savePrediction(
                     },
 
                     body:
-                        JSON.stringify(
-                            payload
-                        )
+                        JSON.stringify({
+
+                            prediction_date:
+                                date,
+
+                            fixture_id:
+                                match.fixture?.id ||
+                                null,
+
+                            home_team:
+                                match.teams?.home?.name ||
+                                "",
+
+                            away_team:
+                                match.teams?.away?.name ||
+                                "",
+
+                            home_team_id:
+                                match.teams?.home?.id ||
+                                null,
+
+                            away_team_id:
+                                match.teams?.away?.id ||
+                                null,
+
+                            country:
+                                match.league?.country ||
+                                null,
+
+                            league:
+                                match.league?.name ||
+                                null,
+
+                            kickoff:
+                                match.fixture?.date ||
+                                null,
+
+                            market:
+                                item.market,
+
+                            selection:
+                                item.selection,
+
+                            confidence:
+                                item.confidence,
+
+                            analysis:
+                                item.analysis,
+
+                            status,
+
+                            result:
+                                "pending",
+
+                            booking_code:
+                                bookingCode,
+
+                            bookmaker:
+                                bookmaker,
+
+                            publish_slip:
+                                false
+
+                        })
 
                 }
             );
 
 
-        let data;
-
-
-        try {
-
-            data =
-                await response.json();
-
-        }
-
-        catch {
-
-            throw new Error(
-                "The prediction API returned an invalid response."
-            );
-
-        }
+        const data =
+            await response.json();
 
 
         if (!response.ok) {
@@ -1658,81 +2621,57 @@ async function savePrediction(
             throw new Error(
                 data.error ||
                 data.message ||
-                "Failed to save prediction."
+                "Unable to save prediction."
             );
 
         }
 
 
-        console.log(
-            "TOMSONSTAKES API RESPONSE:",
-            data
-        );
+        item.status =
+            status;
 
 
-        showSaveStatus(
+        statusBox.innerHTML = `
 
-            status === "published"
+            <div class="status status-success">
 
-                ?
+                ${
+                    status ===
+                    "published"
+                    ?
+                    "✅ Prediction published successfully."
+                    :
+                    "💾 Prediction saved as draft."
+                }
 
-                "✅ Prediction published successfully!"
+            </div>
 
-                :
-
-                "✅ Prediction saved as draft!",
-
-            "success"
-
-        );
-
-
-        /* -------------------------------------------------
-           CLEAR FORM
-        ------------------------------------------------- */
-
-        document.getElementById(
-            "selection"
-        ).value = "";
+        `;
 
 
-        document.getElementById(
-            "confidence"
-        ).value = "";
-
-
-        document.getElementById(
-            "analysis"
-        ).value = "";
+        renderMyPicks();
 
 
     }
-
 
     catch (error) {
 
         console.error(
-            "SAVE PREDICTION ERROR:",
             error
         );
 
 
-        showSaveStatus(
+        statusBox.innerHTML = `
 
-            "❌ " +
-            error.message,
+            <div class="status status-error">
 
-            "error"
+                ❌ ${escapeHtml(
+                    error.message
+                )}
 
-        );
+            </div>
 
-    }
-
-
-    finally {
-
-        button.disabled =
-            false;
+        `;
 
     }
 
@@ -1740,27 +2679,230 @@ async function savePrediction(
 
 
 /* =========================================================
-   SAVE STATUS
+   SAVE DAILY SLIP
 ========================================================= */
 
-function showSaveStatus(
-    message,
-    type
+async function saveDailySlip(
+    publish
 ) {
 
-    document.getElementById(
-        "saveStatus"
-    ).innerHTML = `
+    const date =
+        document.getElementById(
+            "predictionDate"
+        ).value;
 
-        <div class="status ${type}">
 
-            ${escapeHtml(
-                message
-            )}
+    const bookingCode =
+        document.getElementById(
+            "bookingCode"
+        ).value.trim();
 
+
+    const bookmaker =
+        document.getElementById(
+            "bookmaker"
+        ).value.trim();
+
+
+    const status =
+        document.getElementById(
+            "slipStatus"
+        );
+
+
+    if (!date) {
+
+        status.innerHTML = `
+            <div class="status status-error">
+                Select a prediction date.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    status.innerHTML = `
+        <div class="status status-info">
+            ⏳ Saving daily slip...
         </div>
-
     `;
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/predictions",
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            prediction_date:
+                                date,
+
+                            home_team:
+                                "DAILY SLIP",
+
+                            away_team:
+                                "DAILY SLIP",
+
+                            market:
+                                "Daily Slip",
+
+                            selection:
+                                "Daily Slip",
+
+                            confidence:
+                                5,
+
+                            status:
+                                "draft",
+
+                            result:
+                                "pending",
+
+                            booking_code,
+
+                            bookmaker,
+
+                            publish_slip:
+                                publish
+
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                data.message ||
+                "Unable to save daily slip."
+            );
+
+        }
+
+
+        status.innerHTML = `
+
+            <div class="status status-success">
+
+                ${
+                    publish
+                    ?
+                    "🚀 Daily slip published."
+                    :
+                    "✅ Daily slip saved."
+                }
+
+            </div>
+
+        `;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            error
+        );
+
+
+        status.innerHTML = `
+
+            <div class="status status-error">
+
+                ❌ ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+/* =========================================================
+   PUBLISH DAILY SLIP
+========================================================= */
+
+async function publishDailySlip() {
+
+    const picks =
+        Object.values(
+            selectedFixtures
+        );
+
+
+    if (!picks.length) {
+
+        document.getElementById(
+            "slipStatus"
+        ).innerHTML = `
+
+            <div class="status status-warning">
+
+                ⚠️ Select at least one
+                prediction before publishing.
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    const unpublished =
+        picks.filter(
+            pick =>
+                pick.status !==
+                "published"
+        );
+
+
+    for (
+        const pick
+        of unpublished
+    ) {
+
+        activeFixtureId =
+            pick.match.fixture?.id;
+
+
+        await submitCurrentPrediction(
+            "published"
+        );
+
+    }
+
+
+    await saveDailySlip(
+        true
+    );
 
 }
 
@@ -1805,17 +2947,6 @@ function formatKickoff(
         }
 
 
-        if (
-            Number.isNaN(
-                date.getTime()
-            )
-        ) {
-
-            return "Time unavailable";
-
-        }
-
-
         return date.toLocaleString(
             "en-NG",
             {
@@ -1828,9 +2959,6 @@ function formatKickoff(
 
                 month:
                     "short",
-
-                year:
-                    "numeric",
 
                 hour:
                     "2-digit",
@@ -1856,6 +2984,32 @@ function formatKickoff(
 
 
 /* =========================================================
+   NORMALIZE LEAGUE
+========================================================= */
+
+function normalizeLeagueName(
+    name
+) {
+
+    return String(
+        name || ""
+    )
+    .normalize("NFD")
+    .replace(
+        /[\u0300-\u036f]/g,
+        ""
+    )
+    .toLowerCase()
+    .replace(
+        /[^a-z0-9]+/g,
+        " "
+    )
+    .trim();
+
+}
+
+
+/* =========================================================
    ESCAPE HTML
 ========================================================= */
 
@@ -1866,27 +3020,22 @@ function escapeHtml(
     return String(
         value ?? ""
     )
-
     .replace(
         /&/g,
         "&amp;"
     )
-
     .replace(
         /</g,
         "&lt;"
     )
-
     .replace(
         />/g,
         "&gt;"
     )
-
     .replace(
         /"/g,
         "&quot;"
     )
-
     .replace(
         /'/g,
         "&#039;"
@@ -1894,10 +3043,7 @@ function escapeHtml(
 
 }
 
-
 </script>
 
-
 </body>
-
 </html>
