@@ -2682,53 +2682,57 @@ async function submitCurrentPrediction(
    SAVE DAILY SLIP
 ========================================================= */
 
-async function saveDailySlip(
-    publish
-) {
+
+ async function saveDailySlip(publish) {
 
     const date =
         document.getElementById(
             "predictionDate"
         ).value;
 
-
     const bookingCode =
         document.getElementById(
             "bookingCode"
         ).value.trim();
-
 
     const bookmaker =
         document.getElementById(
             "bookmaker"
         ).value.trim();
 
-
-    const status =
+    const statusBox =
         document.getElementById(
             "slipStatus"
         );
 
-
     if (!date) {
 
-        status.innerHTML = `
+        statusBox.innerHTML = `
             <div class="status status-error">
-                Select a prediction date.
+                ❌ Select a prediction date first.
             </div>
         `;
 
-        return;
-
+        return false;
     }
 
+    if (publish && !bookingCode) {
 
-    status.innerHTML = `
+        statusBox.innerHTML = `
+            <div class="status status-warning">
+                ⚠️ Enter the booking code before
+                publishing the daily slip.
+            </div>
+        `;
+
+        return false;
+    }
+
+    statusBox.innerHTML = `
         <div class="status status-info">
             ⏳ Saving daily slip...
         </div>
     `;
-
 
     try {
 
@@ -2736,60 +2740,37 @@ async function saveDailySlip(
             await fetch(
                 "/api/predictions",
                 {
-
-                    method:
-                        "POST",
+                    method: "POST",
 
                     headers: {
-
                         "Content-Type":
                             "application/json"
-
                     },
 
-                    body:
-                        JSON.stringify({
+                    body: JSON.stringify({
 
-                            prediction_date:
-                                date,
+                        type: "daily_slip",
 
-                            home_team:
-                                "DAILY SLIP",
+                        prediction_date:
+                            date,
 
-                            away_team:
-                                "DAILY SLIP",
+                        booking_code:
+                            bookingCode || null,
 
-                            market:
-                                "Daily Slip",
+                        bookmaker:
+                            bookmaker || null,
 
-                            selection:
-                                "Daily Slip",
+                        status:
+                            publish
+                                ? "published"
+                                : "draft"
 
-                            confidence:
-                                5,
-
-                            status:
-                                "draft",
-
-                            result:
-                                "pending",
-
-                            booking_code,
-
-                            bookmaker,
-
-                            publish_slip:
-                                publish
-
-                        })
-
+                    })
                 }
             );
 
-
         const data =
             await response.json();
-
 
         if (!response.ok) {
 
@@ -2798,49 +2779,35 @@ async function saveDailySlip(
                 data.message ||
                 "Unable to save daily slip."
             );
-
         }
 
-
-        status.innerHTML = `
-
+        statusBox.innerHTML = `
             <div class="status status-success">
-
                 ${
                     publish
-                    ?
-                    "🚀 Daily slip published."
-                    :
-                    "✅ Daily slip saved."
+                    ? "🚀 Daily slip published successfully."
+                    : "💾 Daily slip saved as draft."
                 }
-
             </div>
-
         `;
 
-    }
+        return true;
 
-    catch (error) {
+    } catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
-
-        status.innerHTML = `
-
+        statusBox.innerHTML = `
             <div class="status status-error">
-
                 ❌ ${escapeHtml(
                     error.message
                 )}
-
             </div>
-
         `;
 
+        return false;
     }
-
+}
 }
 
 
@@ -2855,57 +2822,68 @@ async function publishDailySlip() {
             selectedFixtures
         );
 
+    const slipStatus =
+        document.getElementById(
+            "slipStatus"
+        );
 
     if (!picks.length) {
 
-        document.getElementById(
-            "slipStatus"
-        ).innerHTML = `
-
+        slipStatus.innerHTML = `
             <div class="status status-warning">
-
-                ⚠️ Select at least one
-                prediction before publishing.
-
+                ⚠️ Select at least one match
+                before publishing.
             </div>
-
         `;
 
         return;
-
     }
 
+    const bookingCode =
+        document.getElementById(
+            "bookingCode"
+        ).value.trim();
 
-    const unpublished =
-        picks.filter(
-            pick =>
-                pick.status !==
-                "published"
-        );
+    if (!bookingCode) {
 
+        slipStatus.innerHTML = `
+            <div class="status status-warning">
+                ⚠️ Enter the booking code
+                before publishing.
+            </div>
+        `;
+
+        return;
+    }
+
+    /*
+       First publish every selected
+       football prediction.
+    */
 
     for (
-        const pick
-        of unpublished
+        const pick of picks
     ) {
 
         activeFixtureId =
             pick.match.fixture?.id;
 
+        updateActivePick();
 
         await submitCurrentPrediction(
             "published"
         );
-
     }
 
+    /*
+       Then publish the daily slip
+       itself.
+    */
 
-    await saveDailySlip(
-        true
-    );
+    await saveDailySlip(true);
 
+    renderMyPicks();
 }
-
 
 /* =========================================================
    FORMAT KICKOFF
