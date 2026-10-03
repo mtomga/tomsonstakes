@@ -5,29 +5,64 @@
 //
 // PURPOSE
 // ------------------------------------------------------------
-// Provides structured team data for api/predict.js V4.0.
+// - Retrieve a team's season fixture history
+// - Identify the latest 5 completed matches
+// - Apply recency weighting
+// - Calculate basic form
+// - Calculate home/away venue form
+// - Calculate season-level home/away performance
+// - Provide structured data to api/predict.js V4.0
 //
-// CORE PREDICTION MODEL
+// PREDICTION MODEL WEIGHTS
 // ------------------------------------------------------------
-// Last 5 matches — recency weighted       45%
-// Current league standings                 30%
-// Season home/away strength                 5%
-// Expected goals / goal model              10%
-// Recent home/away venue form                5%
-// Last 5 H2H                                5%
-//
-// TOTAL                                   100%
+// Last 5 matches - recency weighted     45%
+// Current league standings              30%
+// Season home/away strength              5%
+// Expected goals / goal model           10%
+// Recent home/away venue form             5%
+// Last 5 H2H                              5%
+// ------------------------------------------
+// TOTAL                                 100%
 //
 // IMPORTANT
 // ------------------------------------------------------------
-// Injuries are NOT prediction inputs.
-// Lineups are NOT prediction inputs.
 // This endpoint does NOT make the final prediction.
-// api/predict.js performs the final H/D/A calculation.
+//
+// It does NOT handle:
+// - injuries
+// - lineups
+// - odds
+// - H2H prediction
+// - league standings prediction
+// - final market selection
+//
+// api/predict.js remains responsible for combining
+// the signals.
 // ============================================================
 
+
 export default async function handler(req, res) {
+
   try {
+
+    // ==========================================================
+    // METHOD
+    // ==========================================================
+
+    if (req.method !== "GET") {
+
+      return res.status(405).json({
+
+        success: false,
+
+        error:
+          "Method not allowed. Use GET."
+
+      });
+
+    }
+
+
     // ==========================================================
     // REQUEST PARAMETERS
     // ==========================================================
@@ -37,27 +72,84 @@ export default async function handler(req, res) {
       from,
       to,
       season,
-      league,
-      opponent
+      league
     } = req.query;
+
 
     // ==========================================================
     // VALIDATION
     // ==========================================================
 
     if (!team) {
+
       return res.status(400).json({
+
         success: false,
-        error: "Team ID is required."
+
+        error:
+          "Team ID is required."
+
       });
+
     }
 
+
     if (!season) {
+
       return res.status(400).json({
+
         success: false,
-        error: "Team ID and season are required."
+
+        error:
+          "Season is required."
+
       });
+
     }
+
+
+    const teamId =
+      Number(team);
+
+
+    const seasonId =
+      Number(season);
+
+
+    if (
+      !Number.isInteger(teamId) ||
+      teamId <= 0
+    ) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        error:
+          "Invalid team ID."
+
+      });
+
+    }
+
+
+    if (
+      !Number.isInteger(seasonId) ||
+      seasonId < 2000 ||
+      seasonId > 2100
+    ) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        error:
+          "Invalid season."
+
+      });
+
+    }
+
 
     // ==========================================================
     // API KEY
@@ -66,339 +158,388 @@ export default async function handler(req, res) {
     const apiKey =
       process.env.APIFOOTBALL_KEY;
 
+
     if (!apiKey) {
+
       return res.status(500).json({
+
         success: false,
-        error: "APIFOOTBALL_KEY is not configured."
+
+        error:
+          "APIFOOTBALL_KEY is not configured."
+
       });
+
     }
+
 
     // ==========================================================
     // API HELPER
     // ==========================================================
 
-    const api = async (url) => {
-      try {
-        const response = await fetch(url, {
-          headers: {
-            "x-apisports-key": apiKey,
-            "Accept": "application/json"
+    const api =
+      async (url) => {
+
+        try {
+
+          const response =
+            await fetch(
+              url,
+              {
+                method: "GET",
+
+                headers: {
+
+                  "x-apisports-key":
+                    apiKey,
+
+                  "Accept":
+                    "application/json"
+
+                }
+              }
+            );
+
+
+          const text =
+            await response.text();
+
+
+          let data = {};
+
+
+          try {
+
+            data =
+              text
+                ? JSON.parse(text)
+                : {};
+
+          } catch {
+
+            return {
+
+              ok: false,
+
+              status:
+                response.status,
+
+              data: {},
+
+              error:
+                "Football provider returned invalid JSON."
+
+            };
+
           }
-        });
 
-        const data =
-          await response
-            .json()
-            .catch(() => ({}));
 
-        return {
-          ok: response.ok,
-          status: response.status,
-          data
-        };
+          return {
 
-      } catch (error) {
-        return {
-          ok: false,
-          status: 0,
-          data: {},
-          error:
-            error?.message ||
-            "API request failed."
-        };
-      }
-    };
+            ok:
+              response.ok,
+
+            status:
+              response.status,
+
+            data
+
+          };
+
+        }
+
+        catch (error) {
+
+          return {
+
+            ok: false,
+
+            status: 0,
+
+            data: {},
+
+            error:
+              error?.message ||
+              "Football API request failed."
+
+          };
+
+        }
+
+      };
+
 
     // ==========================================================
     // HELPERS
     // ==========================================================
 
-    const safeArray = (value) =>
-      Array.isArray(value)
-        ? value
-        : [];
+    const safeArray =
+      value =>
+        Array.isArray(value)
+          ? value
+          : [];
 
-    const numeric = (value) => {
-      if (
-        value === null ||
-        value === undefined ||
-        value === ""
-      ) {
-        return null;
-      }
 
-      const number =
-        Number(
-          String(value)
-            .replace("%", "")
-            .replace(",", "")
-            .trim()
-        );
+    const numeric =
+      value => {
 
-      return Number.isFinite(number)
-        ? number
-        : null;
-    };
-
-    const round = (
-      value,
-      decimals = 3
-    ) => {
-      if (
-        !Number.isFinite(value)
-      ) {
-        return null;
-      }
-
-      const factor =
-        Math.pow(
-          10,
-          decimals
-        );
-
-      return (
-        Math.round(
-          value * factor
-        ) / factor
-      );
-    };
-
-    const clamp = (
-      value,
-      min,
-      max
-    ) => {
-      return Math.max(
-        min,
-        Math.min(
-          max,
-          value
-        )
-      );
-    };
-
-    const parseDate = (value) => {
-      if (!value) {
-        return null;
-      }
-
-      const date =
-        new Date(value);
-
-      return Number.isNaN(
-        date.getTime()
-      )
-        ? null
-        : date;
-    };
-
-    // ==========================================================
-    // API ENDPOINTS
-    // ==========================================================
-
-    const fixturesUrl =
-      "https://v3.football.api-sports.io/fixtures";
-
-    const standingsUrl =
-      "https://v3.football.api-sports.io/standings";
-
-    // ==========================================================
-    // REQUEST LAST 5 MATCHES
-    // ==========================================================
-
-    const lastFiveUrl =
-      `${fixturesUrl}?team=${encodeURIComponent(
-        team
-      )}&last=5`;
-
-    // ==========================================================
-    // REQUEST SEASON FIXTURES
-    // ==========================================================
-
-    let rangeFixtures = [];
-
-    if (from && to) {
-      let rangeUrl =
-        `${fixturesUrl}?team=${encodeURIComponent(
-          team
-        )}` +
-        `&season=${encodeURIComponent(
-          season
-        )}` +
-        `&from=${encodeURIComponent(
-          from
-        )}` +
-        `&to=${encodeURIComponent(
-          to
-        )}`;
-
-      if (league) {
-        rangeUrl +=
-          `&league=${encodeURIComponent(
-            league
-          )}`;
-      }
-
-      const rangeResponse =
-        await api(rangeUrl);
-
-      rangeFixtures =
-        safeArray(
-          rangeResponse
-            .data?.response
-        );
-    }
-
-    // ==========================================================
-    // REQUEST CURRENT STANDINGS
-    //
-    // THIS IS REQUIRED FOR THE 30% STANDINGS SIGNAL.
-    // ==========================================================
-
-    let standingsResponse = {
-      ok: false,
-      status: 0,
-      data: {}
-    };
-
-    if (league) {
-      standingsResponse =
-        await api(
-          `${standingsUrl}?league=${encodeURIComponent(
-            league
-          )}&season=${encodeURIComponent(
-            season
-          )}`
-        );
-    }
-
-    const standingsGroups =
-      safeArray(
-        standingsResponse
-          .data?.response
-      );
-
-    // ==========================================================
-    // FLATTEN STANDINGS
-    // ==========================================================
-
-    const standings = [];
-
-    for (
-      const group
-      of standingsGroups
-    ) {
-      const leagueStandings =
-        safeArray(
-          group?.league?.standings
-        );
-
-      for (
-        const table
-        of leagueStandings
-      ) {
-        for (
-          const row
-          of safeArray(table)
+        if (
+          value === null ||
+          value === undefined ||
+          value === ""
         ) {
-          standings.push(row);
+
+          return null;
+
         }
-      }
-    }
 
-    // ==========================================================
-    // FIND THIS TEAM'S STANDING
-    // ==========================================================
 
-    const teamStanding =
-      standings.find(
-        (row) =>
+        const number =
           Number(
-            row?.team?.id
-          ) ===
-          Number(team)
-      ) || null;
+            String(value)
+              .replace("%", "")
+              .replace(",", "")
+              .trim()
+          );
+
+
+        return Number.isFinite(number)
+          ? number
+          : null;
+
+      };
+
+
+    const round =
+      (
+        value,
+        decimals = 4
+      ) => {
+
+        if (
+          !Number.isFinite(value)
+        ) {
+
+          return null;
+
+        }
+
+
+        const factor =
+          Math.pow(
+            10,
+            decimals
+          );
+
+
+        return (
+          Math.round(
+            value * factor
+          ) / factor
+        );
+
+      };
+
+
+    const parseDate =
+      value => {
+
+        if (!value) {
+
+          return null;
+
+        }
+
+
+        const date =
+          new Date(value);
+
+
+        return Number.isNaN(
+          date.getTime()
+        )
+          ? null
+          : date;
+
+      };
+
 
     // ==========================================================
-    // FIND OPPONENT STANDING
-    // ==========================================================
-
-    let opponentStanding =
-      null;
-
-    if (opponent) {
-      opponentStanding =
-        standings.find(
-          (row) =>
-            Number(
-              row?.team?.id
-            ) ===
-            Number(opponent)
-        ) || null;
-    }
-
-    // ==========================================================
-    // DETERMINE TEAM NAME
-    // ==========================================================
-
-    let teamName =
-      teamStanding
-        ?.team
-        ?.name ||
-      null;
-
-    // ==========================================================
-    // LAST FIVE RESPONSE
-    // ==========================================================
-
-    const lastFiveResponse =
-      await api(lastFiveUrl);
-
-    const lastFiveFixtures =
-      safeArray(
-        lastFiveResponse
-          .data?.response
-      );
-
-    // ==========================================================
-    // CHOOSE FIXTURE DATASET
-    // ==========================================================
-
-    const allFixtures =
-      rangeFixtures.length
-        ? rangeFixtures
-        : lastFiveFixtures;
-
-    // ==========================================================
-    // COMPLETED MATCH STATUS
+    // COMPLETED STATUS
     // ==========================================================
 
     const completedStatuses =
       new Set([
+
         "FT",
         "AET",
         "PEN"
+
       ]);
+
+
+    // ==========================================================
+    // BUILD FIXTURE URL
+    //
+    // We intentionally use season fixtures rather than relying
+    // on ?last=5 because the current project must remain
+    // compatible with API plans/configurations where that
+    // shortcut may not be available.
+    // ==========================================================
+
+    const baseUrl =
+      "https://v3.football.api-sports.io/fixtures";
+
+
+    let fixturesUrl =
+      `${baseUrl}` +
+      `?team=${encodeURIComponent(teamId)}` +
+      `&season=${encodeURIComponent(seasonId)}`;
+
+
+    if (league) {
+
+      const leagueId =
+        Number(league);
+
+
+      if (
+        Number.isInteger(leagueId) &&
+        leagueId > 0
+      ) {
+
+        fixturesUrl +=
+          `&league=${encodeURIComponent(
+            leagueId
+          )}`;
+
+      }
+
+    }
+
+
+    // ==========================================================
+    // OPTIONAL DATE RANGE
+    //
+    // If from/to are supplied, use them to reduce the amount
+    // of data retrieved.
+    //
+    // Otherwise retrieve the season fixture list.
+    // ==========================================================
+
+    if (from && to) {
+
+      fixturesUrl +=
+        `&from=${encodeURIComponent(
+          String(from)
+        )}` +
+        `&to=${encodeURIComponent(
+          String(to)
+        )}`;
+
+    }
+
+
+    // ==========================================================
+    // REQUEST FIXTURES
+    // ==========================================================
+
+    const fixtureResponse =
+      await api(
+        fixturesUrl
+      );
+
+
+    if (
+      !fixtureResponse.ok
+    ) {
+
+      return res.status(
+        fixtureResponse.status >= 400
+          ? fixtureResponse.status
+          : 502
+      ).json({
+
+        success: false,
+
+        version:
+          "Team Analysis V4.1",
+
+        error:
+          "Unable to retrieve team fixtures.",
+
+        details:
+          fixtureResponse.error ||
+          fixtureResponse.data?.message ||
+          fixtureResponse.data?.errors ||
+          null
+
+      });
+
+    }
+
+
+    if (
+      fixtureResponse.data?.errors &&
+      Object.keys(
+        fixtureResponse.data.errors
+      ).length > 0
+    ) {
+
+      return res.status(502).json({
+
+        success: false,
+
+        version:
+          "Team Analysis V4.1",
+
+        error:
+          "Football provider returned an error.",
+
+        providerErrors:
+          fixtureResponse.data.errors
+
+      });
+
+    }
+
+
+    const allFixtures =
+      safeArray(
+        fixtureResponse
+          .data
+          ?.response
+      );
+
+
+    // ==========================================================
+    // FILTER COMPLETED MATCHES
+    // ==========================================================
 
     const completedFixtures =
       allFixtures
         .filter(
-          (fixture) =>
+          fixture =>
             completedStatuses.has(
-              fixture
-                ?.fixture
-                ?.status
-                ?.short
+              String(
+                fixture
+                  ?.fixture
+                  ?.status
+                  ?.short ||
+                ""
+              ).toUpperCase()
             )
         )
         .sort(
           (a, b) => {
+
             const dateA =
               parseDate(
                 a
                   ?.fixture
                   ?.date
               );
+
 
             const dateB =
               parseDate(
@@ -407,41 +548,58 @@ export default async function handler(req, res) {
                   ?.date
               );
 
+
             return (
-              (dateB?.getTime() || 0) -
-              (dateA?.getTime() || 0)
+              (
+                dateB?.getTime() ||
+                0
+              ) -
+              (
+                dateA?.getTime() ||
+                0
+              )
             );
+
           }
         );
 
+
     // ==========================================================
-    // LAST FIVE COMPLETED
+    // LAST FIVE
     // ==========================================================
 
     const recentFive =
-      completedFixtures.slice(
-        0,
-        5
-      );
+      completedFixtures
+        .slice(
+          0,
+          5
+        );
+
 
     // ==========================================================
     // RESULT EXTRACTION
     // ==========================================================
 
     const getResult =
-      (fixture) => {
+      fixture => {
 
         const homeId =
-          fixture
-            ?.teams
-            ?.home
-            ?.id;
+          Number(
+            fixture
+              ?.teams
+              ?.home
+              ?.id
+          );
+
 
         const awayId =
-          fixture
-            ?.teams
-            ?.away
-            ?.id;
+          Number(
+            fixture
+              ?.teams
+              ?.away
+              ?.id
+          );
+
 
         const homeGoals =
           numeric(
@@ -450,6 +608,7 @@ export default async function handler(req, res) {
               ?.home
           );
 
+
         const awayGoals =
           numeric(
             fixture
@@ -457,55 +616,76 @@ export default async function handler(req, res) {
               ?.away
           );
 
+
         if (
           homeGoals === null ||
           awayGoals === null
         ) {
+
           return null;
+
         }
 
+
         const isHome =
-          Number(homeId) ===
-          Number(team);
+          homeId ===
+          teamId;
+
 
         const isAway =
-          Number(awayId) ===
-          Number(team);
+          awayId ===
+          teamId;
+
 
         if (
           !isHome &&
           !isAway
         ) {
+
           return null;
+
         }
+
 
         const teamGoals =
           isHome
             ? homeGoals
             : awayGoals;
 
+
         const opponentGoals =
           isHome
             ? awayGoals
             : homeGoals;
 
-        let result = "D";
+
+        let result =
+          "D";
+
 
         if (
           teamGoals >
           opponentGoals
         ) {
-          result = "W";
+
+          result =
+            "W";
+
         }
 
-        if (
+        else if (
           teamGoals <
           opponentGoals
         ) {
-          result = "L";
+
+          result =
+            "L";
+
         }
 
+
         return {
+
           fixtureId:
             fixture
               ?.fixture
@@ -518,6 +698,12 @@ export default async function handler(req, res) {
               ?.date ||
             null,
 
+          timestamp:
+            fixture
+              ?.fixture
+              ?.timestamp ||
+            null,
+
           leagueId:
             fixture
               ?.league
@@ -528,6 +714,12 @@ export default async function handler(req, res) {
             fixture
               ?.league
               ?.name ||
+            null,
+
+          country:
+            fixture
+              ?.league
+              ?.country ||
             null,
 
           round:
@@ -585,17 +777,25 @@ export default async function handler(req, res) {
           goalDifference:
             teamGoals -
             opponentGoals
+
         };
+
       };
 
+
     // ==========================================================
-    // BUILD LAST FIVE RESULTS
+    // BUILD RESULT ARRAY
     // ==========================================================
 
     const results =
       recentFive
-        .map(getResult)
-        .filter(Boolean);
+        .map(
+          getResult
+        )
+        .filter(
+          Boolean
+        );
+
 
     // ==========================================================
     // BASIC FORM
@@ -604,51 +804,68 @@ export default async function handler(req, res) {
     const totalMatches =
       results.length;
 
+
     const wins =
       results.filter(
-        (item) =>
+        item =>
           item.result === "W"
       ).length;
 
+
     const draws =
       results.filter(
-        (item) =>
+        item =>
           item.result === "D"
       ).length;
 
+
     const losses =
       results.filter(
-        (item) =>
+        item =>
           item.result === "L"
       ).length;
 
+
     const points =
       results.reduce(
-        (total, item) =>
+        (
+          total,
+          item
+        ) =>
           total +
           item.points,
         0
       );
 
+
     const goalsFor =
       results.reduce(
-        (total, item) =>
+        (
+          total,
+          item
+        ) =>
           total +
           item.goalsFor,
         0
       );
 
+
     const goalsAgainst =
       results.reduce(
-        (total, item) =>
+        (
+          total,
+          item
+        ) =>
           total +
           item.goalsAgainst,
         0
       );
 
+
     const goalDifference =
       goalsFor -
       goalsAgainst;
+
 
     const pointsPerGame =
       totalMatches
@@ -656,30 +873,38 @@ export default async function handler(req, res) {
           totalMatches
         : 0;
 
+
     const winRate =
       totalMatches
         ? wins /
           totalMatches
         : 0;
 
+
     // ==========================================================
-    // RECENCY-WEIGHTED FORM
+    // RECENCY WEIGHTS
     //
-    // Newest = 5
-    // 2nd    = 4
-    // 3rd    = 3
-    // 4th    = 2
-    // 5th    = 1
+    // Most recent = 5
+    // Second       = 4
+    // Third        = 3
+    // Fourth       = 2
+    // Fifth        = 1
     // ==========================================================
 
     const recencyWeights =
       [5, 4, 3, 2, 1];
 
+
     let weightedPoints = 0;
+
     let weightedGoalsFor = 0;
+
     let weightedGoalsAgainst = 0;
+
     let weightedGoalDifference = 0;
+
     let totalWeight = 0;
+
 
     results.forEach(
       (
@@ -688,30 +913,36 @@ export default async function handler(req, res) {
       ) => {
 
         const weight =
-          recencyWeights[
-            index
-          ] || 1;
+          recencyWeights[index] ||
+          1;
+
 
         weightedPoints +=
           result.points *
           weight;
 
+
         weightedGoalsFor +=
           result.goalsFor *
           weight;
+
 
         weightedGoalsAgainst +=
           result.goalsAgainst *
           weight;
 
+
         weightedGoalDifference +=
           result.goalDifference *
           weight;
 
+
         totalWeight +=
           weight;
+
       }
     );
+
 
     const recencyWeightedPPG =
       totalWeight
@@ -719,11 +950,13 @@ export default async function handler(req, res) {
           totalWeight
         : 0;
 
+
     const recencyWeightedGF =
       totalWeight
         ? weightedGoalsFor /
           totalWeight
         : 0;
+
 
     const recencyWeightedGA =
       totalWeight
@@ -731,82 +964,103 @@ export default async function handler(req, res) {
           totalWeight
         : 0;
 
+
     const recencyWeightedGD =
       totalWeight
         ? weightedGoalDifference /
           totalWeight
         : 0;
 
+
     // ==========================================================
-    // HOME / AWAY VENUE FORM
+    // HOME / AWAY FORM
     // ==========================================================
 
     const homeResults =
       results.filter(
-        (item) =>
+        item =>
           item.venue ===
           "HOME"
       );
 
+
     const awayResults =
       results.filter(
-        (item) =>
+        item =>
           item.venue ===
           "AWAY"
       );
 
+
     const buildVenueStats =
-      (venueResults) => {
+      venueResults => {
 
         const matches =
           venueResults.length;
 
+
         const venueWins =
           venueResults.filter(
-            (item) =>
+            item =>
               item.result ===
               "W"
           ).length;
 
+
         const venueDraws =
           venueResults.filter(
-            (item) =>
+            item =>
               item.result ===
               "D"
           ).length;
 
+
         const venueLosses =
           venueResults.filter(
-            (item) =>
+            item =>
               item.result ===
               "L"
           ).length;
 
+
         const venuePoints =
           venueResults.reduce(
-            (total, item) =>
+            (
+              total,
+              item
+            ) =>
               total +
               item.points,
             0
           );
 
+
         const venueGF =
           venueResults.reduce(
-            (total, item) =>
+            (
+              total,
+              item
+            ) =>
               total +
               item.goalsFor,
             0
           );
 
+
         const venueGA =
           venueResults.reduce(
-            (total, item) =>
+            (
+              total,
+              item
+            ) =>
               total +
               item.goalsAgainst,
             0
           );
 
+
         return {
+
           matches,
 
           wins:
@@ -836,772 +1090,242 @@ export default async function handler(req, res) {
           goalDifference:
             venueGF -
             venueGA
+
         };
+
       };
 
-    const homeVenue =
+
+    const recentHome =
       buildVenueStats(
         homeResults
       );
 
-    const awayVenue =
+
+    const recentAway =
       buildVenueStats(
         awayResults
       );
+
+
+    // ==========================================================
+    // SEASON HOME / AWAY STRENGTH
+    //
+    // This is separate from recent venue form.
+    //
+    // Recent venue form:
+    //     uses LAST 5 overall matches.
+    //
+    // Season home/away strength:
+    //     uses the complete available season history.
+    // ==========================================================
+
+    const seasonResults =
+      completedFixtures
+        .map(
+          getResult
+        )
+        .filter(
+          Boolean
+        );
+
+
+    const seasonHomeResults =
+      seasonResults.filter(
+        item =>
+          item.venue ===
+          "HOME"
+      );
+
+
+    const seasonAwayResults =
+      seasonResults.filter(
+        item =>
+          item.venue ===
+          "AWAY"
+      );
+
+
+    const seasonHome =
+      buildVenueStats(
+        seasonHomeResults
+      );
+
+
+    const seasonAway =
+      buildVenueStats(
+        seasonAwayResults
+      );
+
 
     // ==========================================================
     // FORM STRING
     // ==========================================================
 
-    const formString =
+    const form =
       results
         .map(
-          (item) =>
+          item =>
             item.result
         )
         .join("");
 
+
     // ==========================================================
-    // FORM SCORE
+    // STANDARDIZED FORM SCORE
     //
-    // Standardized 0-1 team form indicator.
+    // 0 = weak
+    // 0.5 = neutral
+    // 1 = strong
     //
-    // Used by predict.js as part of the 45% form signal.
+    // This is only the TEAM FORM SIGNAL.
+    // It is NOT the final prediction probability.
     // ==========================================================
 
-    const calculateFormScore =
-      () => {
+    let formScore =
+      0.5;
 
-        if (!results.length) {
-          return 0.5;
-        }
 
-        const ppgComponent =
-          clamp(
-            recencyWeightedPPG /
-              3,
-            0,
-            1
-          );
-
-        const gdComponent =
-          clamp(
-            0.5 +
-              recencyWeightedGD /
-                4,
-            0,
-            1
-          );
-
-        const winComponent =
-          clamp(
-            wins /
-              Math.max(
-                totalMatches,
-                1
-              ),
-            0,
-            1
-          );
-
-        return (
-          ppgComponent *
-            0.50 +
-          gdComponent *
-            0.30 +
-          winComponent *
-            0.20
-        );
-      };
-
-    const formScore =
-      calculateFormScore();
-
-    // ==========================================================
-    // STANDINGS DATA
-    // ==========================================================
-
-    const standingsData =
-      teamStanding
-        ? {
-            available: true,
-
-            rank:
-              numeric(
-                teamStanding.rank
-              ),
-
-            points:
-              numeric(
-                teamStanding.points
-              ),
-
-            goalsDiff:
-              numeric(
-                teamStanding.goalsDiff
-              ),
-
-            goalsFor:
-              numeric(
-                teamStanding.goalsFor
-              ),
-
-            goalsAgainst:
-              numeric(
-                teamStanding.goalsAgainst
-              ),
-
-            played:
-              numeric(
-                teamStanding.all
-                  ?.played
-              ),
-
-            wins:
-              numeric(
-                teamStanding.all
-                  ?.win
-              ),
-
-            draws:
-              numeric(
-                teamStanding.all
-                  ?.draw
-              ),
-
-            losses:
-              numeric(
-                teamStanding.all
-                  ?.lose
-              ),
-
-            form:
-              teamStanding.form ||
-              null,
-
-            description:
-              teamStanding.description ||
-              null,
-
-            home: {
-              played:
-                numeric(
-                  teamStanding.home
-                    ?.played
-                ),
-
-              wins:
-                numeric(
-                  teamStanding.home
-                    ?.win
-                ),
-
-              draws:
-                numeric(
-                  teamStanding.home
-                    ?.draw
-                ),
-
-              losses:
-                numeric(
-                  teamStanding.home
-                    ?.lose
-                ),
-
-              goalsFor:
-                numeric(
-                  teamStanding.home
-                    ?.goals
-                    ?.for
-                ),
-
-              goalsAgainst:
-                numeric(
-                  teamStanding.home
-                    ?.goals
-                    ?.against
-                )
-            },
-
-            away: {
-              played:
-                numeric(
-                  teamStanding.away
-                    ?.played
-                ),
-
-              wins:
-                numeric(
-                  teamStanding.away
-                    ?.win
-                ),
-
-              draws:
-                numeric(
-                  teamStanding.away
-                    ?.draw
-                ),
-
-              losses:
-                numeric(
-                  teamStanding.away
-                    ?.lose
-                ),
-
-              goalsFor:
-                numeric(
-                  teamStanding.away
-                    ?.goals
-                    ?.for
-                ),
-
-              goalsAgainst:
-                numeric(
-                  teamStanding.away
-                    ?.goals
-                    ?.against
-                )
-            }
-          }
-        : {
-            available: false
-          };
-
-    // ==========================================================
-    // STANDINGS STRENGTH SCORE
-    //
-    // This is NOT the final prediction.
-    //
-    // Higher points / rank / GD / league performance
-    // produce a stronger standardized team score.
-    // ==========================================================
-
-    const calculateStandingScore =
-      () => {
-
-        if (!teamStanding) {
-          return 0.5;
-        }
-
-        const tableSize =
-          standings.length;
-
-        const rank =
-          numeric(
-            teamStanding.rank
-          );
-
-        const points =
-          numeric(
-            teamStanding.points
-          ) || 0;
-
-        const goalsDiff =
-          numeric(
-            teamStanding.goalsDiff
-          ) || 0;
-
-        const played =
-          numeric(
-            teamStanding.all
-              ?.played
-          ) || 0;
-
-        // ------------------------------------------------------
-        // Rank component
-        // ------------------------------------------------------
-
-        let rankScore =
-          0.5;
-
-        if (
-          rank != null &&
-          tableSize > 1
-        ) {
-          rankScore =
-            1 -
-            (
-              (rank - 1) /
-              (tableSize - 1)
-            );
-
-          rankScore =
-            clamp(
-              rankScore,
-              0,
-              1
-            );
-        }
-
-        // ------------------------------------------------------
-        // Points-per-game component
-        // ------------------------------------------------------
-
-        const ppg =
-          played > 0
-            ? points /
-              played
-            : 0;
-
-        const ppgScore =
-          clamp(
-            ppg / 3,
-            0,
-            1
-          );
-
-        // ------------------------------------------------------
-        // Goal difference component
-        //
-        // Converts negative/positive GD into 0-1 range.
-        // ------------------------------------------------------
-
-        const gdScore =
-          clamp(
-            0.5 +
-              goalsDiff /
-                30,
-            0,
-            1
-          );
-
-        // ------------------------------------------------------
-        // Combined standing score
-        // ------------------------------------------------------
-
-        return (
-          rankScore *
-            0.45 +
-          ppgScore *
-            0.35 +
-          gdScore *
-            0.20
-        );
-      };
-
-    const standingScore =
-      calculateStandingScore();
-
-    // ==========================================================
-    // SEASON HOME / AWAY STRENGTH
-    // ==========================================================
-
-    const calculateVenueStrength =
-      () => {
-
-        if (!teamStanding) {
-          return 0.5;
-        }
-
-        const isHomeContext =
-          true;
-
-        const venue =
-          isHomeContext
-            ? teamStanding.home
-            : teamStanding.away;
-
-        if (!venue) {
-          return 0.5;
-        }
-
-        const played =
-          numeric(
-            venue.played
-          ) || 0;
-
-        const wins =
-          numeric(
-            venue.win
-          ) || 0;
-
-        const draws =
-          numeric(
-            venue.draw
-          ) || 0;
-
-        const losses =
-          numeric(
-            venue.lose
-          ) || 0;
-
-        if (!played) {
-          return 0.5;
-        }
-
-        const points =
-          (
-            wins * 3 +
-            draws
-          );
-
-        const ppg =
-          points /
-          played;
-
-        const winRate =
-          wins /
-          played;
-
-        const score =
-          (
-            clamp(
-              ppg / 3,
-              0,
-              1
-            ) *
-            0.60
-          ) +
-          (
-            clamp(
-              winRate,
-              0,
-              1
-            ) *
-            0.40
-          );
-
-        return clamp(
-          score,
-          0,
-          1
-        );
-      };
-
-    const seasonVenueStrength =
-      calculateVenueStrength();
-
-    // ==========================================================
-    // EXPECTED GOALS / GOAL MODEL INPUTS
-    // ==========================================================
-
-    const seasonGoalsFor =
-      numeric(
-        teamStanding
-          ?.all
-          ?.goals
-          ?.for
-      );
-
-    const seasonGoalsAgainst =
-      numeric(
-        teamStanding
-          ?.all
-          ?.goals
-          ?.against
-      );
-
-    const seasonPlayed =
-      numeric(
-        teamStanding
-          ?.all
-          ?.played
-      );
-
-    const seasonGFPerGame =
-      seasonPlayed
-        ? seasonGoalsFor /
-          seasonPlayed
-        : null;
-
-    const seasonGAPerGame =
-      seasonPlayed
-        ? seasonGoalsAgainst /
-          seasonPlayed
-        : null;
-
-    const expectedGoalsInput = {
-      available:
-        seasonGFPerGame != null &&
-        seasonGAPerGame != null,
-
-      goalsForPerGame:
-        seasonGFPerGame,
-
-      goalsAgainstPerGame:
-        seasonGAPerGame,
-
-      recentGoalsForPerGame:
-        totalMatches
-          ? goalsFor /
-            totalMatches
-          : null,
-
-      recentGoalsAgainstPerGame:
-        totalMatches
-          ? goalsAgainst /
-            totalMatches
-          : null
-    };
-
-    // ==========================================================
-    // H2H
-    //
-    // We deliberately retrieve only the last 5 meetings.
-    // ==========================================================
-
-    let h2hFixtures = [];
-
-    if (opponent) {
-
-      const h2hUrl =
-        `${fixturesUrl}/headtohead` +
-        `?h2h=${encodeURIComponent(
-          team
-        )}-${encodeURIComponent(
-          opponent
-        )}` +
-        `&last=5`;
-
-      const h2hResponse =
-        await api(h2hUrl);
-
-      h2hFixtures =
-        safeArray(
-          h2hResponse
-            .data?.response
-        );
-    }
-
-    // ==========================================================
-    // H2H RESULT CALCULATION
-    // ==========================================================
-
-    const h2hResults = [];
-
-    for (
-      const fixture
-      of h2hFixtures
+    if (
+      results.length
     ) {
 
-      const homeId =
-        fixture
-          ?.teams
-          ?.home
-          ?.id;
-
-      const awayId =
-        fixture
-          ?.teams
-          ?.away
-          ?.id;
-
-      const homeGoals =
-        numeric(
-          fixture
-            ?.goals
-            ?.home
+      const ppgComponent =
+        Math.min(
+          recencyWeightedPPG /
+          3,
+          1
         );
 
-      const awayGoals =
-        numeric(
-          fixture
-            ?.goals
-            ?.away
+
+      const gdComponent =
+        Math.max(
+          0,
+          Math.min(
+            1,
+            0.5 +
+            (
+              recencyWeightedGD /
+              4
+            )
+          )
         );
 
-      if (
-        homeGoals == null ||
-        awayGoals == null
-      ) {
-        continue;
-      }
 
-      const teamWasHome =
-        Number(homeId) ===
-        Number(team);
+      const winComponent =
+        Math.max(
+          0,
+          Math.min(
+            1,
+            wins /
+            totalMatches
+          )
+        );
 
-      const teamGoals =
-        teamWasHome
-          ? homeGoals
-          : awayGoals;
 
-      const opponentGoals =
-        teamWasHome
-          ? awayGoals
-          : homeGoals;
+      formScore =
+        (
+          ppgComponent *
+          0.50
+        ) +
+        (
+          gdComponent *
+          0.30
+        ) +
+        (
+          winComponent *
+          0.20
+        );
 
-      let result = "D";
-
-      if (
-        teamGoals >
-        opponentGoals
-      ) {
-        result = "W";
-      }
-
-      if (
-        teamGoals <
-        opponentGoals
-      ) {
-        result = "L";
-      }
-
-      h2hResults.push({
-        fixtureId:
-          fixture
-            ?.fixture
-            ?.id ||
-          null,
-
-        date:
-          fixture
-            ?.fixture
-            ?.date ||
-          null,
-
-        opponent:
-          teamWasHome
-            ? fixture
-                ?.teams
-                ?.away
-                ?.name ||
-              null
-            : fixture
-                ?.teams
-                ?.home
-                ?.name ||
-              null,
-
-        venue:
-          teamWasHome
-            ? "HOME"
-            : "AWAY",
-
-        result,
-
-        points:
-          result === "W"
-            ? 3
-            : result === "D"
-              ? 1
-              : 0,
-
-        goalsFor:
-          teamGoals,
-
-        goalsAgainst:
-          opponentGoals,
-
-        goalDifference:
-          teamGoals -
-          opponentGoals
-      });
     }
 
-    // ==========================================================
-    // H2H SUMMARY
-    // ==========================================================
-
-    const h2hWins =
-      h2hResults.filter(
-        (item) =>
-          item.result ===
-          "W"
-      ).length;
-
-    const h2hDraws =
-      h2hResults.filter(
-        (item) =>
-          item.result ===
-          "D"
-      ).length;
-
-    const h2hLosses =
-      h2hResults.filter(
-        (item) =>
-          item.result ===
-          "L"
-      ).length;
-
-    const h2hPoints =
-      h2hResults.reduce(
-        (total, item) =>
-          total +
-          item.points,
-        0
-      );
-
-    const h2hFormScore =
-      h2hResults.length
-        ? h2hPoints /
-          (
-            h2hResults.length *
-            3
-          )
-        : 0.5;
 
     // ==========================================================
-    // ENGINE INFORMATION
+    // TEAM NAME
     // ==========================================================
 
-    const intendedWeights = {
-      last5RecencyWeighted:
-        0.45,
+    let teamName =
+      null;
 
-      leagueStandings:
-        0.30,
 
-      seasonHomeAwayStrength:
-        0.05,
+    const firstTeamFixture =
+      allFixtures[0] ||
+      null;
 
-      expectedGoals:
-        0.10,
 
-      recentVenueForm:
-        0.05,
+    if (
+      Number(
+        firstTeamFixture
+          ?.teams
+          ?.home
+          ?.id
+      ) === teamId
+    ) {
 
-      last5H2H:
-        0.05
-    };
+      teamName =
+        firstTeamFixture
+          ?.teams
+          ?.home
+          ?.name ||
+        null;
+
+    }
+
+    else if (
+      Number(
+        firstTeamFixture
+          ?.teams
+          ?.away
+          ?.id
+      ) === teamId
+    ) {
+
+      teamName =
+        firstTeamFixture
+          ?.teams
+          ?.away
+          ?.name ||
+        null;
+
+    }
+
 
     // ==========================================================
-    // DATA QUALITY
+    // DATA AVAILABILITY
     // ==========================================================
 
     const dataAvailability = {
-      last5:
+
+      fixtures:
+        allFixtures.length > 0,
+
+      lastFive:
+        results.length >= 5,
+
+      recentForm:
         results.length > 0,
 
-      standings:
-        Boolean(
-          teamStanding
-        ),
+      recentVenue:
+        results.length > 0,
 
-      seasonVenueStrength:
-        Boolean(
-          teamStanding
-        ),
+      seasonHome:
+        seasonHome.matches > 0,
 
-      expectedGoals:
-        expectedGoalsInput.available,
+      seasonAway:
+        seasonAway.matches > 0
 
-      venueForm:
-        homeResults.length > 0 ||
-        awayResults.length > 0,
-
-      h2h:
-        h2hResults.length > 0
     };
 
-    const availableSignals =
-      Object.values(
-        dataAvailability
-      ).filter(Boolean)
-        .length;
-
-    const dataCompleteness =
-      Math.round(
-        (
-          availableSignals /
-          6
-        ) *
-        100
-      );
 
     // ==========================================================
     // RESPONSE
     // ==========================================================
+
+    res.setHeader(
+      "Cache-Control",
+      "no-store"
+    );
+
 
     return res.status(200).json({
 
@@ -1613,24 +1337,28 @@ export default async function handler(req, res) {
       team: {
 
         id:
-          Number(team),
+          teamId,
 
         name:
           teamName,
 
         season:
-          Number(season),
+          seasonId,
 
         league:
           league
             ? Number(league)
-            : null,
-
-        opponent:
-          opponent
-            ? Number(opponent)
             : null
+
       },
+
+
+      // ========================================================
+      // DATA AVAILABILITY
+      // ========================================================
+
+      dataAvailability,
+
 
       // ========================================================
       // LAST FIVE
@@ -1641,11 +1369,13 @@ export default async function handler(req, res) {
         available:
           results.length > 0,
 
+        complete:
+          results.length === 5,
+
         count:
           results.length,
 
-        form:
-          formString,
+        form,
 
         results,
 
@@ -1659,8 +1389,7 @@ export default async function handler(req, res) {
 
         pointsPerGame:
           round(
-            pointsPerGame,
-            3
+            pointsPerGame
           ),
 
         goalsFor,
@@ -1671,198 +1400,82 @@ export default async function handler(req, res) {
 
         winRate:
           round(
-            winRate,
-            3
+            winRate
           ),
 
         recencyWeighted: {
 
           weights:
-            recencyWeights.slice(
-              0,
-              results.length
-            ),
+            recencyWeights
+              .slice(
+                0,
+                results.length
+              ),
+
+          totalWeight,
 
           pointsPerGame:
             round(
-              recencyWeightedPPG,
-              3
+              recencyWeightedPPG
             ),
 
           goalsFor:
             round(
-              recencyWeightedGF,
-              3
+              recencyWeightedGF
             ),
 
           goalsAgainst:
             round(
-              recencyWeightedGA,
-              3
+              recencyWeightedGA
             ),
 
           goalDifference:
             round(
-              recencyWeightedGD,
-              3
+              recencyWeightedGD
             )
+
         },
 
         formScore:
           round(
-            formScore,
-            4
+            formScore
           )
+
       },
 
-      // ========================================================
-      // CURRENT LEAGUE STANDINGS
-      // ========================================================
-
-      standings: {
-
-        available:
-          Boolean(
-            teamStanding
-          ),
-
-        tableSize:
-          standings.length,
-
-        team:
-          standingsData,
-
-        opponent:
-          opponentStanding
-            ? {
-                id:
-                  Number(
-                    opponentStanding
-                      ?.team
-                      ?.id
-                  ),
-
-                name:
-                  opponentStanding
-                    ?.team
-                    ?.name ||
-                  null,
-
-                rank:
-                  numeric(
-                    opponentStanding
-                      ?.rank
-                  ),
-
-                points:
-                  numeric(
-                    opponentStanding
-                      ?.points
-                  ),
-
-                goalsDiff:
-                  numeric(
-                    opponentStanding
-                      ?.goalsDiff
-                  ),
-
-                form:
-                  opponentStanding
-                    ?.form ||
-                  null
-              }
-            : null,
-
-        teamScore:
-          round(
-            standingScore,
-            4
-          )
-      },
 
       // ========================================================
-      // VENUE FORM
+      // RECENT VENUE FORM
       // ========================================================
 
-      venueForm: {
+      recentVenueForm: {
 
         home:
-          homeVenue,
+          recentHome,
 
         away:
-          awayVenue
+          recentAway
+
       },
 
+
       // ========================================================
-      // SEASON HOME/AWAY STRENGTH
+      // SEASON HOME / AWAY STRENGTH
       // ========================================================
 
       seasonHomeAwayStrength: {
 
-        available:
-          Boolean(
-            teamStanding
-          ),
-
-        score:
-          round(
-            seasonVenueStrength,
-            4
-          ),
-
         home:
-          standingsData.home,
+          seasonHome,
 
         away:
-          standingsData.away
+          seasonAway
+
       },
 
-      // ========================================================
-      // EXPECTED GOALS / GOAL MODEL
-      // ========================================================
-
-      expectedGoals:
-        expectedGoalsInput,
 
       // ========================================================
-      // H2H
-      // ========================================================
-
-      h2h: {
-
-        available:
-          h2hResults.length > 0,
-
-        requested:
-          5,
-
-        matches:
-          h2hResults.length,
-
-        wins:
-          h2hWins,
-
-        draws:
-          h2hDraws,
-
-        losses:
-          h2hLosses,
-
-        points:
-          h2hPoints,
-
-        formScore:
-          round(
-            h2hFormScore,
-            4
-          ),
-
-        results:
-          h2hResults
-      },
-
-      // ========================================================
-      // FIXTURE DATA
+      // COMPLETE FIXTURE SUMMARY
       // ========================================================
 
       fixtures: {
@@ -1875,53 +1488,85 @@ export default async function handler(req, res) {
 
         lastFive:
           results
+
       },
 
-      // ========================================================
-      // DATA QUALITY
-      // ========================================================
-
-      dataAvailability,
-
-      dataCompleteness,
 
       // ========================================================
-      // ENGINE INFORMATION
+      // PREDICTION ENGINE CONTRACT
       // ========================================================
 
       engine: {
 
         version:
-          "4.1",
+          "Prediction Engine V4.0",
 
-        intendedWeights,
+        intendedWeights: {
 
-        excludedFromPrediction: [
-          "injuries",
-          "lineups"
+          last5RecencyWeighted:
+            0.45,
+
+          leagueStandings:
+            0.30,
+
+          seasonHomeAwayStrength:
+            0.05,
+
+          expectedGoals:
+            0.10,
+
+          recentVenueForm:
+            0.05,
+
+          last5H2H:
+            0.05
+
+        },
+
+        thisEndpointProvides: [
+
+          "last5RecencyWeighted",
+
+          "seasonHomeAwayStrength",
+
+          "recentVenueForm"
+
         ],
 
-        predictionSource:
-          "api/predict.js",
+        suppliedElsewhere: [
 
-        notes: [
-          "Last five matches receive the largest weight.",
-          "Most recent matches receive greater recency weight.",
-          "Current league standings are explicitly retrieved.",
-          "Season venue strength is separated from recent venue form.",
-          "H2H is limited to the last five meetings.",
-          "Injuries do not affect prediction probabilities.",
-          "Lineups do not affect prediction probabilities."
-        ]
+          "leagueStandings",
+
+          "expectedGoals",
+
+          "last5H2H"
+
+        ],
+
+        excluded:
+
+          [
+
+            "injuries",
+
+            "lineups"
+
+          ]
+
       }
+
     });
 
-  } catch (error) {
+  }
+
+
+  catch (error) {
 
     console.error(
-      "Team Analysis V4.1 error:",
+      "TEAM ANALYSIS V4.1 ERROR:",
       error
     );
+
 
     return res.status(500).json({
 
@@ -1936,6 +1581,9 @@ export default async function handler(req, res) {
       details:
         error?.message ||
         "Unknown server error."
+
     });
+
   }
+
 }
