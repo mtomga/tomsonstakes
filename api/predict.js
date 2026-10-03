@@ -1,42 +1,38 @@
 // /api/predict.js
 // ============================================================
 // TOMSONSTAKES GLOBAL FOOTBALL PREDICTION ENGINE
-// Prediction Engine V3.2
+// Prediction Engine V4.0
 //
-// Frontend contract:
-//   prediction
-//   probability
+// PRIMARY MODEL:
 //
-// Extended frontend-safe response:
-//   probabilities.home
-//   probabilities.draw
-//   probabilities.away
-//   confidence
-//   agreement
+// 35%  Recent Last-5 Form
+// 20%  League/Table Strength
+// 15%  Home/Away Season Strength
+// 15%  Goals + xG Strength
+// 10%  Recent Venue Form
+// 05%  Recent H2H
 //
-// Backend signals:
-//   1. API-Football prediction
-//   2. Bookmaker market probability
-//   3. Season team statistics
-//   4. Recent last-5 form
-//   5. Home/Away strength
-//   6. xG / expected-goal model
-//   7. H2H
-//   8. Injuries / availability
-//   9. Lineups when available
-//   10. Rest / congestion
-//   11. Normalized contextual/web probabilities
+// EXCLUDED FROM CALCULATION:
+//
+// Injuries      = 0%
+// Lineups       = 0%
+// Bookmaker     = 0%
+// API prediction= 0%
 //
 // IMPORTANT:
-// - No artificial home +0.35 bias
-// - No hardcoded Home Win selection
-// - Highest final H/D/A probability ALWAYS wins
-// - Prediction and confidence are separate concepts
+// - No artificial 45% home probability
+// - No home selection bias
+// - Highest calculated probability wins
+// - Recent form is the dominant signal
+// - League/table position is explicitly compared
+// - Home/away strength is explicitly compared
+// - Draw remains a genuine third outcome
 // ============================================================
 
 export default async function handler(req, res) {
+
   // ============================================================
-  // METHOD CHECK
+  // METHOD
   // ============================================================
 
   if (req.method !== "POST") {
@@ -47,6 +43,7 @@ export default async function handler(req, res) {
   }
 
   try {
+
     // ============================================================
     // ENVIRONMENT
     // ============================================================
@@ -57,13 +54,12 @@ export default async function handler(req, res) {
     if (!API_KEY) {
       return res.status(500).json({
         success: false,
-        error:
-          "APIFOOTBALL_KEY is not configured."
+        error: "APIFOOTBALL_KEY is not configured."
       });
     }
 
     // ============================================================
-    // REQUEST DATA
+    // REQUEST
     // ============================================================
 
     const body = req.body || {};
@@ -75,10 +71,10 @@ export default async function handler(req, res) {
       body.normalized || {};
 
     const homeName =
-      match.home;
+      match.home || "";
 
     const awayName =
-      match.away;
+      match.away || "";
 
     const matchDate =
       match.date || null;
@@ -92,20 +88,23 @@ export default async function handler(req, res) {
     }
 
     // ============================================================
-    // API-Football helper
+    // API HELPER
     // ============================================================
 
     const api = async (endpoint) => {
+
       try {
-        const response = await fetch(
-          `https://v3.football.api-sports.io${endpoint}`,
-          {
-            headers: {
-              "x-apisports-key":
-                API_KEY
+
+        const response =
+          await fetch(
+            `https://v3.football.api-sports.io${endpoint}`,
+            {
+              headers: {
+                "x-apisports-key":
+                  API_KEY
+              }
             }
-          }
-        );
+          );
 
         const data =
           await response
@@ -117,7 +116,9 @@ export default async function handler(req, res) {
           status: response.status,
           data
         };
+
       } catch (error) {
+
         return {
           ok: false,
           status: 0,
@@ -132,148 +133,160 @@ export default async function handler(req, res) {
     // HELPERS
     // ============================================================
 
-    const clamp = (
-      value,
-      min,
-      max
-    ) =>
-      Math.max(
-        min,
-        Math.min(max, value)
-      );
-
-    const round = (
-      value,
-      decimals = 3
-    ) => {
-      if (
-        !Number.isFinite(value)
-      ) {
-        return null;
-      }
-
-      const factor =
-        Math.pow(
-          10,
-          decimals
+    const clamp =
+      (value, min, max) =>
+        Math.max(
+          min,
+          Math.min(max, value)
         );
 
-      return (
-        Math.round(
-          value * factor
-        ) / factor
-      );
-    };
+    const numeric =
+      (value) => {
 
-    const numeric = (value) => {
-      if (
-        value === null ||
-        value === undefined ||
-        value === ""
-      ) {
-        return null;
-      }
+        if (
+          value === null ||
+          value === undefined ||
+          value === ""
+        ) {
+          return null;
+        }
 
-      const cleaned =
-        String(value)
-          .replace("%", "")
-          .replace(",", "")
-          .trim();
+        const cleaned =
+          String(value)
+            .replace("%", "")
+            .replace(",", "")
+            .trim();
 
-      const n =
-        Number(cleaned);
+        const number =
+          Number(cleaned);
 
-      return Number.isFinite(n)
-        ? n
-        : null;
-    };
-
-    const safeArray = (
-      value
-    ) =>
-      Array.isArray(value)
-        ? value
-        : [];
-
-    const normalizeName = (
-      name
-    ) => {
-      return String(name || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(
-          /[\u0300-\u036f]/g,
-          ""
-        )
-        .replace(
-          /[^a-z0-9]/g,
-          ""
-        );
-    };
-
-    const parseDate = (
-      value
-    ) => {
-      if (!value) {
-        return null;
-      }
-
-      const d =
-        new Date(value);
-
-      return Number.isNaN(
-        d.getTime()
-      )
-        ? null
-        : d;
-    };
-
-    const normalizeProbabilities = (
-      probabilities
-    ) => {
-      if (!probabilities) {
-        return null;
-      }
-
-      const home =
-        numeric(
-          probabilities.home
-        );
-
-      const draw =
-        numeric(
-          probabilities.draw
-        );
-
-      const away =
-        numeric(
-          probabilities.away
-        );
-
-      if (
-        home == null ||
-        draw == null ||
-        away == null
-      ) {
-        return null;
-      }
-
-      const total =
-        home + draw + away;
-
-      if (total <= 0) {
-        return null;
-      }
-
-      return {
-        home:
-          home / total,
-        draw:
-          draw / total,
-        away:
-          away / total
+        return Number.isFinite(number)
+          ? number
+          : null;
       };
-    };
+
+    const round =
+      (value, decimals = 3) => {
+
+        if (
+          !Number.isFinite(value)
+        ) {
+          return null;
+        }
+
+        const factor =
+          Math.pow(
+            10,
+            decimals
+          );
+
+        return (
+          Math.round(
+            value * factor
+          ) / factor
+        );
+      };
+
+    const safeArray =
+      (value) =>
+        Array.isArray(value)
+          ? value
+          : [];
+
+    const normalizeName =
+      (name) =>
+        String(name || "")
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(
+            /[\u0300-\u036f]/g,
+            ""
+          )
+          .replace(
+            /[^a-z0-9]/g,
+            ""
+          );
+
+    const parseDate =
+      (value) => {
+
+        if (!value) {
+          return null;
+        }
+
+        const date =
+          new Date(value);
+
+        return Number.isNaN(
+          date.getTime()
+        )
+          ? null
+          : date;
+      };
+
+    const normalizeProbabilities =
+      (probabilities) => {
+
+        if (!probabilities) {
+          return null;
+        }
+
+        const home =
+          numeric(
+            probabilities.home
+          );
+
+        const draw =
+          numeric(
+            probabilities.draw
+          );
+
+        const away =
+          numeric(
+            probabilities.away
+          );
+
+        if (
+          home == null ||
+          draw == null ||
+          away == null
+        ) {
+          return null;
+        }
+
+        const total =
+          home +
+          draw +
+          away;
+
+        if (total <= 0) {
+          return null;
+        }
+
+        return {
+          home:
+            home / total,
+
+          draw:
+            draw / total,
+
+          away:
+            away / total
+        };
+      };
+
+    // ============================================================
+    // FINISHED MATCH STATUS
+    // ============================================================
+
+    const FINISHED =
+      [
+        "FT",
+        "AET",
+        "PEN",
+        "AWD",
+        "WO"
+      ];
 
     // ============================================================
     // FIXTURE RESOLUTION
@@ -307,18 +320,19 @@ export default async function handler(req, res) {
       null;
 
     // ============================================================
-    // RESOLVE FIXTURE FROM DATE
+    // RESOLVE FIXTURE
     // ============================================================
 
     if (
       !fixtureId &&
       matchDate
     ) {
+
       const dateOnly =
         String(matchDate)
           .slice(0, 10);
 
-      const fixtureResponse =
+      const response =
         await api(
           `/fixtures?date=${encodeURIComponent(
             dateOnly
@@ -327,8 +341,9 @@ export default async function handler(req, res) {
 
       const fixtures =
         safeArray(
-          fixtureResponse
-            .data?.response
+          response
+            .data
+            ?.response
         );
 
       const targetHome =
@@ -341,54 +356,71 @@ export default async function handler(req, res) {
           awayName
         );
 
-      // Exact match
       fixture =
         fixtures.find(
-          (f) => {
-            const h =
+          (item) => {
+
+            const home =
               normalizeName(
-                f?.teams?.home?.name
+                item
+                  ?.teams
+                  ?.home
+                  ?.name
               );
 
-            const a =
+            const away =
               normalizeName(
-                f?.teams?.away?.name
+                item
+                  ?.teams
+                  ?.away
+                  ?.name
               );
 
             return (
-              h === targetHome &&
-              a === targetAway
+              home === targetHome &&
+              away === targetAway
             );
           }
         ) || null;
 
-      // Fuzzy match
       if (!fixture) {
+
         fixture =
           fixtures.find(
-            (f) => {
-              const h =
+            (item) => {
+
+              const home =
                 normalizeName(
-                  f?.teams?.home?.name
+                  item
+                    ?.teams
+                    ?.home
+                    ?.name
                 );
 
-              const a =
+              const away =
                 normalizeName(
-                  f?.teams?.away?.name
+                  item
+                    ?.teams
+                    ?.away
+                    ?.name
                 );
 
               return (
                 (
-                  h.includes(
+                  home.includes(
                     targetHome
                   ) ||
-                  targetHome.includes(h)
+                  targetHome.includes(
+                    home
+                  )
                 ) &&
                 (
-                  a.includes(
+                  away.includes(
                     targetAway
                   ) ||
-                  targetAway.includes(a)
+                  targetAway.includes(
+                    away
+                  )
                 )
               );
             }
@@ -396,110 +428,1521 @@ export default async function handler(req, res) {
       }
 
       if (fixture) {
+
         fixtureId =
-          fixture.fixture?.id ||
+          fixture
+            ?.fixture
+            ?.id ||
           null;
 
         leagueId =
-          fixture.league?.id ||
+          fixture
+            ?.league
+            ?.id ||
           null;
 
         season =
-          fixture.league?.season ||
+          fixture
+            ?.league
+            ?.season ||
           null;
 
         homeTeamId =
-          fixture.teams?.home?.id ||
+          fixture
+            ?.teams
+            ?.home
+            ?.id ||
           null;
 
         awayTeamId =
-          fixture.teams?.away?.id ||
+          fixture
+            ?.teams
+            ?.away
+            ?.id ||
           null;
       }
     }
 
     // ============================================================
-    // NORMALIZED PROBABILITY FALLBACK
+    // IF FIXTURE CANNOT BE RESOLVED
     // ============================================================
 
-    const getNormalizedProbability =
-      () => {
-        const candidates = [
-          normalized.probabilities,
-          normalized.predictions,
-          normalized.marketProbability,
-          normalized.marketProbabilities,
-          normalized.oddsProbability,
-          normalized.odds?.probabilities,
-          normalized.contextProbability,
-          normalized.contextProbabilities,
-          normalized.context?.probabilities,
-          normalized.motivation?.probabilities,
-          normalized.webProbabilities,
-          normalized.evidence?.probabilities
-        ];
+    if (
+      !fixtureId ||
+      !homeTeamId ||
+      !awayTeamId
+    ) {
 
-        for (
-          const candidate
-          of candidates
+      return res.status(200).json({
+
+        success: true,
+
+        version:
+          "Prediction Engine V4.0",
+
+        prediction:
+          "No Prediction",
+
+        probability:
+          0,
+
+        probabilities: {
+          home: 0,
+          draw: 0,
+          away: 0
+        },
+
+        confidence:
+          "LOW",
+
+        agreement:
+          0,
+
+        dataCompleteness:
+          0,
+
+        status:
+          "INSUFFICIENT_FIXTURE_DATA",
+
+        match: {
+          home:
+            homeName,
+
+          away:
+            awayName,
+
+          date:
+            matchDate
+        },
+
+        internalAnalysis: {
+          fixtureId:
+            null,
+
+          reason:
+            "Fixture, league or team IDs could not be resolved."
+        }
+      });
+    }
+
+    // ============================================================
+    // DATA COLLECTION
+    //
+    // IMPORTANT:
+    // We intentionally DO NOT request:
+    // - injuries
+    // - lineups
+    // - bookmaker odds
+    //
+    // They have ZERO influence on this model.
+    // ============================================================
+
+    const responses =
+      await Promise.all([
+
+        // --------------------------------------------------------
+        // 1. HOME SEASON STATISTICS
+        // --------------------------------------------------------
+
+        leagueId && season
+          ? api(
+              `/teams/statistics?league=${leagueId}&season=${season}&team=${homeTeamId}`
+            )
+          : Promise.resolve({
+              data: {}
+            }),
+
+        // --------------------------------------------------------
+        // 2. AWAY SEASON STATISTICS
+        // --------------------------------------------------------
+
+        leagueId && season
+          ? api(
+              `/teams/statistics?league=${leagueId}&season=${season}&team=${awayTeamId}`
+            )
+          : Promise.resolve({
+              data: {}
+            }),
+
+        // --------------------------------------------------------
+        // 3. HOME LAST FIVE
+        // --------------------------------------------------------
+
+        api(
+          `/fixtures?team=${homeTeamId}&last=5`
+        ),
+
+        // --------------------------------------------------------
+        // 4. AWAY LAST FIVE
+        // --------------------------------------------------------
+
+        api(
+          `/fixtures?team=${awayTeamId}&last=5`
+        ),
+
+        // --------------------------------------------------------
+        // 5. STANDINGS
+        // --------------------------------------------------------
+
+        leagueId && season
+          ? api(
+              `/standings?league=${leagueId}&season=${season}`
+            )
+          : Promise.resolve({
+              data: {}
+            }),
+
+        // --------------------------------------------------------
+        // 6. H2H
+        // --------------------------------------------------------
+
+        api(
+          `/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`
+        )
+      ]);
+
+    const [
+      homeStatsResponse,
+      awayStatsResponse,
+      homeRecentResponse,
+      awayRecentResponse,
+      standingsResponse,
+      h2hResponse
+    ] =
+      responses;
+
+    const homeStats =
+      homeStatsResponse
+        ?.data
+        ?.response
+        ?.[0] ||
+      null;
+
+    const awayStats =
+      awayStatsResponse
+        ?.data
+        ?.response
+        ?.[0] ||
+      null;
+
+    const rawHomeRecent =
+      safeArray(
+        homeRecentResponse
+          ?.data
+          ?.response
+      );
+
+    const rawAwayRecent =
+      safeArray(
+        awayRecentResponse
+          ?.data
+          ?.response
+      );
+
+    const h2hFixtures =
+      safeArray(
+        h2hResponse
+          ?.data
+          ?.response
+      );
+
+    // ============================================================
+    // TARGET MATCH DATE
+    // ============================================================
+
+    const targetDate =
+      parseDate(
+        fixture
+          ?.fixture
+          ?.date
+      ) ||
+      parseDate(
+        matchDate
+      );
+
+    // ============================================================
+    // SORT LAST FIVE PROPERLY
+    // ============================================================
+
+    const prepareRecentFixtures =
+      (
+        fixtures,
+        teamId
+      ) => {
+
+        return fixtures
+          .filter(
+            (item) => {
+
+              const status =
+                String(
+                  item
+                    ?.fixture
+                    ?.status
+                    ?.short ||
+                  ""
+                ).toUpperCase();
+
+              const date =
+                parseDate(
+                  item
+                    ?.fixture
+                    ?.date
+                );
+
+              if (
+                !date
+              ) {
+                return false;
+              }
+
+              // Must already have been played.
+              if (
+                !FINISHED.includes(
+                  status
+                )
+              ) {
+                return false;
+              }
+
+              // Never use the future.
+              if (
+                targetDate &&
+                date >= targetDate
+              ) {
+                return false;
+              }
+
+              // Must actually involve the team.
+              const homeId =
+                item
+                  ?.teams
+                  ?.home
+                  ?.id;
+
+              const awayId =
+                item
+                  ?.teams
+                  ?.away
+                  ?.id;
+
+              return (
+                homeId === teamId ||
+                awayId === teamId
+              );
+            }
+          )
+          .sort(
+            (a, b) => {
+
+              const dateA =
+                parseDate(
+                  a
+                    ?.fixture
+                    ?.date
+                );
+
+              const dateB =
+                parseDate(
+                  b
+                    ?.fixture
+                    ?.date
+                );
+
+              return (
+                dateB -
+                dateA
+              );
+            }
+          )
+          .slice(0, 5);
+      };
+
+    const homeRecent =
+      prepareRecentFixtures(
+        rawHomeRecent,
+        homeTeamId
+      );
+
+    const awayRecent =
+      prepareRecentFixtures(
+        rawAwayRecent,
+        awayTeamId
+      );
+
+    // ============================================================
+    // MATCH RESULT EXTRACTION
+    // ============================================================
+
+    const getResult =
+      (
+        item,
+        teamId
+      ) => {
+
+        const homeId =
+          item
+            ?.teams
+            ?.home
+            ?.id;
+
+        const awayId =
+          item
+            ?.teams
+            ?.away
+            ?.id;
+
+        const homeGoals =
+          numeric(
+            item
+              ?.goals
+              ?.home
+          );
+
+        const awayGoals =
+          numeric(
+            item
+              ?.goals
+              ?.away
+          );
+
+        if (
+          homeGoals == null ||
+          awayGoals == null
         ) {
-          const result =
-            normalizeProbabilities(
-              candidate
-            );
-
-          if (result) {
-            return result;
-          }
+          return null;
         }
 
-        return null;
+        const teamIsHome =
+          homeId === teamId;
+
+        if (
+          !teamIsHome &&
+          awayId !== teamId
+        ) {
+          return null;
+        }
+
+        const goalsFor =
+          teamIsHome
+            ? homeGoals
+            : awayGoals;
+
+        const goalsAgainst =
+          teamIsHome
+            ? awayGoals
+            : homeGoals;
+
+        let result =
+          "D";
+
+        if (
+          goalsFor >
+          goalsAgainst
+        ) {
+          result =
+            "W";
+        } else if (
+          goalsFor <
+          goalsAgainst
+        ) {
+          result =
+            "L";
+        }
+
+        return {
+          result,
+
+          points:
+            result === "W"
+              ? 3
+              : result === "D"
+                ? 1
+                : 0,
+
+          goalsFor,
+
+          goalsAgainst,
+
+          goalDifference:
+            goalsFor -
+            goalsAgainst,
+
+          date:
+            item
+              ?.fixture
+              ?.date ||
+            null,
+
+          venue:
+            teamIsHome
+              ? "home"
+              : "away"
+        };
       };
 
     // ============================================================
-    // NORMALIZED XG
+    // RECENT FORM MODEL
+    // ============================================================
+
+    const buildRecentForm =
+      (
+        fixtures,
+        teamId
+      ) => {
+
+        const results =
+          fixtures
+            .map(
+              (item) =>
+                getResult(
+                  item,
+                  teamId
+                )
+            )
+            .filter(
+              Boolean
+            );
+
+        if (
+          !results.length
+        ) {
+          return null;
+        }
+
+        // --------------------------------------------------------
+        // RECENCY WEIGHTS
+        //
+        // newest = 30%
+        // second = 25%
+        // third = 20%
+        // fourth = 15%
+        // fifth = 10%
+        // --------------------------------------------------------
+
+        const weights =
+          [
+            0.30,
+            0.25,
+            0.20,
+            0.15,
+            0.10
+          ];
+
+        let weightedResult =
+          0;
+
+        let weightTotal =
+          0;
+
+        results.forEach(
+          (item, index) => {
+
+            const weight =
+              weights[index] ||
+              0.10;
+
+            const resultValue =
+              item.result === "W"
+                ? 1
+                : item.result === "D"
+                  ? 0.5
+                  : 0;
+
+            weightedResult +=
+              resultValue *
+              weight;
+
+            weightTotal +=
+              weight;
+          }
+        );
+
+        weightedResult =
+          weightTotal > 0
+            ? weightedResult /
+              weightTotal
+            : 0.5;
+
+        const points =
+          results.reduce(
+            (sum, item) =>
+              sum +
+              item.points,
+            0
+          );
+
+        const goalsFor =
+          results.reduce(
+            (sum, item) =>
+              sum +
+              item.goalsFor,
+            0
+          );
+
+        const goalsAgainst =
+          results.reduce(
+            (sum, item) =>
+              sum +
+              item.goalsAgainst,
+            0
+          );
+
+        const goalDifference =
+          goalsFor -
+          goalsAgainst;
+
+        const goalsForPerGame =
+          goalsFor /
+          results.length;
+
+        const goalsAgainstPerGame =
+          goalsAgainst /
+          results.length;
+
+        const goalDiffPerGame =
+          goalDifference /
+          results.length;
+
+        const wins =
+          results.filter(
+            (item) =>
+              item.result === "W"
+          ).length;
+
+        const draws =
+          results.filter(
+            (item) =>
+              item.result === "D"
+          ).length;
+
+        const losses =
+          results.filter(
+            (item) =>
+              item.result === "L"
+          ).length;
+
+        const cleanSheets =
+          results.filter(
+            (item) =>
+              item.goalsAgainst === 0
+          ).length;
+
+        const failedToScore =
+          results.filter(
+            (item) =>
+              item.goalsFor === 0
+          ).length;
+
+        // --------------------------------------------------------
+        // COMPONENT SCORES
+        // --------------------------------------------------------
+
+        const resultScore =
+          clamp(
+            weightedResult,
+            0,
+            1
+          );
+
+        const goalDiffScore =
+          clamp(
+            0.5 +
+            goalDiffPerGame /
+              4,
+            0,
+            1
+          );
+
+        const attackScore =
+          clamp(
+            goalsForPerGame /
+              3,
+            0,
+            1
+          );
+
+        const defenseScore =
+          clamp(
+            1 -
+            goalsAgainstPerGame /
+              3,
+            0,
+            1
+          );
+
+        // --------------------------------------------------------
+        // FINAL FORM STRENGTH
+        // --------------------------------------------------------
+
+        const strength =
+          (
+            resultScore *
+            0.55
+          ) +
+          (
+            goalDiffScore *
+            0.20
+          ) +
+          (
+            attackScore *
+            0.10
+          ) +
+          (
+            defenseScore *
+            0.15
+          );
+
+        return {
+
+          matches:
+            results.length,
+
+          results:
+            results.map(
+              (item) =>
+                item.result
+            ),
+
+          detailedResults:
+            results,
+
+          points,
+
+          pointsPerGame:
+            points /
+            results.length,
+
+          weightedResult:
+            round(
+              weightedResult,
+              4
+            ),
+
+          wins,
+
+          draws,
+
+          losses,
+
+          goalsFor,
+
+          goalsAgainst,
+
+          goalDifference,
+
+          goalsForPerGame:
+            round(
+              goalsForPerGame,
+              3
+            ),
+
+          goalsAgainstPerGame:
+            round(
+              goalsAgainstPerGame,
+              3
+            ),
+
+          goalDiffPerGame:
+            round(
+              goalDiffPerGame,
+              3
+            ),
+
+          cleanSheets,
+
+          failedToScore,
+
+          strength:
+            round(
+              strength,
+              4
+            )
+        };
+      };
+
+    const homeForm =
+      buildRecentForm(
+        homeRecent,
+        homeTeamId
+      );
+
+    const awayForm =
+      buildRecentForm(
+        awayRecent,
+        awayTeamId
+      );
+
+    // ============================================================
+    // VENUE FORM
+    // ============================================================
+
+    const buildVenueForm =
+      (
+        fixtures,
+        teamId,
+        venue
+      ) => {
+
+        const venueResults =
+          fixtures
+            .map(
+              (item) =>
+                getResult(
+                  item,
+                  teamId
+                )
+            )
+            .filter(
+              (item) =>
+                item &&
+                item.venue ===
+                  venue
+            );
+
+        if (
+          !venueResults.length
+        ) {
+          return null;
+        }
+
+        const points =
+          venueResults.reduce(
+            (sum, item) =>
+              sum +
+              item.points,
+            0
+          );
+
+        const goalsFor =
+          venueResults.reduce(
+            (sum, item) =>
+              sum +
+              item.goalsFor,
+            0
+          );
+
+        const goalsAgainst =
+          venueResults.reduce(
+            (sum, item) =>
+              sum +
+              item.goalsAgainst,
+            0
+          );
+
+        const ppg =
+          points /
+          venueResults.length;
+
+        const gdpg =
+          (
+            goalsFor -
+            goalsAgainst
+          ) /
+          venueResults.length;
+
+        const strength =
+          clamp(
+            (
+              (ppg / 3) *
+              0.65
+            ) +
+            (
+              clamp(
+                0.5 +
+                gdpg / 4,
+                0,
+                1
+              ) *
+              0.35
+            ),
+            0,
+            1
+          );
+
+        return {
+          matches:
+            venueResults.length,
+
+          points,
+
+          ppg:
+            round(
+              ppg,
+              3
+            ),
+
+          goalsFor,
+
+          goalsAgainst,
+
+          goalDifference:
+            goalsFor -
+            goalsAgainst,
+
+          strength:
+            round(
+              strength,
+              4
+            )
+        };
+      };
+
+    const homeVenueForm =
+      buildVenueForm(
+        homeRecent,
+        homeTeamId,
+        "home"
+      );
+
+    const awayVenueForm =
+      buildVenueForm(
+        awayRecent,
+        awayTeamId,
+        "away"
+      );
+
+    // ============================================================
+    // SEASON STATISTICS
+    // ============================================================
+
+    const getStat =
+      (
+        stats,
+        path
+      ) => {
+
+        let current =
+          stats;
+
+        for (
+          const key of path
+        ) {
+
+          if (
+            current == null
+          ) {
+            return null;
+          }
+
+          current =
+            current[key];
+        }
+
+        return numeric(
+          current
+        );
+      };
+
+    const buildSeasonVenueStrength =
+      (
+        stats,
+        venue
+      ) => {
+
+        if (!stats) {
+          return null;
+        }
+
+        const played =
+          getStat(
+            stats,
+            [
+              "fixtures",
+              "played",
+              venue
+            ]
+          );
+
+        const wins =
+          getStat(
+            stats,
+            [
+              "fixtures",
+              "wins",
+              venue
+            ]
+          );
+
+        const draws =
+          getStat(
+            stats,
+            [
+              "fixtures",
+              "draws",
+              venue
+            ]
+          );
+
+        const goalsFor =
+          getStat(
+            stats,
+            [
+              "goals",
+              "for",
+              "average",
+              venue
+            ]
+          );
+
+        const goalsAgainst =
+          getStat(
+            stats,
+            [
+              "goals",
+              "against",
+              "average",
+              venue
+            ]
+          );
+
+        if (
+          played == null ||
+          played <= 0
+        ) {
+          return null;
+        }
+
+        const ppg =
+          (
+            (
+              (wins || 0) *
+              3
+            ) +
+            (
+              (draws || 0) *
+              1
+            )
+          ) /
+          played;
+
+        const resultScore =
+          clamp(
+            ppg / 3,
+            0,
+            1
+          );
+
+        const attackScore =
+          goalsFor == null
+            ? 0.5
+            : clamp(
+                goalsFor / 3,
+                0,
+                1
+              );
+
+        const defenseScore =
+          goalsAgainst == null
+            ? 0.5
+            : clamp(
+                1 -
+                goalsAgainst / 3,
+                0,
+                1
+              );
+
+        const strength =
+          (
+            resultScore *
+            0.55
+          ) +
+          (
+            attackScore *
+            0.20
+          ) +
+          (
+            defenseScore *
+            0.25
+          );
+
+        return {
+
+          played,
+
+          wins:
+            wins || 0,
+
+          draws:
+            draws || 0,
+
+          ppg:
+            round(
+              ppg,
+              3
+            ),
+
+          goalsFor:
+            goalsFor,
+
+          goalsAgainst:
+            goalsAgainst,
+
+          strength:
+            round(
+              strength,
+              4
+            )
+        };
+      };
+
+    const homeSeasonVenue =
+      buildSeasonVenueStrength(
+        homeStats,
+        "home"
+      );
+
+    const awaySeasonVenue =
+      buildSeasonVenueStrength(
+        awayStats,
+        "away"
+      );
+
+    // ============================================================
+    // STANDINGS
+    // ============================================================
+
+    const extractStandingRows =
+      (response) => {
+
+        const output = [];
+
+        const groups =
+          safeArray(
+            response
+              ?.data
+              ?.response
+          );
+
+        for (
+          const leagueBlock
+          of groups
+        ) {
+
+          const standings =
+            safeArray(
+              leagueBlock
+                ?.league
+                ?.standings
+            );
+
+          for (
+            const group
+            of standings
+          ) {
+
+            if (
+              Array.isArray(group)
+            ) {
+
+              for (
+                const row
+                of group
+              ) {
+                output.push(
+                  row
+                );
+              }
+
+            } else if (
+              group &&
+              typeof group ===
+                "object"
+            ) {
+
+              output.push(
+                group
+              );
+            }
+          }
+        }
+
+        return output;
+      };
+
+    const standingRows =
+      extractStandingRows(
+        standingsResponse
+      );
+
+    const homeStanding =
+      standingRows.find(
+        (row) =>
+          Number(
+            row
+              ?.team
+              ?.id
+          ) ===
+          Number(homeTeamId)
+      ) || null;
+
+    const awayStanding =
+      standingRows.find(
+        (row) =>
+          Number(
+            row
+              ?.team
+              ?.id
+          ) ===
+          Number(awayTeamId)
+      ) || null;
+
+    // ============================================================
+    // STANDING STRENGTH
+    // ============================================================
+
+    const standingStrength =
+      (row) => {
+
+        if (!row) {
+          return null;
+        }
+
+        const rank =
+          numeric(
+            row.rank
+          );
+
+        const points =
+          numeric(
+            row.points
+          );
+
+        const goalsDiff =
+          numeric(
+            row.goalsDiff
+          );
+
+        const played =
+          numeric(
+            row
+              ?.all
+              ?.played
+          );
+
+        if (
+          rank == null
+        ) {
+          return null;
+        }
+
+        // --------------------------------------------------------
+        // Rank score
+        // --------------------------------------------------------
+
+        const tableSize =
+          Math.max(
+            standingRows.length,
+            2
+          );
+
+        const rankScore =
+          clamp(
+            (
+              tableSize -
+              rank
+            ) /
+            (
+              tableSize -
+              1
+            ),
+            0,
+            1
+          );
+
+        // --------------------------------------------------------
+        // Points per game
+        // --------------------------------------------------------
+
+        const ppg =
+          played &&
+          played > 0 &&
+          points != null
+            ? points /
+              played
+            : null;
+
+        const pointsScore =
+          ppg == null
+            ? 0.5
+            : clamp(
+                ppg / 3,
+                0,
+                1
+              );
+
+        // --------------------------------------------------------
+        // Goal difference
+        // --------------------------------------------------------
+
+        const gdpg =
+          played &&
+          played > 0 &&
+          goalsDiff != null
+            ? goalsDiff /
+              played
+            : null;
+
+        const gdScore =
+          gdpg == null
+            ? 0.5
+            : clamp(
+                0.5 +
+                gdpg / 4,
+                0,
+                1
+              );
+
+        // --------------------------------------------------------
+        // Combined table strength
+        // --------------------------------------------------------
+
+        const strength =
+          (
+            rankScore *
+            0.25
+          ) +
+          (
+            pointsScore *
+            0.50
+          ) +
+          (
+            gdScore *
+            0.25
+          );
+
+        return {
+
+          rank,
+
+          points,
+
+          played,
+
+          goalsDiff,
+
+          ppg:
+            ppg == null
+              ? null
+              : round(
+                  ppg,
+                  3
+                ),
+
+          gdpg:
+            gdpg == null
+              ? null
+              : round(
+                  gdpg,
+                  3
+                ),
+
+          form:
+            row.form ||
+            null,
+
+          strength:
+            round(
+              strength,
+              4
+            )
+        };
+      };
+
+    const homeTable =
+      standingStrength(
+        homeStanding
+      );
+
+    const awayTable =
+      standingStrength(
+        awayStanding
+      );
+
+    // ============================================================
+    // PAIRWISE PROBABILITY CONVERTER
+    // ============================================================
+
+    const pairToProbabilities =
+      (
+        homeStrength,
+        awayStrength,
+        drawBase = 0.25
+      ) => {
+
+        let home =
+          clamp(
+            numeric(
+              homeStrength
+            ) ?? 0.5,
+            0,
+            1
+          );
+
+        let away =
+          clamp(
+            numeric(
+              awayStrength
+            ) ?? 0.5,
+            0,
+            1
+          );
+
+        const total =
+          home +
+          away;
+
+        if (
+          total <= 0
+        ) {
+          home = 0.5;
+          away = 0.5;
+        }
+
+        const homeShare =
+          total > 0
+            ? home / total
+            : 0.5;
+
+        const edge =
+          Math.abs(
+            home -
+            away
+          );
+
+        // Draw becomes slightly less likely
+        // when the strength gap is larger.
+        const draw =
+          clamp(
+            drawBase -
+            edge * 0.10,
+            0.16,
+            0.30
+          );
+
+        const remaining =
+          1 -
+          draw;
+
+        return normalizeProbabilities({
+          home:
+            remaining *
+            homeShare,
+
+          draw,
+
+          away:
+            remaining *
+            (
+              1 -
+              homeShare
+            )
+        });
+      };
+
+    // ============================================================
+    // SIGNAL 1 — LAST FIVE FORM
+    // ============================================================
+
+    const formSignal =
+      homeForm &&
+      awayForm
+        ? pairToProbabilities(
+            homeForm.strength,
+            awayForm.strength,
+            0.25
+          )
+        : null;
+
+    // ============================================================
+    // SIGNAL 2 — TABLE / STANDINGS
+    // ============================================================
+
+    const standingsSignal =
+      homeTable &&
+      awayTable
+        ? pairToProbabilities(
+            homeTable.strength,
+            awayTable.strength,
+            0.25
+          )
+        : null;
+
+    // ============================================================
+    // SIGNAL 3 — HOME/AWAY SEASON STRENGTH
+    // ============================================================
+
+    const seasonVenueSignal =
+      homeSeasonVenue &&
+      awaySeasonVenue
+        ? pairToProbabilities(
+            homeSeasonVenue.strength,
+            awaySeasonVenue.strength,
+            0.24
+          )
+        : null;
+
+    // ============================================================
+    // SIGNAL 4 — RECENT VENUE FORM
+    // ============================================================
+
+    const venueSignal =
+      homeVenueForm &&
+      awayVenueForm
+        ? pairToProbabilities(
+            homeVenueForm.strength,
+            awayVenueForm.strength,
+            0.24
+          )
+        : null;
+
+    // ============================================================
+    // XG / GOAL MODEL
     // ============================================================
 
     const getNormalizedXG =
       () => {
+
         const home =
           numeric(
-            normalized?.xG?.home
+            normalized
+              ?.xG
+              ?.home
           ) ??
           numeric(
-            normalized?.xg?.home
+            normalized
+              ?.xg
+              ?.home
           ) ??
           numeric(
-            normalized?.expectedGoals?.home
+            normalized
+              ?.expectedGoals
+              ?.home
           ) ??
           numeric(
-            normalized?.expected_goals?.home
-          ) ??
-          numeric(
-            normalized?.homeXG
-          ) ??
-          numeric(
-            normalized?.homeXg
+            normalized
+              ?.homeXG
           );
 
         const away =
           numeric(
-            normalized?.xG?.away
+            normalized
+              ?.xG
+              ?.away
           ) ??
           numeric(
-            normalized?.xg?.away
+            normalized
+              ?.xg
+              ?.away
           ) ??
           numeric(
-            normalized?.expectedGoals?.away
+            normalized
+              ?.expectedGoals
+              ?.away
           ) ??
           numeric(
-            normalized?.expected_goals?.away
-          ) ??
-          numeric(
-            normalized?.awayXG
-          ) ??
-          numeric(
-            normalized?.awayXg
+            normalized
+              ?.awayXG
           );
 
         if (
@@ -510,28 +1953,75 @@ export default async function handler(req, res) {
         }
 
         return {
-          home: clamp(
-            home,
-            0.05,
-            6
-          ),
-          away: clamp(
-            away,
-            0.05,
-            6
-          )
+          home:
+            clamp(
+              home,
+              0.05,
+              5
+            ),
+
+          away:
+            clamp(
+              away,
+              0.05,
+              5
+            )
         };
       };
 
-    // ============================================================
-    // POISSON
-    // ============================================================
+    const teamStatsXG =
+      homeSeasonVenue &&
+      awaySeasonVenue &&
+      homeSeasonVenue.goalsFor !=
+        null &&
+      homeSeasonVenue.goalsAgainst !=
+        null &&
+      awaySeasonVenue.goalsFor !=
+        null &&
+      awaySeasonVenue.goalsAgainst !=
+        null
+        ? {
+            home:
+              clamp(
+                (
+                  homeSeasonVenue
+                    .goalsFor +
+                  awaySeasonVenue
+                    .goalsAgainst
+                ) / 2,
+                0.05,
+                5
+              ),
 
-    const poissonProbability =
+            away:
+              clamp(
+                (
+                  awaySeasonVenue
+                    .goalsFor +
+                  homeSeasonVenue
+                    .goalsAgainst
+                ) / 2,
+                0.05,
+                5
+              )
+          }
+        : null;
+
+    const xG =
+      getNormalizedXG() ||
+      teamStatsXG ||
+      null;
+
+    // ------------------------------------------------------------
+    // POISSON
+    // ------------------------------------------------------------
+
+    const poisson =
       (
         lambda,
         k
       ) => {
+
         if (
           !Number.isFinite(
             lambda
@@ -541,7 +2031,8 @@ export default async function handler(req, res) {
           return 0;
         }
 
-        let factorial = 1;
+        let factorial =
+          1;
 
         for (
           let i = 2;
@@ -563,1502 +2054,252 @@ export default async function handler(req, res) {
 
     const buildPoissonSignal =
       (xg) => {
+
         if (!xg) {
           return null;
         }
 
-        let homeWin = 0;
-        let draw = 0;
-        let awayWin = 0;
+        let homeWin =
+          0;
+
+        let draw =
+          0;
+
+        let awayWin =
+          0;
 
         for (
           let h = 0;
           h <= 10;
           h++
         ) {
+
           for (
             let a = 0;
             a <= 10;
             a++
           ) {
+
             const probability =
-              poissonProbability(
+              poisson(
                 xg.home,
                 h
               ) *
-              poissonProbability(
+              poisson(
                 xg.away,
                 a
               );
 
-            if (h > a) {
+            if (
+              h > a
+            ) {
+
               homeWin +=
                 probability;
+
             } else if (
               h === a
             ) {
+
               draw +=
                 probability;
+
             } else {
+
               awayWin +=
                 probability;
             }
           }
         }
 
-        const total =
-          homeWin +
-          draw +
-          awayWin;
-
-        if (total <= 0) {
-          return null;
-        }
-
-        return {
+        return normalizeProbabilities({
           home:
-            homeWin / total,
-          draw:
-            draw / total,
-          away:
-            awayWin / total
-        };
-      };
-    
-    // ============================================================
-    // FALLBACK FROM XG
-    // ============================================================
+            homeWin,
 
-    const fallbackFromXG =
-      (xg) => {
-        if (!xg) {
-          return {
-            home: 0.333333,
-            draw: 0.333333,
-            away: 0.333334
-          };
-        }
-
-        const poisson =
-          buildPoissonSignal(
-            xg
-          );
-
-        return (
-          poisson || {
-            home: 0.333333,
-            draw: 0.333333,
-            away: 0.333334
-          }
-        );
-      };
-
-    // ============================================================
-    // IF FIXTURE CANNOT BE IDENTIFIED
-    // ============================================================
-
-    if (
-      !fixtureId ||
-      !homeTeamId ||
-      !awayTeamId
-    ) {
-      const normalizedProbability =
-        getNormalizedProbability();
-
-      const fallbackXG =
-        getNormalizedXG();
-
-      const fallbackProbabilities =
-        normalizedProbability ||
-        fallbackFromXG(
-          fallbackXG
-        );
-
-      const fallbackFinal =
-        choosePrediction(
-          fallbackProbabilities
-        );
-
-      return res.status(200).json({
-        success: true,
-
-        version:
-          "Prediction Engine V3.2",
-
-        prediction:
-          fallbackFinal.prediction,
-
-        probability:
-          fallbackFinal.probability,
-
-        probabilities:
-          fallbackFinal.probabilities,
-
-        confidence:
-          calculateConfidence(
-            fallbackProbabilities,
-            1,
-            0.5
-          ),
-
-        agreement:
-          50,
-
-        status:
-          "FALLBACK",
-
-        match: {
-          home: homeName,
-          away: awayName,
-          date: matchDate
-        },
-
-        internalAnalysis: {
-          fixtureId: null,
-
-          signalsUsed:
-            normalizedProbability
-              ? [
-                  "normalized_probability"
-                ]
-              : [
-                  "normalized_xg"
-                ],
-
-          probabilities:
-            fallbackProbabilities,
-
-          xG:
-            fallbackXG
-        }
-      });
-    }
-
-    // ============================================================
-    // PARALLEL API DATA COLLECTION
-    // ============================================================
-
-    const requests =
-      await Promise.all([
-        // 1. API-Football prediction
-        api(
-          `/predictions?fixture=${fixtureId}`
-        ),
-
-        // 2. Home statistics
-        leagueId && season
-          ? api(
-              `/teams/statistics?league=${leagueId}&season=${season}&team=${homeTeamId}`
-            )
-          : Promise.resolve({
-              ok: false,
-              data: {}
-            }),
-
-        // 3. Away statistics
-        leagueId && season
-          ? api(
-              `/teams/statistics?league=${leagueId}&season=${season}&team=${awayTeamId}`
-            )
-          : Promise.resolve({
-              ok: false,
-              data: {}
-            }),
-
-        // 4. H2H
-        api(
-          `/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=10`
-        ),
-
-        // 5. Injuries
-        api(
-          `/injuries?fixture=${fixtureId}`
-        ),
-
-        // 6. Odds
-        api(
-          `/odds?fixture=${fixtureId}`
-        ),
-
-        // 7. Home last 5
-        api(
-          `/fixtures?team=${homeTeamId}&last=5`
-        ),
-
-        // 8. Away last 5
-        api(
-          `/fixtures?team=${awayTeamId}&last=5`
-        ),
-
-        // 9. Lineups
-        api(
-          `/fixtures/lineups?fixture=${fixtureId}`
-        )
-      ]);
-
-    const [
-      predictionResponse,
-      homeStatsResponse,
-      awayStatsResponse,
-      h2hResponse,
-      injuryResponse,
-      oddsResponse,
-      homeRecentResponse,
-      awayRecentResponse,
-      lineupResponse
-    ] = requests;
-
-    const apiPrediction =
-      predictionResponse
-        .data?.response?.[0] ||
-      null;
-
-    const homeStats =
-      homeStatsResponse
-        .data?.response?.[0] ||
-      null;
-
-    const awayStats =
-      awayStatsResponse
-        .data?.response?.[0] ||
-      null;
-
-    const h2hFixtures =
-      safeArray(
-        h2hResponse
-          .data?.response
-      );
-
-    const injuries =
-      safeArray(
-        injuryResponse
-          .data?.response
-      );
-
-    const odds =
-      safeArray(
-        oddsResponse
-          .data?.response
-      );
-
-    const homeRecent =
-      safeArray(
-        homeRecentResponse
-          .data?.response
-      );
-
-    const awayRecent =
-      safeArray(
-        awayRecentResponse
-          .data?.response
-      );
-
-    const lineups =
-      safeArray(
-        lineupResponse
-          .data?.response
-      );
-
-    // ============================================================
-    // SIGNAL 1
-    // API-FOOTBALL PREDICTION
-    // ============================================================
-
-    const parseApiPrediction =
-      () => {
-        const percent =
-          apiPrediction
-            ?.predictions
-            ?.percent;
-
-        if (!percent) {
-          return null;
-        }
-
-        const probabilities =
-          normalizeProbabilities(
-            percent
-          );
-
-        if (!probabilities) {
-          return null;
-        }
-
-        const goals =
-          apiPrediction
-            ?.predictions
-            ?.goals ||
-          {};
-
-        return {
-          ...probabilities,
-
-          predictedGoals: {
-            home:
-              numeric(
-                goals.home
-              ),
-            away:
-              numeric(
-                goals.away
-              )
-          },
-
-          winner:
-            apiPrediction
-              ?.predictions
-              ?.winner
-              ?.name ||
-            null,
-
-          advice:
-            apiPrediction
-              ?.predictions
-              ?.advice ||
-            null,
-
-          underOver:
-            apiPrediction
-              ?.predictions
-              ?.under_over ||
-            null
-        };
-      };
-
-    const apiSignal =
-      parseApiPrediction();
-
-    // ============================================================
-    // SIGNAL 2
-    // BOOKMAKER MARKET PROBABILITY
-    // ============================================================
-
-    const parseMarketProbabilities =
-      () => {
-        const probabilities =
-          [];
-
-        for (
-          const bookmaker
-          of odds
-        ) {
-          const bets =
-            safeArray(
-              bookmaker
-                ?.bookmaker
-                ?.bets
-            );
-
-          for (
-            const bet
-            of bets
-          ) {
-            const betName =
-              String(
-                bet?.name ||
-                ""
-              ).toLowerCase();
-
-            const isMatchWinner =
-              betName.includes(
-                "match winner"
-              ) ||
-              betName.includes(
-                "1x2"
-              ) ||
-              String(
-                bet?.id
-              ) === "1";
-
-            if (
-              !isMatchWinner
-            ) {
-              continue;
-            }
-
-            let homeOdd =
-              null;
-
-            let drawOdd =
-              null;
-
-            let awayOdd =
-              null;
-
-            for (
-              const value
-              of safeArray(
-                bet?.values
-              )
-            ) {
-              const label =
-                String(
-                  value?.value ||
-                  ""
-                ).toLowerCase();
-
-              const odd =
-                numeric(
-                  value?.odd
-                );
-
-              if (
-                odd == null ||
-                odd <= 1
-              ) {
-                continue;
-              }
-
-              if (
-                label === "home" ||
-                label === "1"
-              ) {
-                homeOdd = odd;
-              }
-
-              if (
-                label === "draw" ||
-                label === "x"
-              ) {
-                drawOdd = odd;
-              }
-
-              if (
-                label === "away" ||
-                label === "2"
-              ) {
-                awayOdd = odd;
-              }
-            }
-
-            if (
-              homeOdd &&
-              drawOdd &&
-              awayOdd
-            ) {
-              const h =
-                1 / homeOdd;
-
-              const d =
-                1 / drawOdd;
-
-              const a =
-                1 / awayOdd;
-
-              const total =
-                h + d + a;
-
-              if (total > 0) {
-                probabilities.push({
-                  home:
-                    h / total,
-                  draw:
-                    d / total,
-                  away:
-                    a / total
-                });
-              }
-            }
-          }
-        }
-
-        if (
-          probabilities.length
-        ) {
-          const count =
-            probabilities.length;
-
-          return {
-            home:
-              probabilities.reduce(
-                (
-                  sum,
-                  item
-                ) =>
-                  sum +
-                  item.home,
-                0
-              ) / count,
-
-            draw:
-              probabilities.reduce(
-                (
-                  sum,
-                  item
-                ) =>
-                  sum +
-                  item.draw,
-                0
-              ) / count,
-
-            away:
-              probabilities.reduce(
-                (
-                  sum,
-                  item
-                ) =>
-                  sum +
-                  item.away,
-                0
-              ) / count
-          };
-        }
-
-        // Normalized market fallback
-        const market =
-          normalized
-            ?.marketProbability ||
-          normalized
-            ?.marketProbabilities ||
-          normalized
-            ?.oddsProbability ||
-          normalized
-            ?.odds
-            ?.probabilities ||
-          null;
-
-        return normalizeProbabilities(
-          market
-        );
-      };
-
-    const marketSignal =
-      parseMarketProbabilities();
-
-    // ============================================================
-    // SIGNAL 3
-    // SEASON HOME/AWAY STATISTICS
-    // ============================================================
-
-    const getStatAverage =
-      (
-        stats,
-        type,
-        venue
-      ) => {
-        return numeric(
-          stats
-            ?.goals
-            ?.[type]
-            ?.average
-            ?.[venue]
-        );
-      };
-
-    const buildXGFromTeamStats =
-      () => {
-        if (
-          !homeStats ||
-          !awayStats
-        ) {
-          return null;
-        }
-
-        const homeAttack =
-          getStatAverage(
-            homeStats,
-            "for",
-            "home"
-          );
-
-        const homeDefense =
-          getStatAverage(
-            homeStats,
-            "against",
-            "home"
-          );
-
-        const awayAttack =
-          getStatAverage(
-            awayStats,
-            "for",
-            "away"
-          );
-
-        const awayDefense =
-          getStatAverage(
-            awayStats,
-            "against",
-            "away"
-          );
-
-        if (
-          homeAttack == null ||
-          homeDefense == null ||
-          awayAttack == null ||
-          awayDefense == null
-        ) {
-          return null;
-        }
-
-        // No artificial home bonus.
-        const homeXG =
-          (
-            homeAttack +
-            awayDefense
-          ) / 2;
-
-        const awayXG =
-          (
-            awayAttack +
-            homeDefense
-          ) / 2;
-
-        return {
-          home:
-            clamp(
-              homeXG,
-              0.05,
-              5
-            ),
+          draw,
 
           away:
-            clamp(
-              awayXG,
-              0.05,
-              5
-            )
-        };
+            awayWin
+        });
       };
-
-    const teamStatsXG =
-      buildXGFromTeamStats();
-
-    // ============================================================
-    // SIGNAL 4
-    // RECENT FORM
-    // ============================================================
-
-    const getResultForTeam =
-      (
-        fixtureItem,
-        teamId
-      ) => {
-        const homeId =
-          fixtureItem
-            ?.teams
-            ?.home
-            ?.id;
-
-        const awayId =
-          fixtureItem
-            ?.teams
-            ?.away
-            ?.id;
-
-        const homeGoals =
-          numeric(
-            fixtureItem
-              ?.goals
-              ?.home
-          );
-
-        const awayGoals =
-          numeric(
-            fixtureItem
-              ?.goals
-              ?.away
-          );
-
-        if (
-          homeGoals == null ||
-          awayGoals == null
-        ) {
-          return null;
-        }
-
-        const isHome =
-          homeId === teamId;
-
-        if (
-          !isHome &&
-          awayId !== teamId
-        ) {
-          return null;
-        }
-
-        const teamGoals =
-          isHome
-            ? homeGoals
-            : awayGoals;
-
-        const opponentGoals =
-          isHome
-            ? awayGoals
-            : homeGoals;
-
-        let result =
-          "D";
-
-        if (
-          teamGoals >
-          opponentGoals
-        ) {
-          result = "W";
-        } else if (
-          teamGoals <
-          opponentGoals
-        ) {
-          result = "L";
-        }
-
-        return {
-          result,
-
-          points:
-            result === "W"
-              ? 3
-              : result === "D"
-                ? 1
-                : 0,
-
-          goalsFor:
-            teamGoals,
-
-          goalsAgainst:
-            opponentGoals,
-
-          date:
-            fixtureItem
-              ?.fixture
-              ?.date ||
-            null
-        };
-      };
-
-    const buildRecentForm =
-      (
-        fixtures,
-        teamId
-      ) => {
-        const results =
-          fixtures
-            .map(
-              (
-                fixtureItem
-              ) =>
-                getResultForTeam(
-                  fixtureItem,
-                  teamId
-                )
-            )
-            .filter(
-              Boolean
-            )
-            .slice(0, 5);
-
-        if (
-          !results.length
-        ) {
-          return null;
-        }
-
-        const points =
-          results.reduce(
-            (
-              sum,
-              item
-            ) =>
-              sum +
-              item.points,
-            0
-          );
-
-        const goalsFor =
-          results.reduce(
-            (
-              sum,
-              item
-            ) =>
-              sum +
-              item.goalsFor,
-            0
-          );
-
-        const goalsAgainst =
-          results.reduce(
-            (
-              sum,
-              item
-            ) =>
-              sum +
-              item.goalsAgainst,
-            0
-          );
-
-        const ppg =
-          points /
-          results.length;
-
-        const goalDiff =
-          (
-            goalsFor -
-            goalsAgainst
-          ) /
-          results.length;
-
-        const wins =
-          results.filter(
-            (r) =>
-              r.result ===
-              "W"
-          ).length;
-
-        const draws =
-          results.filter(
-            (r) =>
-              r.result ===
-              "D"
-          ).length;
-
-        const losses =
-          results.filter(
-            (r) =>
-              r.result ===
-              "L"
-          ).length;
-
-        return {
-          results,
-          points,
-          ppg,
-          goalDiff,
-          wins,
-          draws,
-          losses,
-          goalsFor,
-          goalsAgainst
-        };
-      };
-
-    const homeForm =
-      buildRecentForm(
-        homeRecent,
-        homeTeamId
-      );
-
-    const awayForm =
-      buildRecentForm(
-        awayRecent,
-        awayTeamId
-      );
-
-    // ============================================================
-    // FORM SIGNAL
-    // ============================================================
-
-    const buildFormSignal =
-      () => {
-        if (
-          !homeForm ||
-          !awayForm
-        ) {
-          return null;
-        }
-
-        // Symmetrical scoring.
-        const homeScore =
-          homeForm.ppg +
-          homeForm.goalDiff *
-            0.20;
-
-        const awayScore =
-          awayForm.ppg +
-          awayForm.goalDiff *
-            0.20;
-
-        const homePositive =
-          Math.max(
-            homeScore,
-            0.05
-          );
-
-        const awayPositive =
-          Math.max(
-            awayScore,
-            0.05
-          );
-
-        // Draw remains a genuine third outcome.
-        const drawBase =
-          1.10;
-
-        const total =
-          homePositive +
-          awayPositive +
-          drawBase;
-
-        return {
-          home:
-            homePositive /
-            total,
-
-          draw:
-            drawBase /
-            total,
-
-          away:
-            awayPositive /
-            total
-        };
-      };
-
-    const formSignal =
-      buildFormSignal();
-
-    // ============================================================
-    // SIGNAL 5
-    // EXPECTED GOALS
-    // ============================================================
-
-    const normalizedXG =
-      getNormalizedXG();
-
-    const apiPredictedGoals =
-      apiSignal
-        ?.predictedGoals;
-
-    let xGSignalData =
-      normalizedXG ||
-      (
-        apiPredictedGoals
-          ?.home != null &&
-        apiPredictedGoals
-          ?.away != null
-          ? {
-              home:
-                apiPredictedGoals
-                  .home,
-
-              away:
-                apiPredictedGoals
-                  .away
-            }
-          : null
-      ) ||
-      teamStatsXG;
-
-    const xGSource =
-      normalizedXG
-        ? "normalized_xg"
-        : (
-            apiPredictedGoals
-              ?.home != null &&
-            apiPredictedGoals
-              ?.away != null
-          )
-          ? "api_football_predicted_goals"
-          : teamStatsXG
-            ? "team_home_away_goal_rates"
-            : null;
 
     const xGSignal =
       buildPoissonSignal(
-        xGSignalData
+        xG
       );
 
     // ============================================================
-    // SIGNAL 6
-    // H2H
+    // SIGNAL 5 — H2H
     // ============================================================
 
-    const buildH2HSignal =
+    const buildH2H =
       () => {
+
         if (
           !h2hFixtures.length
         ) {
           return null;
         }
 
-        let homeWins = 0;
-        let draws = 0;
-        let awayWins = 0;
+        const matches =
+          h2hFixtures
+            .filter(
+              (game) => {
 
-        for (
-          const game
-          of h2hFixtures
+                const hg =
+                  numeric(
+                    game
+                      ?.goals
+                      ?.home
+                  );
+
+                const ag =
+                  numeric(
+                    game
+                      ?.goals
+                      ?.away
+                  );
+
+                return (
+                  hg != null &&
+                  ag != null
+                );
+              }
+            )
+            .sort(
+              (a, b) => {
+
+                const dateA =
+                  parseDate(
+                    a
+                      ?.fixture
+                      ?.date
+                  );
+
+                const dateB =
+                  parseDate(
+                    b
+                      ?.fixture
+                      ?.date
+                  );
+
+                return (
+                  dateB -
+                  dateA
+                );
+              }
+            )
+            .slice(0, 5);
+
+        if (
+          !matches.length
         ) {
-          const hId =
-            game
-              ?.teams
-              ?.home
-              ?.id;
-
-          const aId =
-            game
-              ?.teams
-              ?.away
-              ?.id;
-
-          const hg =
-            numeric(
-              game
-                ?.goals
-                ?.home
-            );
-
-          const ag =
-            numeric(
-              game
-                ?.goals
-                ?.away
-            );
-
-          if (
-            hg == null ||
-            ag == null
-          ) {
-            continue;
-          }
-
-          const homeWasTarget =
-            hId ===
-            homeTeamId;
-
-          const targetGoals =
-            homeWasTarget
-              ? hg
-              : ag;
-
-          const opponentGoals =
-            homeWasTarget
-              ? ag
-              : hg;
-
-          if (
-            targetGoals >
-            opponentGoals
-          ) {
-            homeWins++;
-          } else if (
-            targetGoals ===
-            opponentGoals
-          ) {
-            draws++;
-          } else {
-            awayWins++;
-          }
-        }
-
-        const total =
-          homeWins +
-          draws +
-          awayWins;
-
-        if (!total) {
           return null;
         }
 
-        return {
+        const weights =
+          [
+            0.30,
+            0.25,
+            0.20,
+            0.15,
+            0.10
+          ];
+
+        let homeScore =
+          0;
+
+        let awayScore =
+          0;
+
+        let drawScore =
+          0;
+
+        let weightTotal =
+          0;
+
+        matches.forEach(
+          (game, index) => {
+
+            const weight =
+              weights[index] ||
+              0.10;
+
+            const hg =
+              numeric(
+                game
+                  ?.goals
+                  ?.home
+              );
+
+            const ag =
+              numeric(
+                game
+                  ?.goals
+                  ?.away
+              );
+
+            const homeIsTarget =
+              Number(
+                game
+                  ?.teams
+                  ?.home
+                  ?.id
+              ) ===
+              Number(
+                homeTeamId
+              );
+
+            if (
+              hg === ag
+            ) {
+
+              drawScore +=
+                weight;
+
+            } else if (
+              homeIsTarget
+                ? hg > ag
+                : ag > hg
+            ) {
+
+              homeScore +=
+                weight;
+
+            } else {
+
+              awayScore +=
+                weight;
+            }
+
+            weightTotal +=
+              weight;
+          }
+        );
+
+        if (
+          weightTotal <= 0
+        ) {
+          return null;
+        }
+
+        return normalizeProbabilities({
           home:
-            homeWins / total,
+            homeScore,
 
           draw:
-            draws / total,
+            drawScore,
 
           away:
-            awayWins / total
-        };
+            awayScore
+        });
       };
 
     const h2hSignal =
-      buildH2HSignal();
+      buildH2H();
 
     // ============================================================
-    // SIGNAL 7
-    // INJURIES
-    // ============================================================
-
-    const buildInjuryAdjustment =
-      () => {
-        let homeCount = 0;
-        let awayCount = 0;
-
-        for (
-          const item
-          of injuries
-        ) {
-          const teamId =
-            item?.team?.id;
-
-          if (
-            teamId ===
-            homeTeamId
-          ) {
-            homeCount++;
-          }
-
-          if (
-            teamId ===
-            awayTeamId
-          ) {
-            awayCount++;
-          }
-        }
-
-        const structuredHome =
-          numeric(
-            normalized
-              ?.injuries
-              ?.homeImpact
-          ) ??
-          numeric(
-            normalized
-              ?.injuryImpact
-              ?.home
-          ) ??
-          numeric(
-            normalized
-              ?.availability
-              ?.homeImpact
-          );
-
-        const structuredAway =
-          numeric(
-            normalized
-              ?.injuries
-              ?.awayImpact
-          ) ??
-          numeric(
-            normalized
-              ?.injuryImpact
-              ?.away
-          ) ??
-          numeric(
-            normalized
-              ?.availability
-              ?.awayImpact
-          );
-
-        return {
-          homeCount,
-          awayCount,
-
-          homeImpact:
-            structuredHome != null
-              ? clamp(
-                  structuredHome,
-                  0,
-                  0.15
-                )
-              : clamp(
-                  homeCount *
-                    0.008,
-                  0,
-                  0.045
-                ),
-
-          awayImpact:
-            structuredAway != null
-              ? clamp(
-                  structuredAway,
-                  0,
-                  0.15
-                )
-              : clamp(
-                  awayCount *
-                    0.008,
-                  0,
-                  0.045
-                )
-        };
-      };
-
-    const injuryAdjustment =
-      buildInjuryAdjustment();
-
-    // ============================================================
-    // SIGNAL 8
-    // REST / CONGESTION
-    // ============================================================
-
-    const getRestInformation =
-      (
-        fixtures,
-        targetDate
-      ) => {
-        const target =
-          parseDate(
-            targetDate
-          );
-
-        if (!target) {
-          return {
-            lastMatch: null,
-            restDays: null,
-            congestionMatches: 0
-          };
-        }
-
-        const completed =
-          fixtures
-            .map(
-              (item) => ({
-                date:
-                  parseDate(
-                    item
-                      ?.fixture
-                      ?.date
-                  ),
-                fixture:
-                  item
-              })
-            )
-            .filter(
-              (item) =>
-                item.date &&
-                item.date <
-                  target
-            )
-            .sort(
-              (
-                a,
-                b
-              ) =>
-                b.date -
-                a.date
-            );
-
-        if (
-          !completed.length
-        ) {
-          return {
-            lastMatch: null,
-            restDays: null,
-            congestionMatches: 0
-          };
-        }
-
-        const lastMatch =
-          completed[0]
-            .date;
-
-        const restDays =
-          Math.max(
-            0,
-            (
-              target.getTime() -
-              lastMatch.getTime()
-            ) /
-              (
-                1000 *
-                60 *
-                60 *
-                24
-              )
-          );
-
-        const sevenDaysAgo =
-          new Date(
-            target.getTime() -
-              7 *
-                24 *
-                60 *
-                60 *
-                1000
-          );
-
-        const congestionMatches =
-          completed.filter(
-            (item) =>
-              item.date >=
-              sevenDaysAgo
-          ).length;
-
-        return {
-          lastMatch:
-            lastMatch.toISOString(),
-
-          restDays:
-            round(
-              restDays,
-              1
-            ),
-
-          congestionMatches
-        };
-      };
-
-    const targetMatchDate =
-      matchDate ||
-      fixture
-        ?.fixture
-        ?.date;
-
-    const homeRest =
-      getRestInformation(
-        homeRecent,
-        targetMatchDate
-      );
-
-    const awayRest =
-      getRestInformation(
-        awayRecent,
-        targetMatchDate
-      );
-
-    const buildCongestionAdjustment =
-      () => {
-        let home = 0;
-        let away = 0;
-
-        if (
-          homeRest.restDays !=
-            null &&
-          awayRest.restDays !=
-            null
-        ) {
-          if (
-            homeRest.restDays -
-              awayRest.restDays >=
-            2
-          ) {
-            home +=
-              0.015;
-          }
-
-          if (
-            awayRest.restDays -
-              homeRest.restDays >=
-            2
-          ) {
-            away +=
-              0.015;
-          }
-        }
-
-        if (
-          homeRest.congestionMatches >=
-          4
-        ) {
-          home -=
-            0.015;
-        }
-
-        if (
-          awayRest.congestionMatches >=
-          4
-        ) {
-          away -=
-            0.015;
-        }
-
-        return {
-          home,
-          away
-        };
-      };
-
-    const congestionAdjustment =
-      buildCongestionAdjustment();
-
-    // ============================================================
-    // SIGNAL 9
-    // LINEUPS
-    // ============================================================
-
-    const getLineupForTeam =
-      (teamId) =>
-        lineups.find(
-          (item) =>
-            item
-              ?.team
-              ?.id ===
-            teamId
-        ) || null;
-
-    const homeLineup =
-      getLineupForTeam(
-        homeTeamId
-      );
-
-    const awayLineup =
-      getLineupForTeam(
-        awayTeamId
-      );
-
-    const lineupSignal = {
-      available:
-        Boolean(
-          homeLineup ||
-          awayLineup
-        ),
-
-      home:
-        homeLineup
-          ? {
-              formation:
-                homeLineup
-                  .formation ||
-                null,
-
-              starters:
-                safeArray(
-                  homeLineup
-                    .startXI
-                ).length,
-
-              substitutes:
-                safeArray(
-                  homeLineup
-                    .substitutes
-                ).length
-            }
-          : null,
-
-      away:
-        awayLineup
-          ? {
-              formation:
-                awayLineup
-                  .formation ||
-                null,
-
-              starters:
-                safeArray(
-                  awayLineup
-                    .startXI
-                ).length,
-
-              substitutes:
-                safeArray(
-                  awayLineup
-                    .substitutes
-                ).length
-            }
-          : null
-    };
-
-    // ============================================================
-    // SIGNAL 10
-    // CONTEXT / WEB EVIDENCE
-    // ============================================================
-
-    const contextualSignal =
-      normalized
-        ?.contextProbability ||
-      normalized
-        ?.contextProbabilities ||
-      normalized
-        ?.context
-        ?.probabilities ||
-      normalized
-        ?.motivation
-        ?.probabilities ||
-      normalized
-        ?.webProbabilities ||
-      normalized
-        ?.evidence
-        ?.probabilities ||
-      null;
-
-    const contextSignal =
-      normalizeProbabilities(
-        contextualSignal
-      );
-
-    // ============================================================
-    // ENSEMBLE
+    // WEIGHTED MODEL
     // ============================================================
 
     const signals = [];
@@ -2069,90 +2310,81 @@ export default async function handler(req, res) {
         probabilities,
         weight
       ) => {
+
         if (
           !probabilities
         ) {
           return;
         }
 
-        const normalized =
+        const normalizedSignal =
           normalizeProbabilities(
             probabilities
           );
 
         if (
-          !normalized
+          !normalizedSignal
         ) {
           return;
         }
 
         signals.push({
           name,
+
           probabilities:
-            normalized,
+            normalizedSignal,
+
           weight
         });
       };
 
-    // ------------------------------------------------------------
-    // V3.2 WEIGHTS
-    //
-    // Sum = 1.00
-    // ------------------------------------------------------------
+    // ============================================================
+    // TOMSONSTAKES V4 WEIGHTS
+    // ============================================================
 
     addSignal(
-      "api_football_prediction",
-      apiSignal,
-      0.24
-    );
-
-    addSignal(
-      "market_probability",
-      marketSignal,
-      0.18
-    );
-
-    addSignal(
-      "recent_form",
+      "last_5_form",
       formSignal,
-      0.14
+      0.35
     );
 
     addSignal(
-      "expected_goals",
+      "league_standings",
+      standingsSignal,
+      0.20
+    );
+
+    addSignal(
+      "home_away_season_strength",
+      seasonVenueSignal,
+      0.15
+    );
+
+    addSignal(
+      "goals_xg_model",
       xGSignal,
-      0.16
+      0.15
     );
 
     addSignal(
-      "h2h",
+      "recent_venue_form",
+      venueSignal,
+      0.10
+    );
+
+    addSignal(
+      "recent_h2h",
       h2hSignal,
-      0.04
-    );
-
-    addSignal(
-      "contextual_evidence",
-      contextSignal,
-      0.06
-    );
-
-    const seasonStrengthSignal =
-      buildPoissonSignal(
-        teamStatsXG
-      );
-
-    addSignal(
-      "season_home_away_strength",
-      seasonStrengthSignal,
-      0.18
+      0.05
     );
 
     // ============================================================
-    // WEIGHTED ENSEMBLE
+    // COMBINE
     // ============================================================
 
     const combineSignals =
       (signalList) => {
+
         if (
           !signalList.length
         ) {
@@ -2161,10 +2393,7 @@ export default async function handler(req, res) {
 
         const totalWeight =
           signalList.reduce(
-            (
-              sum,
-              signal
-            ) =>
+            (sum, signal) =>
               sum +
               signal.weight,
             0
@@ -2176,7 +2405,7 @@ export default async function handler(req, res) {
           return null;
         }
 
-        const result = {
+        const output = {
           home: 0,
           draw: 0,
           away: 0
@@ -2186,23 +2415,24 @@ export default async function handler(req, res) {
           const signal
           of signalList
         ) {
+
           const weight =
             signal.weight /
             totalWeight;
 
-          result.home +=
+          output.home +=
             signal
               .probabilities
               .home *
             weight;
 
-          result.draw +=
+          output.draw +=
             signal
               .probabilities
               .draw *
             weight;
 
-          result.away +=
+          output.away +=
             signal
               .probabilities
               .away *
@@ -2210,7 +2440,7 @@ export default async function handler(req, res) {
         }
 
         return normalizeProbabilities(
-          result
+          output
         );
       };
 
@@ -2220,97 +2450,179 @@ export default async function handler(req, res) {
       );
 
     // ============================================================
-    // AVAILABILITY / REST ADJUSTMENTS
+    // FALLBACK
     // ============================================================
 
-    const applyAdjustments =
+    if (
+      !finalProbabilities
+    ) {
+
+      finalProbabilities =
+        {
+          home:
+            0.333333,
+
+          draw:
+            0.333333,
+
+          away:
+            0.333334
+        };
+    }
+
+    // ============================================================
+    // PREDICTION
+    // ============================================================
+
+    const choosePrediction =
       (probabilities) => {
-        if (
-          !probabilities
-        ) {
-          return null;
-        }
 
-        let home =
-          probabilities.home;
+        const options = [
 
-        let draw =
-          probabilities.draw;
+          {
+            key:
+              "home",
 
-        let away =
-          probabilities.away;
+            name:
+              "Home Win",
 
-        // --------------------------------------------------------
-        // INJURY EFFECT
-        //
-        // Injuries reduce the corresponding team's probability.
-        // They do NOT directly transfer all lost probability
-        // to the opponent.
-        // --------------------------------------------------------
+            value:
+              probabilities.home
+          },
 
-        home -=
-          injuryAdjustment
-            .homeImpact *
-          0.50;
+          {
+            key:
+              "draw",
 
-        away -=
-          injuryAdjustment
-            .awayImpact *
-          0.50;
+            name:
+              "Draw",
 
-        // --------------------------------------------------------
-        // REST / CONGESTION
-        // --------------------------------------------------------
+            value:
+              probabilities.draw
+          },
 
-        home +=
-          congestionAdjustment.home;
+          {
+            key:
+              "away",
 
-        away +=
-          congestionAdjustment.away;
+            name:
+              "Away Win",
 
-        // --------------------------------------------------------
-        // Safety clamps
-        // --------------------------------------------------------
+            value:
+              probabilities.away
+          }
+        ];
 
-        home =
-          clamp(
-            home,
-            0.02,
-            0.95
+        const highest =
+          options.reduce(
+            (best, current) =>
+              current.value >
+              best.value
+                ? current
+                : best,
+            options[0]
           );
 
-        draw =
-          clamp(
-            draw,
-            0.02,
-            0.70
-          );
+        return {
 
-        away =
-          clamp(
-            away,
-            0.02,
-            0.95
-          );
+          prediction:
+            highest.name,
 
-        return normalizeProbabilities({
-          home,
-          draw,
-          away
-        });
+          selectedKey:
+            highest.key,
+
+          probability:
+            Math.round(
+              highest.value *
+              100
+            ),
+
+          probabilities: {
+
+            home:
+              Math.round(
+                probabilities.home *
+                100
+              ),
+
+            draw:
+              Math.round(
+                probabilities.draw *
+                100
+              ),
+
+            away:
+              Math.round(
+                probabilities.away *
+                100
+              )
+          }
+        };
       };
 
-    finalProbabilities =
-      applyAdjustments(
+    const final =
+      choosePrediction(
         finalProbabilities
       );
 
     // ============================================================
-    // SIGNAL AGREEMENT
+    // DATA COMPLETENESS
+    // ============================================================
+
+    const completenessChecks = [
+
+      Boolean(
+        homeForm &&
+        awayForm
+      ),
+
+      Boolean(
+        homeTable &&
+        awayTable
+      ),
+
+      Boolean(
+        homeSeasonVenue &&
+        awaySeasonVenue
+      ),
+
+      Boolean(
+        xGSignal
+      ),
+
+      Boolean(
+        homeVenueForm &&
+        awayVenueForm
+      ),
+
+      Boolean(
+        h2hSignal
+      )
+    ];
+
+    const available =
+      completenessChecks
+        .filter(
+          Boolean
+        )
+        .length;
+
+    const dataCompleteness =
+      Math.round(
+        (
+          available /
+          completenessChecks.length
+        ) *
+        100
+      );
+
+    // ============================================================
+    // AGREEMENT
     // ============================================================
 
     const calculateAgreement =
       (signalList) => {
+
         if (
           signalList.length <
           2
@@ -2318,7 +2630,7 @@ export default async function handler(req, res) {
           return 50;
         }
 
-        let totalDistance =
+        let distanceTotal =
           0;
 
         let comparisons =
@@ -2330,12 +2642,14 @@ export default async function handler(req, res) {
           signalList.length;
           i++
         ) {
+
           for (
             let j = i + 1;
             j <
             signalList.length;
             j++
           ) {
+
             const a =
               signalList[i]
                 .probabilities;
@@ -2344,7 +2658,6 @@ export default async function handler(req, res) {
               signalList[j]
                 .probabilities;
 
-            // Total variation distance
             const distance =
               0.5 *
               (
@@ -2362,7 +2675,7 @@ export default async function handler(req, res) {
                 )
               );
 
-            totalDistance +=
+            distanceTotal +=
               distance;
 
             comparisons++;
@@ -2375,16 +2688,17 @@ export default async function handler(req, res) {
           return 50;
         }
 
-        const averageDistance =
-          totalDistance /
+        const average =
+          distanceTotal /
           comparisons;
 
         return Math.round(
           clamp(
             (
               1 -
-              averageDistance
-            ) * 100,
+              average
+            ) *
+            100,
             0,
             100
           )
@@ -2397,61 +2711,6 @@ export default async function handler(req, res) {
       );
 
     // ============================================================
-    // DATA COMPLETENESS
-    // ============================================================
-
-    const calculateDataCompleteness =
-      () => {
-        const checks = [
-          Boolean(
-            apiSignal
-          ),
-          Boolean(
-            marketSignal
-          ),
-          Boolean(
-            homeStats &&
-            awayStats
-          ),
-          Boolean(
-            homeForm &&
-            awayForm
-          ),
-          Boolean(
-            xGSignal
-          ),
-          Boolean(
-            h2hSignal
-          ),
-          Boolean(
-            injuries.length
-          ),
-          Boolean(
-            homeRest &&
-            awayRest
-          ),
-          Boolean(
-            contextSignal
-          )
-        ];
-
-        const available =
-          checks.filter(
-            Boolean
-          ).length;
-
-        return Math.round(
-          (
-            available /
-            checks.length
-          ) * 100
-        );
-      };
-
-    const dataCompleteness =
-      calculateDataCompleteness();
-
-    // ============================================================
     // CONFIDENCE
     // ============================================================
 
@@ -2461,20 +2720,16 @@ export default async function handler(req, res) {
         agreementScore,
         completeness
       ) => {
-        if (
-          !probabilities
-        ) {
-          return "LOW";
-        }
 
-        const values = [
-          probabilities.home,
-          probabilities.draw,
-          probabilities.away
-        ].sort(
-          (a, b) =>
-            b - a
-        );
+        const values =
+          [
+            probabilities.home,
+            probabilities.draw,
+            probabilities.away
+          ].sort(
+            (a, b) =>
+              b - a
+          );
 
         const highest =
           values[0];
@@ -2486,154 +2741,40 @@ export default async function handler(req, res) {
           highest -
           second;
 
-        // Confidence is NOT prediction probability.
-        //
-        // It considers:
-        // 1. highest probability
-        // 2. distance from second choice
-        // 3. signal agreement
-        // 4. data completeness
-
         const score =
-          highest * 100 * 0.40 +
-          margin * 100 * 0.25 +
-          agreementScore * 0.20 +
-          completeness * 0.15;
+          (
+            highest *
+            100 *
+            0.45
+          ) +
+          (
+            margin *
+            100 *
+            0.25
+          ) +
+          (
+            agreementScore *
+            0.15
+          ) +
+          (
+            completeness *
+            0.15
+          );
 
         if (
-          score >= 62
+          score >= 65
         ) {
           return "HIGH";
         }
 
         if (
-          score >= 48
+          score >= 50
         ) {
           return "MEDIUM";
         }
 
         return "LOW";
       };
-
-    // ============================================================
-    // FINAL PREDICTION
-    // ============================================================
-
-    const choosePrediction =
-      (probabilities) => {
-        if (
-          !probabilities
-        ) {
-          return {
-            prediction:
-              "No Prediction",
-
-            probability:
-              0,
-
-            probabilities: {
-              home: 0,
-              draw: 0,
-              away: 0
-            },
-
-            selectedKey:
-              null
-          };
-        }
-
-        const home =
-          Number(
-            probabilities.home
-          ) || 0;
-
-        const draw =
-          Number(
-            probabilities.draw
-          ) || 0;
-
-        const away =
-          Number(
-            probabilities.away
-          ) || 0;
-
-        const options = [
-          {
-            key: "home",
-            name: "Home Win",
-            value: home
-          },
-          {
-            key: "draw",
-            name: "Draw",
-            value: draw
-          },
-          {
-            key: "away",
-            name: "Away Win",
-            value: away
-          }
-        ];
-
-        // ========================================================
-        // CRITICAL:
-        //
-        // TRUE MAXIMUM SELECTION.
-        //
-        // No home preference.
-        // No API-Football winner override.
-        // No frontend decision.
-        // ========================================================
-
-        const highest =
-          options.reduce(
-            (
-              best,
-              current
-            ) =>
-              current.value >
-              best.value
-                ? current
-                : best,
-            options[0]
-          );
-
-        return {
-          prediction:
-            highest.name,
-
-          probability:
-            Math.round(
-              highest.value *
-              100
-            ),
-
-          probabilities: {
-            home:
-              Math.round(
-                home * 100
-              ),
-
-            draw:
-              Math.round(
-                draw * 100
-              ),
-
-            away:
-              Math.round(
-                away * 100
-              )
-          },
-
-          selectedKey:
-            highest.key
-        };
-      };
-
-    const final =
-      choosePrediction(
-        finalProbabilities
-      );
 
     const confidence =
       calculateConfidence(
@@ -2643,14 +2784,8 @@ export default async function handler(req, res) {
       );
 
     // ============================================================
-    // SIGNAL REPORT
+    // SIGNAL WEIGHTS REPORT
     // ============================================================
-
-    const signalsUsed =
-      signals.map(
-        (signal) =>
-          signal.name
-      );
 
     const signalWeights =
       {};
@@ -2659,6 +2794,7 @@ export default async function handler(req, res) {
       const signal
       of signals
     ) {
+
       signalWeights[
         signal.name
       ] =
@@ -2670,13 +2806,15 @@ export default async function handler(req, res) {
     // ============================================================
 
     return res.status(200).json({
-      success: true,
+
+      success:
+        true,
 
       version:
-        "Prediction Engine V3.2",
+        "Prediction Engine V4.0",
 
       // ----------------------------------------------------------
-      // ORIGINAL FRONTEND CONTRACT
+      // FRONTEND CONTRACT
       // ----------------------------------------------------------
 
       prediction:
@@ -2684,10 +2822,6 @@ export default async function handler(req, res) {
 
       probability:
         final.probability,
-
-      // ----------------------------------------------------------
-      // NEW FRONTEND-SAFE DATA
-      // ----------------------------------------------------------
 
       probabilities:
         final.probabilities,
@@ -2699,11 +2833,12 @@ export default async function handler(req, res) {
       dataCompleteness,
 
       status:
-        signals.length >= 5
-          ? "ENSEMBLE_COMPLETE"
+        signals.length >= 4
+          ? "FORM_TABLE_MODEL"
           : "PARTIAL_DATA",
 
       match: {
+
         home:
           homeName,
 
@@ -2723,13 +2858,22 @@ export default async function handler(req, res) {
       // ==========================================================
 
       internalAnalysis: {
+
         fixtureId,
 
         leagueId,
 
         season,
 
-        signalsUsed,
+        model:
+
+          "Recent-form-first statistical ensemble",
+
+        signalsUsed:
+          signals.map(
+            (signal) =>
+              signal.name
+          ),
 
         signalWeights,
 
@@ -2738,6 +2882,12 @@ export default async function handler(req, res) {
 
         finalProbabilities,
 
+        selectedOutcome:
+          final.prediction,
+
+        selectedProbability:
+          final.probability,
+
         confidence,
 
         agreement,
@@ -2745,172 +2895,154 @@ export default async function handler(req, res) {
         dataCompleteness,
 
         // --------------------------------------------------------
-        // API-FOOTBALL
-        // --------------------------------------------------------
-
-        apiPrediction: {
-          available:
-            Boolean(
-              apiSignal
-            ),
-
-          probabilities:
-            apiSignal
-              ? {
-                  home:
-                    round(
-                      apiSignal.home
-                    ),
-
-                  draw:
-                    round(
-                      apiSignal.draw
-                    ),
-
-                  away:
-                    round(
-                      apiSignal.away
-                    )
-                }
-              : null,
-
-          predictedGoals:
-            apiSignal
-              ?.predictedGoals ||
-            null,
-
-          winner:
-            apiSignal
-              ?.winner ||
-            null,
-
-          advice:
-            apiSignal
-              ?.advice ||
-            null,
-
-          underOver:
-            apiSignal
-              ?.underOver ||
-            null
-        },
-
-        // --------------------------------------------------------
-        // MARKET
-        // --------------------------------------------------------
-
-        market: {
-          available:
-            Boolean(
-              marketSignal
-            ),
-
-          probabilities:
-            marketSignal
-              ? {
-                  home:
-                    round(
-                      marketSignal.home
-                    ),
-
-                  draw:
-                    round(
-                      marketSignal.draw
-                    ),
-
-                  away:
-                    round(
-                      marketSignal.away
-                    )
-                }
-              : null,
-
-          bookmakerCount:
-            odds.length
-        },
-
-        // --------------------------------------------------------
-        // TEAM STATISTICS
-        // --------------------------------------------------------
-
-        teamStatistics: {
-          available:
-            Boolean(
-              homeStats &&
-              awayStats
-            ),
-
-          home:
-            homeStats
-              ? {
-                  form:
-                    homeStats
-                      .form ||
-                    null,
-
-                  homeGoalsFor:
-                    getStatAverage(
-                      homeStats,
-                      "for",
-                      "home"
-                    ),
-
-                  homeGoalsAgainst:
-                    getStatAverage(
-                      homeStats,
-                      "against",
-                      "home"
-                    )
-                }
-              : null,
-
-          away:
-            awayStats
-              ? {
-                  form:
-                    awayStats
-                      .form ||
-                    null,
-
-                  awayGoalsFor:
-                    getStatAverage(
-                      awayStats,
-                      "for",
-                      "away"
-                    ),
-
-                  awayGoalsAgainst:
-                    getStatAverage(
-                      awayStats,
-                      "against",
-                      "away"
-                    )
-                }
-              : null
-        },
-
-        // --------------------------------------------------------
-        // RECENT FORM
+        // LAST FIVE FORM
         // --------------------------------------------------------
 
         recentForm: {
+
           home:
             homeForm,
 
           away:
-            awayForm
+            awayForm,
+
+          comparison: {
+
+            homeStrength:
+              homeForm
+                ?.strength ??
+              null,
+
+            awayStrength:
+              awayForm
+                ?.strength ??
+              null,
+
+            strongerRecentForm:
+              homeForm &&
+              awayForm
+                ? (
+                    homeForm.strength >
+                    awayForm.strength
+                      ? homeName
+                      : awayForm.strength >
+                        homeForm.strength
+                        ? awayName
+                        : "EVEN"
+                  )
+                : null
+          }
         },
 
         // --------------------------------------------------------
-        // XG / GOAL MODEL
+        // STANDINGS
+        // --------------------------------------------------------
+
+        standings: {
+
+          available:
+            Boolean(
+              homeTable &&
+              awayTable
+            ),
+
+          home:
+            homeTable,
+
+          away:
+            awayTable,
+
+          comparison: {
+
+            homeRank:
+              homeTable
+                ?.rank ??
+              null,
+
+            awayRank:
+              awayTable
+                ?.rank ??
+              null,
+
+            homePoints:
+              homeTable
+                ?.points ??
+              null,
+
+            awayPoints:
+              awayTable
+                ?.points ??
+              null,
+
+            strongerTablePosition:
+              homeTable &&
+              awayTable
+                ? (
+                    homeTable.strength >
+                    awayTable.strength
+                      ? homeName
+                      : awayTable.strength >
+                        homeTable.strength
+                        ? awayName
+                        : "EVEN"
+                  )
+                : null
+          }
+        },
+
+        // --------------------------------------------------------
+        // HOME / AWAY SEASON STRENGTH
+        // --------------------------------------------------------
+
+        homeAwayStrength: {
+
+          home:
+            homeSeasonVenue,
+
+          away:
+            awaySeasonVenue,
+
+          stronger:
+            homeSeasonVenue &&
+            awaySeasonVenue
+              ? (
+                  homeSeasonVenue.strength >
+                  awaySeasonVenue.strength
+                    ? homeName
+                    : awaySeasonVenue.strength >
+                      homeSeasonVenue.strength
+                      ? awayName
+                      : "EVEN"
+                )
+              : null
+        },
+
+        // --------------------------------------------------------
+        // VENUE FORM
+        // --------------------------------------------------------
+
+        venueForm: {
+
+          home:
+            homeVenueForm,
+
+          away:
+            awayVenueForm
+        },
+
+        // --------------------------------------------------------
+        // XG
         // --------------------------------------------------------
 
         xG: {
-          source:
-            xGSource,
+
+          available:
+            Boolean(
+              xG
+            ),
 
           expectedGoals:
-            xGSignalData,
+            xG,
 
           probabilities:
             xGSignal
@@ -2938,6 +3070,7 @@ export default async function handler(req, res) {
         // --------------------------------------------------------
 
         h2h: {
+
           matches:
             h2hFixtures.length,
 
@@ -2963,96 +3096,14 @@ export default async function handler(req, res) {
         },
 
         // --------------------------------------------------------
-        // INJURIES
-        // --------------------------------------------------------
-
-        injuries: {
-          total:
-            injuries.length,
-
-          home:
-            injuryAdjustment
-              .homeCount,
-
-          away:
-            injuryAdjustment
-              .awayCount,
-
-          homeImpact:
-            round(
-              injuryAdjustment
-                .homeImpact,
-              4
-            ),
-
-          awayImpact:
-            round(
-              injuryAdjustment
-                .awayImpact,
-              4
-            )
-        },
-
-        // --------------------------------------------------------
-        // REST / CONGESTION
-        // --------------------------------------------------------
-
-        congestion: {
-          home:
-            homeRest,
-
-          away:
-            awayRest,
-
-          adjustment:
-            congestionAdjustment
-        },
-
-        // --------------------------------------------------------
-        // LINEUPS
-        // --------------------------------------------------------
-
-        lineups:
-          lineupSignal,
-
-        // --------------------------------------------------------
-        // CONTEXT
-        // --------------------------------------------------------
-
-        contextual: {
-          available:
-            Boolean(
-              contextSignal
-            ),
-
-          probabilities:
-            contextSignal
-              ? {
-                  home:
-                    round(
-                      contextSignal.home
-                    ),
-
-                  draw:
-                    round(
-                      contextSignal.draw
-                    ),
-
-                  away:
-                    round(
-                      contextSignal.away
-                    )
-                }
-              : null
-        },
-
-        // --------------------------------------------------------
         // INDIVIDUAL SIGNALS
         // --------------------------------------------------------
 
         individualSignals:
+
           signals.map(
             (signal) => ({
+
               name:
                 signal.name,
 
@@ -3080,20 +3131,67 @@ export default async function handler(req, res) {
                     .away
                 )
             })
-          )
+          ),
+
+        // --------------------------------------------------------
+        // EXPLICITLY EXCLUDED
+        // --------------------------------------------------------
+
+        excludedFactors: {
+
+          injuries:
+            {
+              influence:
+                0,
+
+              reason:
+                "Excluded from prediction calculation by design."
+            },
+
+          lineups:
+            {
+              influence:
+                0,
+
+              reason:
+                "Excluded from prediction calculation by design."
+            },
+
+          bookmakerOdds:
+            {
+              influence:
+                0,
+
+              reason:
+                "Excluded from prediction calculation by design."
+            },
+
+          apiFootballPrediction:
+            {
+              influence:
+                0,
+
+              reason:
+                "Excluded from prediction calculation by design."
+            }
+        }
       }
     });
+
   } catch (error) {
+
     console.error(
-      "Prediction Engine V3.2 error:",
+      "Prediction Engine V4.0 error:",
       error
     );
 
     return res.status(500).json({
-      success: false,
+
+      success:
+        false,
 
       version:
-        "Prediction Engine V3.2",
+        "Prediction Engine V4.0",
 
       error:
         "Prediction engine failed.",
