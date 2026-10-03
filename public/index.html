@@ -1,12 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>TomsonStakes Global Football</title>
-
-<style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>TomsonStakes Global Football</title><style>
 
 * {
     box-sizing: border-box;
@@ -24,7 +19,6 @@ body {
     margin: auto;
     padding: 20px;
 }
-
 
 /* =========================
    HEADER
@@ -47,7 +41,6 @@ body {
     font-size: 14px;
     letter-spacing: .5px;
 }
-
 
 /* =========================
    CONTROL
@@ -110,7 +103,6 @@ button:disabled {
     background: #1d4ed8;
 }
 
-
 /* =========================
    GENERAL
 ========================= */
@@ -144,9 +136,8 @@ button:disabled {
     color: #991b1b;
 }
 
-
 /* =========================
-   COUNTRY SECTION
+   COUNTRY
 ========================= */
 
 .country-section {
@@ -168,9 +159,8 @@ button:disabled {
     font-weight: normal;
 }
 
-
 /* =========================
-   LEAGUE SECTION
+   LEAGUE
 ========================= */
 
 .league-section {
@@ -194,7 +184,6 @@ button:disabled {
     font-size: 12px;
     margin-top: 4px;
 }
-
 
 /* =========================
    FIXTURE
@@ -336,7 +325,6 @@ button:disabled {
     word-break: break-all;
 }
 
-
 /* =========================
    ANALYSIS
 ========================= */
@@ -381,11 +369,6 @@ button:disabled {
     margin-top: 7px;
 }
 
-
-/* =========================
-   PREDICTION REMARK
-========================= */
-
 .prediction-remark {
     margin-top: 18px;
     padding: 10px 18px;
@@ -397,30 +380,91 @@ button:disabled {
     text-transform: uppercase;
 }
 
-
-/* BELOW 60% */
-
 .remark-avoid {
     background: #fee2e2;
     color: #991b1b;
 }
-
-
-/* 60% - 80% */
 
 .remark-medium {
     background: #fef3c7;
     color: #92400e;
 }
 
-
-/* ABOVE 80% */
-
 .remark-high {
     background: #dcfce7;
     color: #166534;
 }
 
+/* =========================
+   SIGNAL BREAKDOWN
+========================= */
+
+.signal-panel {
+    margin-top: 16px;
+    background: #f9fafb;
+    color: #111827;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: left;
+}
+
+.signal-title {
+    font-size: 15px;
+    font-weight: 900;
+    margin-bottom: 12px;
+}
+
+.signal-row {
+    display: grid;
+    grid-template-columns: 1fr 55px 75px;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.signal-row:last-child {
+    border-bottom: none;
+}
+
+.signal-name {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.signal-weight {
+    font-size: 11px;
+    color: #6b7280;
+    text-align: center;
+}
+
+.signal-value {
+    font-size: 12px;
+    font-weight: 900;
+    text-align: right;
+}
+
+.signal-bar {
+    grid-column: 1 / 4;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.signal-fill {
+    height: 100%;
+    background: #2563eb;
+    border-radius: 999px;
+    transition: width .4s ease;
+}
+
+.engine-note {
+    margin-top: 12px;
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 1.5;
+}
 
 /* =========================
    RESPONSIVE
@@ -476,70 +520,47 @@ button:disabled {
 
 }
 
-</style>
-</head>
+</style></head><body><div class="container"><div class="header">
 
+    <h1>
+        🔥 TOMSONSTAKES
+    </h1>
 
-<body>
-
-<div class="container">
-
-
-    <!-- HEADER -->
-
-    <div class="header">
-
-        <h1>
-            🔥 TOMSONSTAKES
-        </h1>
-
-        <div class="subtitle">
-            GLOBAL FOOTBALL PREDICTION ENGINE
-        </div>
-
+    <div class="subtitle">
+        GLOBAL FOOTBALL PREDICTION ENGINE V4.0
     </div>
-
-
-    <!-- DATE CONTROL -->
-
-    <div class="control-box">
-
-        <p>
-            Select a date to scan available football fixtures.
-        </p>
-
-        <input
-            type="date"
-            id="matchDate"
-        >
-
-        <br>
-
-        <button
-            class="main-button"
-            id="scanButton"
-            onclick="analyzeMatches()"
-        >
-            ANALYZE MATCHES
-        </button>
-
-    </div>
-
-
-    <!-- RESULTS -->
-
-    <div id="results"></div>
 
 </div>
 
+<div class="control-box">
 
-<script>
+    <p>
+        Select a date to scan available football fixtures.
+    </p>
 
+    <input
+        type="date"
+        id="matchDate"
+    >
+
+    <br>
+
+    <button
+        class="main-button"
+        id="scanButton"
+        onclick="analyzeMatches()"
+    >
+        ANALYZE MATCHES
+    </button>
+
+</div>
+
+<div id="results"></div>
+
+</div><script>
 
 /* =========================================================
    TOP LEAGUE PRIORITY
-
-   Lower number = displayed earlier
 ========================================================= */
 
 const TOP_LEAGUES = [
@@ -587,48 +608,34 @@ const TOP_LEAGUES = [
 ========================================================= */
 
 const FINISHED_STATUSES = [
-
     "FT",
     "AET",
     "PEN",
     "AWD",
     "WO"
-
 ];
 
-
 const LIVE_STATUSES = [
-
     "1H",
     "HT",
     "2H",
     "ET",
     "BT",
     "P"
-
 ];
-
 
 const POSTPONED_STATUSES = [
-
     "PST"
-
 ];
-
 
 const CANCELLED_STATUSES = [
-
     "CANC",
     "ABD"
-
 ];
 
-
 const SUSPENDED_STATUSES = [
-
     "SUSP",
     "INT"
-
 ];
 
 
@@ -647,40 +654,27 @@ async function analyzeMatches() {
     const scanButton =
         document.getElementById("scanButton");
 
-
     if (!date) {
 
         results.innerHTML = `
-
             <div class="notice status-warning">
-
                 ⚠️ Please select a match date.
-
             </div>
-
         `;
 
         return;
-
     }
-
 
     scanButton.disabled = true;
 
-
     results.innerHTML = `
-
         <div class="notice">
 
-            <h2>
-                🔥 TOMSONSTAKES
-            </h2>
+            <h2>🔥 TOMSONSTAKES</h2>
 
             <p>
                 🔎 Scanning global football fixtures for
-                <strong>
-                    ${escapeHtml(date)}
-                </strong>...
+                <strong>${escapeHtml(date)}</strong>...
             </p>
 
             <p>
@@ -688,9 +682,7 @@ async function analyzeMatches() {
             </p>
 
         </div>
-
     `;
-
 
     try {
 
@@ -698,10 +690,8 @@ async function analyzeMatches() {
             `/api/fixtures?date=${encodeURIComponent(date)}`
         );
 
-
         const data =
             await response.json();
-
 
         if (!response.ok) {
 
@@ -713,7 +703,6 @@ async function analyzeMatches() {
 
         }
 
-
         if (
             data.errors &&
             Object.keys(data.errors).length > 0
@@ -722,11 +711,9 @@ async function analyzeMatches() {
             const apiErrors =
                 Object.values(data.errors).join("; ");
 
-
             throw new Error(apiErrors);
 
         }
-
 
         if (
             !data.response ||
@@ -750,10 +737,8 @@ async function analyzeMatches() {
                     </p>
 
                     <div class="status status-warning">
-
                         ⚠️ No football fixtures were found
                         for this date.
-
                     </div>
 
                 </div>
@@ -761,17 +746,13 @@ async function analyzeMatches() {
             `;
 
             return;
-
         }
-
 
         const grouped =
             groupFixtures(data.response);
 
-
         const countryGroups =
             sortCountryGroups(grouped);
-
 
         let html = `
 
@@ -799,11 +780,12 @@ async function analyzeMatches() {
 
         `;
 
-
         let fixtureIndex = 0;
 
-
-        for (const countryGroup of countryGroups) {
+        for (
+            const countryGroup
+            of countryGroups
+        ) {
 
             html += buildCountryGroup(
                 countryGroup,
@@ -813,9 +795,7 @@ async function analyzeMatches() {
 
         }
 
-
         results.innerHTML = html;
-
 
     } catch (error) {
 
@@ -823,7 +803,6 @@ async function analyzeMatches() {
             "FIXTURE SCAN ERROR:",
             error
         );
-
 
         results.innerHTML = `
 
@@ -864,57 +843,58 @@ function groupFixtures(fixtures) {
 
     const countries = {};
 
-
     fixtures.forEach(match => {
 
         const country =
             match.league?.country ||
             "Other";
 
-
         const leagueName =
             match.league?.name ||
             "Unknown Competition";
-
 
         const leagueId =
             match.league?.id ||
             leagueName;
 
-
         if (!countries[country]) {
 
             countries[country] = {
-
                 country,
-
                 leagues: {}
-
             };
 
         }
 
+        if (
+            !countries[country]
+                .leagues[leagueId]
+        ) {
 
-        if (!countries[country].leagues[leagueId]) {
+            countries[country]
+                .leagues[leagueId] = {
 
-            countries[country].leagues[leagueId] = {
+                    leagueId,
 
-                leagueId,
+                    leagueName,
 
-                leagueName,
+                    leagueLogo:
+                        match.league?.logo ||
+                        "",
 
-                leagueLogo:
-                    match.league?.logo || "",
+                    round:
+                        match.league?.round ||
+                        "",
 
-                round:
-                    match.league?.round || "",
+                    season:
+                        match.league?.season ||
+                        null,
 
-                fixtures: []
+                    fixtures: []
 
-            };
+                };
 
         }
-
 
         countries[country]
             .leagues[leagueId]
@@ -923,9 +903,7 @@ function groupFixtures(fixtures) {
 
     });
 
-
     return countries;
-
 }
 
 
@@ -943,19 +921,20 @@ function sortCountryGroups(grouped) {
                     Object.values(a.leagues)
                 );
 
-
             const priorityB =
                 getBestLeaguePriority(
                     Object.values(b.leagues)
                 );
 
+            if (
+                priorityA !==
+                priorityB
+            ) {
 
-            if (priorityA !== priorityB) {
-
-                return priorityA - priorityB;
+                return priorityA -
+                    priorityB;
 
             }
-
 
             return a.country.localeCompare(
                 b.country
@@ -963,22 +942,20 @@ function sortCountryGroups(grouped) {
 
         }
     );
-
 }
 
 
 /* =========================================================
-   BEST LEAGUE PRIORITY FOR COUNTRY
+   BEST LEAGUE PRIORITY
 ========================================================= */
 
-function getBestLeaguePriority(leagues) {
+function getBestLeaguePriority(
+    leagues
+) {
 
     if (!leagues.length) {
-
         return 9999;
-
     }
-
 
     return Math.min(
         ...leagues.map(
@@ -988,7 +965,6 @@ function getBestLeaguePriority(leagues) {
                 )
         )
     );
-
 }
 
 
@@ -1001,7 +977,6 @@ function getLeaguePriority(name) {
     const normalized =
         normalizeLeagueName(name);
 
-
     for (
         let i = 0;
         i < TOP_LEAGUES.length;
@@ -1012,7 +987,6 @@ function getLeaguePriority(name) {
             normalizeLeagueName(
                 TOP_LEAGUES[i]
             );
-
 
         if (
             normalized === target ||
@@ -1025,9 +999,7 @@ function getLeaguePriority(name) {
 
     }
 
-
     return 1000;
-
 }
 
 
@@ -1045,19 +1017,20 @@ function sortLeagues(leagues) {
                     a.leagueName
                 );
 
-
             const priorityB =
                 getLeaguePriority(
                     b.leagueName
                 );
 
+            if (
+                priorityA !==
+                priorityB
+            ) {
 
-            if (priorityA !== priorityB) {
-
-                return priorityA - priorityB;
+                return priorityA -
+                    priorityB;
 
             }
-
 
             return a.leagueName.localeCompare(
                 b.leagueName
@@ -1065,12 +1038,11 @@ function sortLeagues(leagues) {
 
         }
     );
-
 }
 
 
 /* =========================================================
-   SORT FIXTURES BY KICKOFF
+   SORT FIXTURES
 ========================================================= */
 
 function sortFixtures(fixtures) {
@@ -1080,30 +1052,33 @@ function sortFixtures(fixtures) {
 
             const timeA =
                 Number(
-                    a.fixture?.timestamp || 0
+                    a.fixture?.timestamp ||
+                    0
                 );
-
 
             const timeB =
                 Number(
-                    b.fixture?.timestamp || 0
+                    b.fixture?.timestamp ||
+                    0
                 );
 
+            if (
+                timeA !==
+                timeB
+            ) {
 
-            if (timeA !== timeB) {
-
-                return timeA - timeB;
+                return timeA -
+                    timeB;
 
             }
 
-
             const homeA =
-                a.teams?.home?.name || "";
-
+                a.teams?.home?.name ||
+                "";
 
             const homeB =
-                b.teams?.home?.name || "";
-
+                b.teams?.home?.name ||
+                "";
 
             return homeA.localeCompare(
                 homeB
@@ -1111,7 +1086,6 @@ function sortFixtures(fixtures) {
 
         }
     );
-
 }
 
 
@@ -1132,14 +1106,13 @@ function buildCountryGroup(
             )
         );
 
-
     const fixtureCount =
         leagues.reduce(
             (total, league) =>
-                total + league.fixtures.length,
+                total +
+                league.fixtures.length,
             0
         );
-
 
     let html = `
 
@@ -1153,15 +1126,12 @@ function buildCountryGroup(
                 )}
 
                 <span class="country-count">
-
                     (${fixtureCount} matches)
-
                 </span>
 
             </div>
 
     `;
-
 
     leagues.forEach(league => {
 
@@ -1173,16 +1143,11 @@ function buildCountryGroup(
 
     });
 
-
     html += `
-
         </section>
-
     `;
 
-
     return html;
-
 }
 
 
@@ -1200,7 +1165,6 @@ function buildLeagueGroup(
         sortFixtures(
             league.fixtures
         );
-
 
     let html = `
 
@@ -1222,11 +1186,9 @@ function buildLeagueGroup(
                     ?
                     `
                     <div class="league-round">
-
                         ${escapeHtml(
                             league.round
                         )}
-
                     </div>
                     `
                     :
@@ -1237,12 +1199,10 @@ function buildLeagueGroup(
 
     `;
 
-
     fixtures.forEach(match => {
 
         const index =
             getIndex();
-
 
         html += buildFixtureCard(
             match,
@@ -1252,16 +1212,11 @@ function buildLeagueGroup(
 
     });
 
-
     html += `
-
         </div>
-
     `;
 
-
     return html;
-
 }
 
 
@@ -1279,43 +1234,69 @@ function buildFixtureCard(
         match.teams?.home?.name ||
         "Home Team";
 
-
     const away =
         match.teams?.away?.name ||
         "Away Team";
 
+    const homeId =
+        Number(
+            match.teams?.home?.id
+        );
+
+    const awayId =
+        Number(
+            match.teams?.away?.id
+        );
+
+    const leagueId =
+        Number(
+            match.league?.id
+        );
+
+    const season =
+        Number(
+            match.league?.season
+        );
 
     const homeLogo =
         match.teams?.home?.logo ||
         "";
 
-
     const awayLogo =
         match.teams?.away?.logo ||
         "";
 
-
     const homeIdentity =
         createIdentity(home);
 
-
     const awayIdentity =
         createIdentity(away);
-
 
     const identitiesValid =
         Boolean(homeIdentity) &&
         Boolean(awayIdentity) &&
         homeIdentity !== awayIdentity;
 
+    const idsValid =
+        Number.isFinite(homeId) &&
+        Number.isFinite(awayId) &&
+        homeId > 0 &&
+        awayId > 0;
+
+    const leagueValid =
+        Number.isFinite(leagueId) &&
+        leagueId > 0;
+
+    const seasonValid =
+        Number.isFinite(season) &&
+        season >= 2000;
 
     const fixtureId =
-        match.fixture?.id || "";
-
+        match.fixture?.id ||
+        "";
 
     const state =
         getMatchState(match);
-
 
     const kickoff =
         formatKickoffWAT(
@@ -1323,13 +1304,12 @@ function buildFixtureCard(
             match.fixture?.timestamp
         );
 
-
     let middleHTML = "";
 
-
-    /* UPCOMING */
-
-    if (state.type === "upcoming") {
+    if (
+        state.type ===
+        "upcoming"
+    ) {
 
         middleHTML = `
 
@@ -1340,9 +1320,7 @@ function buildFixtureCard(
                 </div>
 
                 <div class="status-pill status-upcoming">
-
                     UPCOMING
-
                 </div>
 
             </div>
@@ -1351,21 +1329,19 @@ function buildFixtureCard(
 
     }
 
-
-    /* LIVE */
-
-    else if (state.type === "live") {
+    else if (
+        state.type ===
+        "live"
+    ) {
 
         middleHTML = `
 
             <div class="score-area">
 
                 <div class="score">
-
                     ${state.homeScore}
                     -
                     ${state.awayScore}
-
                 </div>
 
                 <div class="status-pill status-live">
@@ -1392,21 +1368,19 @@ function buildFixtureCard(
 
     }
 
-
-    /* FINISHED */
-
-    else if (state.type === "finished") {
+    else if (
+        state.type ===
+        "finished"
+    ) {
 
         middleHTML = `
 
             <div class="score-area">
 
                 <div class="score">
-
                     ${state.homeScore}
                     -
                     ${state.awayScore}
-
                 </div>
 
                 <div class="status-pill status-finished">
@@ -1423,23 +1397,19 @@ function buildFixtureCard(
 
     }
 
-
-    /* POSTPONED */
-
-    else if (state.type === "postponed") {
+    else if (
+        state.type ===
+        "postponed"
+    ) {
 
         middleHTML = `
 
             <div class="score-area">
 
-                <div class="vs">
-                    —
-                </div>
+                <div class="vs">—</div>
 
                 <div class="status-pill status-postponed">
-
                     POSTPONED
-
                 </div>
 
             </div>
@@ -1448,23 +1418,19 @@ function buildFixtureCard(
 
     }
 
-
-    /* CANCELLED */
-
-    else if (state.type === "cancelled") {
+    else if (
+        state.type ===
+        "cancelled"
+    ) {
 
         middleHTML = `
 
             <div class="score-area">
 
-                <div class="vs">
-                    —
-                </div>
+                <div class="vs">—</div>
 
                 <div class="status-pill status-cancelled">
-
                     CANCELLED
-
                 </div>
 
             </div>
@@ -1473,27 +1439,23 @@ function buildFixtureCard(
 
     }
 
-
-    /* SUSPENDED */
-
-    else if (state.type === "suspended") {
+    else {
 
         middleHTML = `
 
             <div class="score-area">
 
                 <div class="score">
-
                     ${state.homeScore}
                     -
                     ${state.awayScore}
-
                 </div>
 
                 <div class="status-pill status-suspended">
 
                     ${escapeHtml(
-                        state.label
+                        state.label ||
+                        "SUSPENDED"
                     )}
 
                 </div>
@@ -1504,6 +1466,62 @@ function buildFixtureCard(
 
     }
 
+    const canAnalyze =
+        state.type === "upcoming" &&
+        identitiesValid &&
+        idsValid &&
+        leagueValid &&
+        seasonValid;
+
+    let analysisButton = "";
+
+    if (canAnalyze) {
+
+        analysisButton = `
+
+            <button
+                class="analyze-button"
+                id="analyze-button-${index}"
+                onclick="
+                    runMatchAnalysis(
+                        ${index},
+                        '${escapeJs(home)}',
+                        '${escapeJs(away)}',
+                        ${homeId},
+                        ${awayId},
+                        ${leagueId},
+                        ${season},
+                        '${escapeJs(homeIdentity)}',
+                        '${escapeJs(awayIdentity)}',
+                        '${escapeJs(selectedDate)}',
+                        ${fixtureId || "null"}
+                    )
+                "
+            >
+
+                🔍 ANALYZE MATCH
+
+            </button>
+
+        `;
+
+    }
+
+    else {
+
+        analysisButton = `
+
+            <div class="status status-warning">
+
+                ⚠️ Prediction analysis requires
+                valid home team ID, away team ID,
+                league ID and season.
+
+            </div>
+
+        `;
+
+    }
 
     return `
 
@@ -1515,24 +1533,16 @@ function buildFixtureCard(
             <div class="fixture-header">
 
                 <span class="fixture-number">
-
                     MATCH #${index + 1}
-
                 </span>
 
                 <span class="match-time">
-
                     🕐 ${escapeHtml(kickoff)}
-
                 </span>
 
             </div>
 
-
             <div class="teams-area">
-
-
-                <!-- HOME TEAM -->
 
                 <div class="team">
 
@@ -1552,27 +1562,17 @@ function buildFixtureCard(
                     }
 
                     <div class="team-name">
-
                         ${escapeHtml(home)}
-
                     </div>
 
                 </div>
 
-
-                <!-- SCORE / STATUS -->
-
                 ${middleHTML}
-
-
-                <!-- AWAY TEAM -->
 
                 <div class="team team-away">
 
                     <div class="team-name">
-
                         ${escapeHtml(away)}
-
                     </div>
 
                     ${
@@ -1592,12 +1592,11 @@ function buildFixtureCard(
 
                 </div>
 
-
             </div>
 
-
             ${
-                state.type === "upcoming"
+                state.type ===
+                "upcoming"
                 ?
                 `
                 <div class="kickoff-only">
@@ -1611,7 +1610,6 @@ function buildFixtureCard(
                 ""
             }
 
-
             <div class="fixture-footer">
 
                 <div class="fixture-id">
@@ -1621,43 +1619,34 @@ function buildFixtureCard(
                         String(fixtureId)
                     )}
 
+                    <br>
+
+                    Team IDs:
+                    ${escapeHtml(
+                        String(homeId)
+                    )}
+                    -
+                    ${escapeHtml(
+                        String(awayId)
+                    )}
+
+                    <br>
+
+                    League:
+                    ${escapeHtml(
+                        String(leagueId)
+                    )}
+
+                    |
+
+                    Season:
+                    ${escapeHtml(
+                        String(season)
+                    )}
+
                 </div>
 
-
-                ${
-                    identitiesValid
-                    ?
-                    `
-                    <button
-                        class="analyze-button"
-                        id="analyze-button-${index}"
-                        onclick="
-                            runMatchAnalysis(
-                                ${index},
-                                '${escapeJs(home)}',
-                                '${escapeJs(away)}',
-                                '${escapeJs(homeIdentity)}',
-                                '${escapeJs(awayIdentity)}',
-                                '${escapeJs(selectedDate)}'
-                            )
-                        "
-                    >
-
-                        🔍 ANALYZE MATCH
-
-                    </button>
-                    `
-                    :
-                    `
-                    <div class="status status-error">
-
-                        ❌ Unable to create valid
-                        team identities.
-
-                    </div>
-                    `
-                }
-
+                ${analysisButton}
 
                 <div
                     id="analysis-${index}"
@@ -1669,254 +1658,6 @@ function buildFixtureCard(
         </div>
 
     `;
-
-}
-
-
-/* =========================================================
-   DETERMINE MATCH STATE
-========================================================= */
-
-function getMatchState(match) {
-
-    const statusCode =
-        String(
-            match.fixture?.status?.short ||
-            "NS"
-        ).toUpperCase();
-
-
-    const statusLong =
-        match.fixture?.status?.long ||
-        statusCode;
-
-
-    const homeScore =
-        match.goals?.home ?? 0;
-
-
-    const awayScore =
-        match.goals?.away ?? 0;
-
-
-    const elapsed =
-        match.fixture?.status?.elapsed ??
-        null;
-
-
-    /* FINISHED */
-
-    if (
-        FINISHED_STATUSES.includes(
-            statusCode
-        )
-    ) {
-
-        let label = "FT";
-
-
-        if (statusCode === "AET") {
-
-            label = "AET";
-
-        }
-
-        else if (statusCode === "PEN") {
-
-            label = "PEN";
-
-        }
-
-        else if (statusCode === "AWD") {
-
-            label = "AWARDED";
-
-        }
-
-        else if (statusCode === "WO") {
-
-            label = "WALKOVER";
-
-        }
-
-
-        return {
-
-            type: "finished",
-
-            statusCode,
-
-            label,
-
-            homeScore,
-
-            awayScore
-
-        };
-
-    }
-
-
-    /* LIVE */
-
-    if (
-        LIVE_STATUSES.includes(
-            statusCode
-        )
-    ) {
-
-        return {
-
-            type: "live",
-
-            statusCode,
-
-            elapsed,
-
-            homeScore,
-
-            awayScore
-
-        };
-
-    }
-
-
-    /* POSTPONED */
-
-    if (
-        POSTPONED_STATUSES.includes(
-            statusCode
-        )
-    ) {
-
-        return {
-
-            type: "postponed",
-
-            statusCode
-
-        };
-
-    }
-
-
-    /* CANCELLED */
-
-    if (
-        CANCELLED_STATUSES.includes(
-            statusCode
-        )
-    ) {
-
-        return {
-
-            type: "cancelled",
-
-            statusCode
-
-        };
-
-    }
-
-
-    /* SUSPENDED */
-
-    if (
-        SUSPENDED_STATUSES.includes(
-            statusCode
-        )
-    ) {
-
-        return {
-
-            type: "suspended",
-
-            statusCode,
-
-            label:
-                statusCode === "INT"
-                ?
-                "INTERRUPTED"
-                :
-                "SUSPENDED",
-
-            homeScore,
-
-            awayScore
-
-        };
-
-    }
-
-
-    /* UPCOMING */
-
-    return {
-
-        type: "upcoming",
-
-        statusCode
-
-    };
-
-}
-
-
-/* =========================================================
-   FORMAT KICKOFF IN NIGERIAN TIME
-========================================================= */
-
-function formatKickoffWAT(
-    isoDate,
-    timestamp
-) {
-
-    try {
-
-        let dateObject;
-
-
-        if (timestamp) {
-
-            dateObject =
-                new Date(
-                    Number(timestamp) * 1000
-                );
-
-        }
-
-        else if (isoDate) {
-
-            dateObject =
-                new Date(isoDate);
-
-        }
-
-        else {
-
-            return "Time unavailable";
-
-        }
-
-
-        return dateObject.toLocaleTimeString(
-            "en-NG",
-            {
-                timeZone: "Africa/Lagos",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false
-            }
-        ) + " WAT";
-
-
-    } catch (error) {
-
-        return "Time unavailable";
-
-    }
-
 }
 
 
@@ -1928,9 +1669,14 @@ async function runMatchAnalysis(
     index,
     home,
     away,
+    homeId,
+    awayId,
+    leagueId,
+    season,
     homeIdentity,
     awayIdentity,
-    date
+    date,
+    fixtureId
 ) {
 
     const box =
@@ -1938,12 +1684,10 @@ async function runMatchAnalysis(
             `analysis-${index}`
         );
 
-
     const button =
         document.getElementById(
             `analyze-button-${index}`
         );
-
 
     box.innerHTML = `
 
@@ -1955,30 +1699,38 @@ async function runMatchAnalysis(
 
     `;
 
-
     button.disabled = true;
-
 
     const MATCH = {
 
+        fixtureId:
+            fixtureId || null,
+
         home,
+
+        homeId,
 
         homeIdentity,
 
         away,
 
+        awayId,
+
         awayIdentity,
+
+        leagueId,
+
+        season,
 
         date
 
     };
 
-
     try {
 
-        /* =========================
+        /* =====================================================
            STEP 1 — WEB DATA
-        ========================= */
+        ===================================================== */
 
         const webUrl =
             `/api/web-data` +
@@ -1986,16 +1738,18 @@ async function runMatchAnalysis(
             `&homeIdentity=${encodeURIComponent(homeIdentity)}` +
             `&away=${encodeURIComponent(away)}` +
             `&awayIdentity=${encodeURIComponent(awayIdentity)}` +
+            `&homeId=${encodeURIComponent(homeId)}` +
+            `&awayId=${encodeURIComponent(awayId)}` +
+            `&leagueId=${encodeURIComponent(leagueId)}` +
+            `&season=${encodeURIComponent(season)}` +
+            `&fixtureId=${encodeURIComponent(fixtureId || "")}` +
             `&date=${encodeURIComponent(date)}`;
-
 
         const webResponse =
             await fetch(webUrl);
 
-
         const webData =
             await webResponse.json();
-
 
         if (!webResponse.ok) {
 
@@ -2007,10 +1761,9 @@ async function runMatchAnalysis(
 
         }
 
-
-        /* =========================
-           STEP 2 — NORMALIZE WEB DATA
-        ========================= */
+        /* =====================================================
+           STEP 2 — NORMALIZE
+        ===================================================== */
 
         box.innerHTML = `
 
@@ -2022,7 +1775,6 @@ async function runMatchAnalysis(
 
         `;
 
-
         const normalizeResponse =
             await fetch(
                 "/api/normalize-web",
@@ -2030,27 +1782,24 @@ async function runMatchAnalysis(
                     method: "POST",
 
                     headers: {
-
                         "Content-Type":
                             "application/json"
-
                     },
 
-                    body: JSON.stringify({
+                    body:
+                        JSON.stringify({
 
-                        ...webData,
+                            ...webData,
 
-                        match: MATCH
+                            match: MATCH
 
-                    })
+                        })
 
                 }
             );
 
-
         const normalized =
             await normalizeResponse.json();
-
 
         if (!normalizeResponse.ok) {
 
@@ -2062,21 +1811,20 @@ async function runMatchAnalysis(
 
         }
 
-
-        /* =========================
-           STEP 3 — PREDICTION ENGINE
-        ========================= */
+        /* =====================================================
+           STEP 3 — PREDICTION
+        ===================================================== */
 
         box.innerHTML = `
 
             <div class="status status-warning">
 
-                🧠 Running prediction engine...
+                🧠 Running TOMSONSTAKES V4.0
+                prediction engine...
 
             </div>
 
         `;
-
 
         const predictionResponse =
             await fetch(
@@ -2085,27 +1833,24 @@ async function runMatchAnalysis(
                     method: "POST",
 
                     headers: {
-
                         "Content-Type":
                             "application/json"
-
                     },
 
-                    body: JSON.stringify({
+                    body:
+                        JSON.stringify({
 
-                        match: MATCH,
+                            match: MATCH,
 
-                        normalized
+                            normalized
 
-                    })
+                        })
 
                 }
             );
 
-
         const prediction =
             await predictionResponse.json();
-
 
         if (!predictionResponse.ok) {
 
@@ -2117,31 +1862,24 @@ async function runMatchAnalysis(
 
         }
 
-
-        /* =========================
-           FINAL DISPLAY
-        ========================= */
-
         box.innerHTML =
             buildAnalysisHTML(
                 prediction
             );
 
-
         button.textContent =
             "✓ ANALYSIS COMPLETE";
 
-
         button.disabled = false;
 
+    }
 
-    } catch (error) {
+    catch (error) {
 
         console.error(
             "MATCH ANALYSIS ERROR:",
             error
         );
-
 
         box.innerHTML = `
 
@@ -2152,17 +1890,14 @@ async function runMatchAnalysis(
                 <br><br>
 
                 <strong>
-
                     ${escapeHtml(
                         error.message
                     )}
-
                 </strong>
 
             </div>
 
         `;
-
 
         button.disabled = false;
 
@@ -2178,11 +1913,6 @@ async function runMatchAnalysis(
 function buildAnalysisHTML(
     prediction
 ) {
-
-    /*
-     * Make sure the API returned
-     * a valid prediction object.
-     */
 
     if (
         !prediction ||
@@ -2204,32 +1934,10 @@ function buildAnalysisHTML(
 
     }
 
-
-    /*
-     * Convert probability safely.
-     *
-     * API can return:
-     *
-     * 0.38 → 38%
-     * 0.60 → 60%
-     * 0.80 → 80%
-     *
-     * OR:
-     *
-     * 38 → 38%
-     * 60 → 60%
-     * 80 → 80%
-     */
-
     const rawProbability =
         Number(
             prediction.probability
         );
-
-
-    /*
-     * Reject invalid probability.
-     */
 
     if (
         Number.isNaN(rawProbability) ||
@@ -2249,37 +1957,13 @@ function buildAnalysisHTML(
 
     }
 
-
-    /*
-     * Convert decimal probability
-     * into percentage.
-     */
-
-    let probability;
-
-
-    if (
+    let probability =
         rawProbability > 0 &&
         rawProbability <= 1
-    ) {
-
-        probability =
-            rawProbability * 100;
-
-    }
-
-    else {
-
-        probability =
-            rawProbability;
-
-    }
-
-
-    /*
-     * Keep probability within
-     * a sensible display range.
-     */
+        ?
+        rawProbability * 100
+        :
+        rawProbability;
 
     probability =
         Math.max(
@@ -2290,76 +1974,41 @@ function buildAnalysisHTML(
             )
         );
 
-
-    /*
-     * Determine confidence remark.
-     *
-     * BELOW 60%:
-     * AVOID
-     *
-     * 60% THROUGH 80%:
-     * MEDIUM
-     *
-     * ABOVE 80%:
-     * HIGH
-     */
-
     let remark;
     let remarkClass;
 
-
     if (probability < 60) {
 
-        remark =
-            "AVOID";
-
-        remarkClass =
-            "remark-avoid";
+        remark = "AVOID";
+        remarkClass = "remark-avoid";
 
     }
 
     else if (probability <= 80) {
 
-        remark =
-            "MEDIUM";
-
-        remarkClass =
-            "remark-medium";
+        remark = "MEDIUM";
+        remarkClass = "remark-medium";
 
     }
 
     else {
 
-        remark =
-            "HIGH";
-
-        remarkClass =
-            "remark-high";
+        remark = "HIGH";
+        remarkClass = "remark-high";
 
     }
 
-
-    /*
-     * Rounded display probability.
-     */
-
     const displayProbability =
-        Math.round(
-            probability
-        ) + "%";
-
+        Math.round(probability) +
+        "%";
 
     return `
 
         <div class="prediction-result">
 
-
             <div class="prediction-label">
-
-                PREDICTION
-
+                TOMSONSTAKES V4.0 PREDICTION
             </div>
-
 
             <div class="prediction-value">
 
@@ -2369,13 +2018,9 @@ function buildAnalysisHTML(
 
             </div>
 
-
             <div class="probability-label">
-
                 PROBABILITY
-
             </div>
-
 
             <div class="probability-value">
 
@@ -2384,7 +2029,6 @@ function buildAnalysisHTML(
                 )}
 
             </div>
-
 
             <div
                 class="prediction-remark ${remarkClass}"
@@ -2396,117 +2040,701 @@ function buildAnalysisHTML(
 
             </div>
 
+            ${buildSignalBreakdown(
+                prediction
+            )}
 
         </div>
 
     `;
-
 }
 
 
 /* =========================================================
-   FORMAT PROBABILITY
+   SIGNAL BREAKDOWN
 ========================================================= */
 
-function formatPredictionProbability(
+function buildSignalBreakdown(
+    prediction
+) {
+
+    const signals =
+        prediction.signals ||
+        prediction.breakdown ||
+        prediction.components ||
+        null;
+
+    if (
+        !signals ||
+        typeof signals !== "object"
+    ) {
+
+        return "";
+
+    }
+
+    const signalDefinitions = [
+
+        {
+            keys: [
+                "last5RecencyWeighted",
+                "recencyWeightedForm",
+                "last5"
+            ],
+
+            label:
+                "Last 5 — Recency Weighted",
+
+            weight:
+                45
+
+        },
+
+        {
+            keys: [
+                "leagueStandings",
+                "standings"
+            ],
+
+            label:
+                "Current League Standings",
+
+            weight:
+                30
+
+        },
+
+        {
+            keys: [
+                "seasonHomeAwayStrength",
+                "homeAwayStrength"
+            ],
+
+            label:
+                "Season Home/Away Strength",
+
+            weight:
+                5
+
+        },
+
+        {
+            keys: [
+                "expectedGoals",
+                "goalModel",
+                "xg"
+            ],
+
+            label:
+                "Expected Goals / Goal Model",
+
+            weight:
+                10
+
+        },
+
+        {
+            keys: [
+                "recentVenueForm",
+                "venueForm"
+            ],
+
+            label:
+                "Recent Home/Away Venue Form",
+
+            weight:
+                5
+
+        },
+
+        {
+            keys: [
+                "last5H2H",
+                "h2h"
+            ],
+
+            label:
+                "Last 5 H2H",
+
+            weight:
+                5
+
+        }
+
+    ];
+
+    let rows = "";
+
+    signalDefinitions.forEach(
+        definition => {
+
+            let value = null;
+
+            for (
+                const key
+                of definition.keys
+            ) {
+
+                if (
+                    signals[key] !==
+                    undefined
+                ) {
+
+                    value =
+                        signals[key];
+
+                    break;
+
+                }
+
+            }
+
+            const display =
+                formatSignalValue(
+                    value
+                );
+
+            const barValue =
+                signalToPercentage(
+                    value
+                );
+
+            rows += `
+
+                <div class="signal-row">
+
+                    <div class="signal-name">
+
+                        ${escapeHtml(
+                            definition.label
+                        )}
+
+                    </div>
+
+                    <div class="signal-weight">
+
+                        ${definition.weight}%
+
+                    </div>
+
+                    <div class="signal-value">
+
+                        ${escapeHtml(
+                            display
+                        )}
+
+                    </div>
+
+                    <div class="signal-bar">
+
+                        <div
+                            class="signal-fill"
+                            style="width:${barValue}%"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+    );
+
+    return `
+
+        <div class="signal-panel">
+
+            <div class="signal-title">
+
+                🧠 ENGINE SIGNAL BREAKDOWN
+
+            </div>
+
+            ${rows}
+
+            <div class="engine-note">
+
+                V4.0 weighting:
+                45% recency-weighted last 5,
+                30% league standings,
+                5% season home/away strength,
+                10% expected goals/goal model,
+                5% recent venue form,
+                5% last 5 H2H.
+
+            </div>
+
+        </div>
+
+    `;
+}
+
+
+/* =========================================================
+   FORMAT SIGNAL
+========================================================= */
+
+function formatSignalValue(
     value
 ) {
 
     if (
-        value === undefined ||
         value === null ||
+        value === undefined ||
         value === ""
     ) {
 
-        return "—";
+        return "N/A";
 
     }
 
+    if (
+        typeof value ===
+        "number"
+    ) {
 
-    const number =
-        Number(value);
+        if (
+            value >= 0 &&
+            value <= 1
+        ) {
 
+            return Math.round(
+                value * 100
+            ) + "%";
+
+        }
+
+        return String(
+            Math.round(
+                value * 100
+            ) / 100
+        );
+
+    }
 
     if (
-        Number.isNaN(number) ||
+        typeof value ===
+        "object"
+    ) {
+
+        if (
+            value.score !==
+            undefined
+        ) {
+
+            return formatSignalValue(
+                value.score
+            );
+
+        }
+
+        if (
+            value.value !==
+            undefined
+        ) {
+
+            return formatSignalValue(
+                value.value
+            );
+
+        }
+
+        if (
+            value.probability !==
+            undefined
+        ) {
+
+            return formatSignalValue(
+                value.probability
+            );
+
+        }
+
+        return "Available";
+
+    }
+
+    return String(value);
+}
+
+
+/* =========================================================
+   SIGNAL BAR
+========================================================= */
+
+function signalToPercentage(
+    value
+) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+
+        return 0;
+
+    }
+
+    let number;
+
+    if (
+        typeof value ===
+        "object"
+    ) {
+
+        number =
+            Number(
+                value.score ??
+                value.value ??
+                value.probability ??
+                0
+            );
+
+    }
+
+    else {
+
+        number =
+            Number(value);
+
+    }
+
+    if (
         !Number.isFinite(number)
     ) {
 
-        return String(value);
+        return 0;
 
     }
 
+    if (
+        number >= 0 &&
+        number <= 1
+    ) {
 
-    const percent =
-        number > 0 && number <= 1
-        ?
-        number * 100
-        :
-        number;
+        number *= 100;
 
+    }
 
-    return (
-        Math.round(percent)
-        + "%"
+    return Math.max(
+        0,
+        Math.min(
+            100,
+            number
+        )
     );
 
 }
 
 
 /* =========================================================
-   NORMALIZE LEAGUE NAME
+   MATCH STATE
+========================================================= */
+
+function getMatchState(match) {
+
+    const statusCode =
+        String(
+            match.fixture?.status?.short ||
+            "NS"
+        ).toUpperCase();
+
+    const homeScore =
+        match.goals?.home ??
+        0;
+
+    const awayScore =
+        match.goals?.away ??
+        0;
+
+    const elapsed =
+        match.fixture?.status?.elapsed ??
+        null;
+
+    if (
+        FINISHED_STATUSES.includes(
+            statusCode
+        )
+    ) {
+
+        let label = "FT";
+
+        if (
+            statusCode === "AET"
+        ) {
+
+            label = "AET";
+
+        }
+
+        else if (
+            statusCode === "PEN"
+        ) {
+
+            label = "PEN";
+
+        }
+
+        else if (
+            statusCode === "AWD"
+        ) {
+
+            label = "AWARDED";
+
+        }
+
+        else if (
+            statusCode === "WO"
+        ) {
+
+            label = "WALKOVER";
+
+        }
+
+        return {
+
+            type:
+                "finished",
+
+            statusCode,
+
+            label,
+
+            homeScore,
+
+            awayScore
+
+        };
+
+    }
+
+    if (
+        LIVE_STATUSES.includes(
+            statusCode
+        )
+    ) {
+
+        return {
+
+            type:
+                "live",
+
+            statusCode,
+
+            elapsed,
+
+            homeScore,
+
+            awayScore
+
+        };
+
+    }
+
+    if (
+        POSTPONED_STATUSES.includes(
+            statusCode
+        )
+    ) {
+
+        return {
+
+            type:
+                "postponed",
+
+            statusCode
+
+        };
+
+    }
+
+    if (
+        CANCELLED_STATUSES.includes(
+            statusCode
+        )
+    ) {
+
+        return {
+
+            type:
+                "cancelled",
+
+            statusCode
+
+        };
+
+    }
+
+    if (
+        SUSPENDED_STATUSES.includes(
+            statusCode
+        )
+    ) {
+
+        return {
+
+            type:
+                "suspended",
+
+            statusCode,
+
+            label:
+                statusCode === "INT"
+                ?
+                "INTERRUPTED"
+                :
+                "SUSPENDED",
+
+            homeScore,
+
+            awayScore
+
+        };
+
+    }
+
+    return {
+
+        type:
+            "upcoming",
+
+        statusCode
+
+    };
+
+}
+
+
+/* =========================================================
+   FORMAT KICKOFF WAT
+========================================================= */
+
+function formatKickoffWAT(
+    isoDate,
+    timestamp
+) {
+
+    try {
+
+        let dateObject;
+
+        if (timestamp) {
+
+            dateObject =
+                new Date(
+                    Number(timestamp) *
+                    1000
+                );
+
+        }
+
+        else if (isoDate) {
+
+            dateObject =
+                new Date(
+                    isoDate
+                );
+
+        }
+
+        else {
+
+            return "Time unavailable";
+
+        }
+
+        return dateObject.toLocaleTimeString(
+            "en-NG",
+            {
+                timeZone:
+                    "Africa/Lagos",
+
+                hour:
+                    "2-digit",
+
+                minute:
+                    "2-digit",
+
+                hour12:
+                    false
+
+            }
+        ) + " WAT";
+
+    }
+
+    catch (
+        error
+    ) {
+
+        return "Time unavailable";
+
+    }
+
+}
+
+
+/* =========================================================
+   NORMALIZE LEAGUE
 ========================================================= */
 
 function normalizeLeagueName(
     name
 ) {
 
-    return String(name || "")
-        .normalize("NFD")
-        .replace(
-            /[\u0300-\u036f]/g,
-            ""
-        )
-        .toLowerCase()
-        .replace(
-            /[^a-z0-9]+/g,
-            " "
-        )
-        .trim();
+    return String(
+        name || ""
+    )
+    .normalize("NFD")
+    .replace(
+        /[\u0300-\u036f]/g,
+        ""
+    )
+    .toLowerCase()
+    .replace(
+        /[^a-z0-9]+/g,
+        " "
+    )
+    .trim();
 
 }
 
 
 /* =========================================================
-   CREATE TEAM IDENTITY
+   TEAM IDENTITY
 ========================================================= */
 
-function createIdentity(name) {
+function createIdentity(
+    name
+) {
 
-    return String(name || "")
-        .trim()
-        .normalize("NFD")
-        .replace(
-            /[\u0300-\u036f]/g,
-            ""
-        )
-        .replace(
-            /[’']/g,
-            ""
-        )
-        .replace(
-            /&/g,
-            " AND "
-        )
-        .toUpperCase()
-        .replace(
-            /[^A-Z0-9]+/g,
-            "_"
-        )
-        .replace(
-            /^_+|_+$/g,
-            ""
-        ) || "";
+    return String(
+        name || ""
+    )
+    .trim()
+    .normalize("NFD")
+    .replace(
+        /[\u0300-\u036f]/g,
+        ""
+    )
+    .replace(
+        /[’']/g,
+        ""
+    )
+    .replace(
+        /&/g,
+        " AND "
+    )
+    .toUpperCase()
+    .replace(
+        /[^A-Z0-9]+/g,
+        "_"
+    )
+    .replace(
+        /^_+|_+$/g,
+        ""
+    ) || "";
 
 }
 
@@ -2515,60 +2743,66 @@ function createIdentity(name) {
    ESCAPE HTML
 ========================================================= */
 
-function escapeHtml(value) {
+function escapeHtml(
+    value
+) {
 
-    return String(value ?? "")
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+    return String(
+        value ?? ""
+    )
+    .replace(
+        /&/g,
+        "&amp;"
+    )
+    .replace(
+        /</g,
+        "&lt;"
+    )
+    .replace(
+        />/g,
+        "&gt;"
+    )
+    .replace(
+        /"/g,
+        "&quot;"
+    )
+    .replace(
+        /'/g,
+        "&#039;"
+    );
 
 }
 
 
 /* =========================================================
-   ESCAPE JAVASCRIPT STRING
+   ESCAPE JAVASCRIPT
 ========================================================= */
 
-function escapeJs(value) {
+function escapeJs(
+    value
+) {
 
-    return String(value ?? "")
-        .replace(
-            /\\/g,
-            "\\\\"
-        )
-        .replace(
-            /'/g,
-            "\\'"
-        )
-        .replace(
-            /\r/g,
-            "\\r"
-        )
-        .replace(
-            /\n/g,
-            "\\n"
-        );
+    return String(
+        value ?? ""
+    )
+    .replace(
+        /\\/g,
+        "\\\\"
+    )
+    .replace(
+        /'/g,
+        "\\'"
+    )
+    .replace(
+        /\r/g,
+        "\\r"
+    )
+    .replace(
+        /\n/g,
+        "\\n"
+    );
 
 }
 
-</script>
-
-</body>
+</script></body>
 </html>
