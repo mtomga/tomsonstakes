@@ -1,882 +1,1413 @@
+// /api/web-data.js
+// ============================================================
+// TOMSONSTAKES WEB DATA ENGINE
+// Version 4.0
+//
+// Purpose:
+// - Collect external football evidence
+// - Resolve team identities
+// - Resolve API-Football team IDs when possible
+// - Collect web evidence for:
+//      * form
+//      * standings
+//      * statistics
+//      * H2H
+//      * injuries
+//      * lineups
+//      * xG / goal model information
+//      * odds when publicly indexed
+// - Return structured raw evidence
+//
+// IMPORTANT:
+// - This endpoint DOES NOT make predictions.
+// - This endpoint DOES NOT calculate the final score.
+// - normalize-web.js converts this payload into structured data.
+// - predict.js V4.0 consumes the normalized data.
+//
+// ENGINE WEIGHTS USED DOWNSTREAM:
+//
+// Last 5 matches — recency weighted       45%
+// Current league standings                30%
+// Season home/away strength                5%
+// Expected goals / goal model             10%
+// Recent home/away venue form               5%
+// Last 5 H2H                               5%
+// TOTAL                                  100%
+// ============================================================
+
 export default async function handler(req, res) {
 
-    try {
+  const startedAt = Date.now();
 
-        if (req.method !== "GET") {
-            return res.status(405).json({
-                success: false,
-                error: "GET method required."
-            });
-        }
+  try {
 
-        const {
-            home,
-            homeIdentity,
-            away,
-            awayIdentity,
-            date
-        } = req.query;
+    // ==========================================================
+    // REQUEST PARAMETERS
+    // ==========================================================
 
-        // =====================================================
-        // BASIC VALIDATION
-        // =====================================================
+    const {
+      home,
+      away,
+      homeIdentity,
+      awayIdentity,
+      date
+    } = req.query;
 
-        if (
-            !home ||
-            !homeIdentity ||
-            !away ||
-            !awayIdentity ||
-            !date
-        ) {
-            return res.status(400).json({
-                success: false,
-                error:
-                    "home, homeIdentity, away, awayIdentity and date are required."
-            });
-        }
 
-        // =====================================================
-        // GLOBAL TEAM IDENTITY
-        // =====================================================
+    // ==========================================================
+    // VALIDATION
+    // ==========================================================
 
-        function createIdentity(name) {
+    if (!home || !away) {
 
-            return String(name || "")
-                .trim()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[’']/g, "")
-                .replace(/&/g, " AND ")
-                .toUpperCase()
-                .replace(/[^A-Z0-9]+/g, "_")
-                .replace(/^_+|_+$/g, "");
-        }
+      return res.status(400).json({
+        success: false,
+        version: "Web Data V4.0",
+        error: "Home and away team names are required."
+      });
 
-        const expectedHomeIdentity =
-            createIdentity(home);
+    }
 
-        const expectedAwayIdentity =
-            createIdentity(away);
 
-        // =====================================================
-        // VERIFY IDENTITIES
-        // =====================================================
+    if (!date) {
 
-        if (
-            !expectedHomeIdentity ||
-            !expectedAwayIdentity
-        ) {
-            return res.status(400).json({
-                success: false,
-                error: "Unable to generate team identity."
-            });
-        }
+      return res.status(400).json({
+        success: false,
+        version: "Web Data V4.0",
+        error: "Match date is required. Use YYYY-MM-DD."
+      });
 
-        if (
-            homeIdentity !== expectedHomeIdentity ||
-            awayIdentity !== expectedAwayIdentity
-        ) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid team identity.",
+    }
 
-                details: {
-                    home: {
-                        supplied:
-                            homeIdentity,
-                        expected:
-                            expectedHomeIdentity
-                    },
 
-                    away: {
-                        supplied:
-                            awayIdentity,
-                        expected:
-                            expectedAwayIdentity
-                    }
-                }
-            });
-        }
+    // ==========================================================
+    // API KEYS
+    // ==========================================================
 
-        // =====================================================
-        // SAME TEAM PROTECTION
-        // =====================================================
+    const apiFootballKey =
+      process.env.APIFOOTBALL_KEY || "";
 
-        if (
-            homeIdentity === awayIdentity
-        ) {
-            return res.status(400).json({
-                success: false,
-                error:
-                    "Home and away teams cannot have the same identity."
-            });
-        }
+    const serperKey =
+      process.env.SERPER_API_KEY || "";
 
-        // =====================================================
-        // CANONICAL TEAM NAMES
-        //
-        // IMPORTANT:
-        // No hard-coded team list.
-        // The names supplied by API-Football are used.
-        // =====================================================
 
-        const canonicalHome =
-            String(home).trim();
+    // ==========================================================
+    // HELPERS
+    // ==========================================================
 
-        const canonicalAway =
-            String(away).trim();
+    const safeArray = (value) =>
+      Array.isArray(value)
+        ? value
+        : [];
 
-        // =====================================================
-        // SEARCH NAME VARIANTS
-        // =====================================================
 
-        function getSearchNames(teamName) {
+    const cleanString = (value) =>
+      String(value ?? "")
+        .replace(/\s+/g, " ")
+        .trim();
 
-            const original =
-                String(teamName || "").trim();
 
-            const withoutApostrophe =
-                original.replace(/[’']/g, "");
+    const normalizeIdentity = (value) =>
+      cleanString(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[’']/g, "")
+        .replace(/&/g, " AND ")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
 
-            const normalized =
-                original
-                    .normalize("NFD")
-                    .replace(/[\u0300-\u036f]/g, "")
-                    .replace(/[’']/g, "");
 
-            const compactSpaces =
-                original.replace(/\s+/g, " ");
+    const parseNumber = (value) => {
 
-            return [
-                original,
-                withoutApostrophe,
-                normalized,
-                compactSpaces
-            ]
-                .map(value => value.trim())
-                .filter(Boolean)
-                .filter(
-                    (value, index, array) =>
-                        array.indexOf(value) === index
-                );
-        }
+      if (
+        value === null ||
+        value === undefined ||
+        value === ""
+      ) {
+        return null;
+      }
 
-        const homeNames =
-            getSearchNames(canonicalHome);
+      const number =
+        Number(
+          String(value)
+            .replace("%", "")
+            .replace(",", "")
+            .trim()
+        );
 
-        const awayNames =
-            getSearchNames(canonicalAway);
+      return Number.isFinite(number)
+        ? number
+        : null;
 
-        // =====================================================
-        // API KEY
-        // =====================================================
+    };
 
-        const apiKey =
-            process.env.SERPER_API_KEY;
 
-        if (!apiKey) {
-            return res.status(500).json({
-                success: false,
-                error:
-                    "SERPER_API_KEY is not configured."
-            });
-        }
+    const truncate = (
+      value,
+      max = 1200
+    ) => {
 
-        // =====================================================
-        // DATE
-        // =====================================================
+      const text =
+        cleanString(value);
 
-        const parsedDate =
-            new Date(date);
+      if (text.length <= max) {
+        return text;
+      }
 
-        if (
-            Number.isNaN(
-                parsedDate.getTime()
+      return text.slice(0, max) + "...";
+
+    };
+
+
+    // ==========================================================
+    // GENERIC FETCH JSON
+    // ==========================================================
+
+    const fetchJSON = async (
+      url,
+      options = {}
+    ) => {
+
+      try {
+
+        const response =
+          await fetch(
+            url,
+            {
+              ...options
+            }
+          );
+
+
+        const text =
+          await response.text();
+
+
+        let data = {};
+
+
+        try {
+
+          data =
+            text
+              ? JSON.parse(text)
+              : {};
+
+        } catch {
+
+          data = {
+            raw: truncate(
+              text,
+              3000
             )
-        ) {
-            return res.status(400).json({
-                success: false,
-                error:
-                    "Invalid match date."
-            });
+          };
+
         }
 
-        const matchYear =
-            parsedDate.getUTCFullYear();
 
-        // =====================================================
-        // SEARCH DEFINITIONS
-        // =====================================================
+        return {
+          ok: response.ok,
+          status: response.status,
+          data
+        };
 
-        const searches = [];
+      } catch (error) {
 
-        // =====================================================
-        // HOME FORM SEARCHES
-        // =====================================================
+        return {
+          ok: false,
+          status: 0,
+          data: {},
+          error:
+            error?.message ||
+            "Request failed."
+        };
 
-        for (const teamName of homeNames) {
+      }
 
-            searches.push(
+    };
 
-                {
-                    type: "form_home",
 
-                    team:
-                        canonicalHome,
+    // ==========================================================
+    // API-FOOTBALL REQUEST
+    // ==========================================================
 
-                    teamIdentity:
-                        homeIdentity,
+    const apiFootball =
+      async (
+        endpoint,
+        params = {}
+      ) => {
 
-                    query:
-                        `"${teamName}" results ${matchYear} football recent`
-                },
+        if (!apiFootballKey) {
 
-                {
-                    type: "form_home_recent",
+          return {
+            enabled: false,
+            ok: false,
+            status: 0,
+            data: {},
+            error:
+              "APIFOOTBALL_KEY is not configured."
+          };
 
-                    team:
-                        canonicalHome,
-
-                    teamIdentity:
-                        homeIdentity,
-
-                    query:
-                        `"${teamName}" recent results ${matchYear} football`
-                },
-
-                {
-                    type: "form_home_fixtures",
-
-                    team:
-                        canonicalHome,
-
-                    teamIdentity:
-                        homeIdentity,
-
-                    query:
-                        `"${teamName}" fixtures results ${matchYear} FotMob`
-                },
-
-                {
-                    type: "form_home_soccerway",
-
-                    team:
-                        canonicalHome,
-
-                    teamIdentity:
-                        homeIdentity,
-
-                    query:
-                        `"${teamName}" Soccerway results ${matchYear}`
-                }
-            );
         }
 
-        // =====================================================
-        // AWAY FORM SEARCHES
-        // =====================================================
 
-        for (const teamName of awayNames) {
+        const query =
+          new URLSearchParams();
 
-            searches.push(
 
-                {
-                    type: "form_away",
+        Object.entries(params)
+          .forEach(
+            ([key, value]) => {
 
-                    team:
-                        canonicalAway,
+              if (
+                value !== undefined &&
+                value !== null &&
+                value !== ""
+              ) {
 
-                    teamIdentity:
-                        awayIdentity,
+                query.set(
+                  key,
+                  String(value)
+                );
 
-                    query:
-                        `"${teamName}" results ${matchYear} football recent`
-                },
+              }
 
-                {
-                    type: "form_away_recent",
-
-                    team:
-                        canonicalAway,
-
-                    teamIdentity:
-                        awayIdentity,
-
-                    query:
-                        `"${teamName}" recent results ${matchYear} football`
-                },
-
-                {
-                    type: "form_away_fixtures",
-
-                    team:
-                        canonicalAway,
-
-                    teamIdentity:
-                        awayIdentity,
-
-                    query:
-                        `"${teamName}" fixtures results ${matchYear} FotMob`
-                },
-
-                {
-                    type: "form_away_soccerway",
-
-                    team:
-                        canonicalAway,
-
-                    teamIdentity:
-                        awayIdentity,
-
-                    query:
-                        `"${teamName}" Soccerway results ${matchYear}`
-                }
-            );
-        }
-
-        // =====================================================
-        // DIRECT HOME RESULT SEARCH
-        // =====================================================
-
-        searches.push({
-
-            type:
-                "form_home_direct",
-
-            team:
-                canonicalHome,
-
-            teamIdentity:
-                homeIdentity,
-
-            query:
-                `"${canonicalHome}" "${matchYear}" football results W D L`
-        });
-
-        // =====================================================
-        // DIRECT AWAY RESULT SEARCH
-        // =====================================================
-
-        searches.push({
-
-            type:
-                "form_away_direct",
-
-            team:
-                canonicalAway,
-
-            teamIdentity:
-                awayIdentity,
-
-            query:
-                `"${canonicalAway}" "${matchYear}" football results W D L`
-        });
-
-        // =====================================================
-        // HOME + AWAY MATCH SEARCH
-        // =====================================================
-
-        searches.push({
-
-            type:
-                "form_home_matches",
-
-            team:
-                canonicalHome,
-
-            teamIdentity:
-                homeIdentity,
-
-            query:
-                `"${canonicalHome}" football matches results ${matchYear}`
-        });
-
-        searches.push({
-
-            type:
-                "form_away_matches",
-
-            team:
-                canonicalAway,
-
-            teamIdentity:
-                awayIdentity,
-
-            query:
-                `"${canonicalAway}" football matches results ${matchYear}`
-        });
-
-        // =====================================================
-        // H2H
-        // =====================================================
-
-        searches.push({
-
-            type:
-                "h2h",
-
-            team:
-                null,
-
-            teamIdentity:
-                null,
-
-            query:
-                `"${canonicalHome}" "${canonicalAway}" head to head H2H results football`
-        });
-
-        // =====================================================
-        // STATS
-        // =====================================================
-
-        searches.push({
-
-            type:
-                "stats",
-
-            team:
-                null,
-
-            teamIdentity:
-                null,
-
-            query:
-                `"${canonicalHome}" "${canonicalAway}" statistics goals xG BTTS over under ${matchYear} football`
-        });
-
-        // =====================================================
-        // INJURIES
-        // =====================================================
-
-        searches.push({
-
-            type:
-                "injuries",
-
-            team:
-                null,
-
-            teamIdentity:
-                null,
-
-            query:
-                `"${canonicalHome}" "${canonicalAway}" injuries suspended players team news ${matchYear} football`
-        });
-
-        // =====================================================
-        // LINEUPS
-        // =====================================================
-
-        searches.push({
-
-            type:
-                "lineups",
-
-            team:
-                null,
-
-            teamIdentity:
-                null,
-
-            query:
-                `"${canonicalHome}" "${canonicalAway}" predicted lineup starting XI ${matchYear} football`
-        });
-
-        // =====================================================
-        // ODDS
-        // =====================================================
-
-        searches.push({
-
-            type:
-                "odds",
-
-            team:
-                null,
-
-            teamIdentity:
-                null,
-
-            query:
-                `"${canonicalHome}" "${canonicalAway}" odds 1X2 over under BTTS football ${matchYear}`
-        });
-
-        // =====================================================
-        // EXECUTE SEARCHES
-        // =====================================================
-
-        const results = [];
-
-        for (const search of searches) {
-
-            try {
-
-                const response =
-                    await fetch(
-                        "https://google.serper.dev/search",
-                        {
-                            method: "POST",
-
-                            headers: {
-                                "X-API-KEY":
-                                    apiKey,
-
-                                "Content-Type":
-                                    "application/json"
-                            },
-
-                            body:
-                                JSON.stringify({
-                                    q:
-                                        search.query,
-
-                                    num:
-                                        8
-                                })
-                        }
-                    );
-
-                const data =
-                    await response.json();
-
-                results.push({
-
-                    type:
-                        search.type,
-
-                    team:
-                        search.team || null,
-
-                    teamIdentity:
-                        search.teamIdentity || null,
-
-                    query:
-                        search.query,
-
-                    status:
-                        response.status,
-
-                    success:
-                        response.ok,
-
-                    results:
-                        Array.isArray(
-                            data.organic
-                        )
-                            ? data.organic.map(
-                                item => ({
-
-                                    title:
-                                        item.title ||
-                                        null,
-
-                                    link:
-                                        item.link ||
-                                        null,
-
-                                    snippet:
-                                        item.snippet ||
-                                        null,
-
-                                    date:
-                                        item.date ||
-                                        null,
-
-                                    position:
-                                        item.position ||
-                                        null
-                                })
-                            )
-                            : [],
-
-                    knowledgeGraph:
-                        data.knowledgeGraph ||
-                        null
-                });
-
-            } catch (searchError) {
-
-                results.push({
-
-                    type:
-                        search.type,
-
-                    team:
-                        search.team || null,
-
-                    teamIdentity:
-                        search.teamIdentity ||
-                        null,
-
-                    query:
-                        search.query,
-
-                    status:
-                        500,
-
-                    success:
-                        false,
-
-                    error:
-                        searchError.message,
-
-                    results:
-                        []
-                });
             }
-        }
+          );
 
-        // =====================================================
-        // FLATTEN RESULTS
-        // =====================================================
 
-        const allResults = [];
+        const url =
+          `https://v3.football.api-sports.io/${endpoint}?${query.toString()}`;
 
-        for (const search of results) {
 
-            for (const item of search.results) {
+        const result =
+          await fetchJSON(
+            url,
+            {
+              headers: {
+                "x-apisports-key":
+                  apiFootballKey,
 
-                allResults.push({
-
-                    type:
-                        search.type,
-
-                    team:
-                        search.team || null,
-
-                    teamIdentity:
-                        search.teamIdentity ||
-                        null,
-
-                    title:
-                        item.title,
-
-                    link:
-                        item.link,
-
-                    snippet:
-                        item.snippet,
-
-                    date:
-                        item.date,
-
-                    position:
-                        item.position
-                });
+                "Accept":
+                  "application/json"
+              }
             }
-        }
+          );
 
-        // =====================================================
-        // FORM RESULT COUNTS
-        // =====================================================
 
-        const homeFormResults =
-            allResults.filter(item =>
+        return {
+          enabled: true,
+          ...result
+        };
 
-                item.teamIdentity ===
-                    homeIdentity &&
+      };
 
-                String(item.type)
-                    .startsWith("form_home")
-            );
 
-        const awayFormResults =
-            allResults.filter(item =>
+    // ==========================================================
+    // TEAM ID RESOLUTION
+    //
+    // This is important because predict/analyze require
+    // numeric API-Football team IDs.
+    // ==========================================================
 
-                item.teamIdentity ===
-                    awayIdentity &&
+    const resolveTeam =
+      async (teamName) => {
 
-                String(item.type)
-                    .startsWith("form_away")
-            );
+        const response =
+          await apiFootball(
+            "teams",
+            {
+              search:
+                teamName
+            }
+          );
 
-        // =====================================================
-        // RESPONSE
-        // =====================================================
 
-        return res.status(200).json({
+        const teams =
+          safeArray(
+            response
+              ?.data
+              ?.response
+          );
 
-            success:
-                true,
 
-            version:
-                "V4.0-GLOBAL",
+        if (!teams.length) {
 
-            match: {
+          return {
+            requestedName:
+              teamName,
 
-                home:
-                    canonicalHome,
+            resolved:
+              false,
 
-                homeInput:
-                    home,
+            teamId:
+              null,
 
-                homeIdentity:
-                    homeIdentity,
+            name:
+              null,
 
-                away:
-                    canonicalAway,
+            country:
+              null,
 
-                awayInput:
-                    away,
+            logo:
+              null,
 
-                awayIdentity:
-                    awayIdentity,
+            candidates: [],
 
-                date:
-                    date,
-
-                year:
-                    matchYear
-            },
-
-            identityResolution: {
-
-                home: {
-
-                    input:
-                        home,
-
-                    identity:
-                        homeIdentity,
-
-                    canonical:
-                        canonicalHome
-                },
-
-                away: {
-
-                    input:
-                        away,
-
-                    identity:
-                        awayIdentity,
-
-                    canonical:
-                        canonicalAway
-                }
-            },
-
-            searchedAt:
-                new Date().toISOString(),
-
-            searches:
-                results,
-
-            allResults:
-
-                allResults,
-
-            formSearchSummary: {
-
-                home: {
-
-                    identity:
-                        homeIdentity,
-
-                    searchResultCount:
-                        homeFormResults.length
-                },
-
-                away: {
-
-                    identity:
-                        awayIdentity,
-
-                    searchResultCount:
-                        awayFormResults.length
-                }
-            },
-
-            summary: {
-
-                totalSearches:
-                    searches.length,
-
-                successfulSearches:
-                    results.filter(
-                        item =>
-                            item.success
-                    ).length,
-
-                failedSearches:
-                    results.filter(
-                        item =>
-                            !item.success
-                    ).length,
-
-                totalResults:
-                    allResults.length
-            },
-
-            analysisReady: {
-
-                form:
-                    homeFormResults.length > 0 &&
-                    awayFormResults.length > 0,
-
-                h2h:
-                    allResults.some(
-                        item =>
-                            item.type === "h2h"
-                    ),
-
-                stats:
-                    allResults.some(
-                        item =>
-                            item.type === "stats"
-                    ),
-
-                injuries:
-                    allResults.some(
-                        item =>
-                            item.type === "injuries"
-                    ),
-
-                lineups:
-                    allResults.some(
-                        item =>
-                            item.type === "lineups"
-                    ),
-
-                odds:
-                    allResults.some(
-                        item =>
-                            item.type === "odds"
-                    )
-            },
-
-            warnings: [
-
-                "Web results are raw source information.",
-
-                "Team identities are generated dynamically from the requested team names.",
-
-                "Form searches use multiple team-name variants.",
-
-                "Form must be extracted only from results belonging to the requested team.",
-
-                "Missing statistics must not be guessed.",
-
-                "Source URLs should be retained for verification.",
-
-                "The home and away clubs are treated as separate identities."
-            ]
-        });
-
-    } catch (error) {
-
-        console.error(error);
-
-        return res.status(500).json({
-
-            success:
-                false,
+            apiAvailable:
+              response.enabled === true,
 
             error:
-                "Web data search failed.",
+              response.error ||
+              null
+          };
 
-            details:
-                error.message
-        });
+        }
+
+
+        const normalizedRequested =
+          normalizeIdentity(
+            teamName
+          );
+
+
+        const scored =
+          teams.map(
+            item => {
+
+              const candidate =
+                item?.team;
+
+              const candidateName =
+                candidate?.name ||
+                "";
+
+              const candidateIdentity =
+                normalizeIdentity(
+                  candidateName
+                );
+
+
+              let score = 0;
+
+
+              if (
+                candidateIdentity ===
+                normalizedRequested
+              ) {
+
+                score += 100;
+
+              }
+
+
+              if (
+                candidateIdentity.includes(
+                  normalizedRequested
+                )
+              ) {
+
+                score += 50;
+
+              }
+
+
+              if (
+                normalizedRequested.includes(
+                  candidateIdentity
+                )
+              ) {
+
+                score += 40;
+
+              }
+
+
+              const requestedWords =
+                normalizedRequested
+                  .split("_")
+                  .filter(Boolean);
+
+
+              const candidateWords =
+                candidateIdentity
+                  .split("_")
+                  .filter(Boolean);
+
+
+              requestedWords.forEach(
+                word => {
+
+                  if (
+                    candidateWords.includes(
+                      word
+                    )
+                  ) {
+
+                    score += 10;
+
+                  }
+
+                }
+              );
+
+
+              return {
+                item,
+                score
+              };
+
+            }
+          )
+          .sort(
+            (a, b) =>
+              b.score -
+              a.score
+          );
+
+
+        const best =
+          scored[0];
+
+
+        const bestTeam =
+          best?.item?.team ||
+          null;
+
+
+        return {
+
+          requestedName:
+            teamName,
+
+          resolved:
+            Boolean(
+              bestTeam?.id
+            ),
+
+          teamId:
+            bestTeam?.id
+              ? Number(bestTeam.id)
+              : null,
+
+          name:
+            bestTeam?.name ||
+            null,
+
+          country:
+            bestTeam?.country ||
+            null,
+
+          code:
+            bestTeam?.code ||
+            null,
+
+          logo:
+            bestTeam?.logo ||
+            null,
+
+          candidates:
+            scored
+              .slice(0, 5)
+              .map(
+                candidate => ({
+
+                  id:
+                    candidate
+                      ?.item
+                      ?.team
+                      ?.id ||
+                    null,
+
+                  name:
+                    candidate
+                      ?.item
+                      ?.team
+                      ?.name ||
+                    null,
+
+                  country:
+                    candidate
+                      ?.item
+                      ?.team
+                      ?.country ||
+                    null,
+
+                  score:
+                    candidate.score
+
+                })
+              ),
+
+          apiAvailable:
+            response.enabled === true
+
+        };
+
+      };
+
+
+    // ==========================================================
+    // SERPER WEB SEARCH
+    // ==========================================================
+
+    const webSearch =
+      async (
+        query,
+        category
+      ) => {
+
+        if (!serperKey) {
+
+          return {
+
+            enabled: false,
+
+            category,
+
+            query,
+
+            status: 0,
+
+            success: false,
+
+            results: [],
+
+            error:
+              "SERPER_API_KEY is not configured."
+
+          };
+
+        }
+
+
+        const response =
+          await fetchJSON(
+            "https://google.serper.dev/search",
+            {
+              method: "POST",
+
+              headers: {
+                "X-API-KEY":
+                  serperKey,
+
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+
+                  q:
+                    query,
+
+                  gl:
+                    "ng",
+
+                  hl:
+                    "en",
+
+                  num:
+                    10
+
+                })
+
+            }
+          );
+
+
+        const organic =
+          safeArray(
+            response
+              ?.data
+              ?.organic
+          );
+
+
+        const knowledgeGraph =
+          response
+            ?.data
+            ?.knowledgeGraph ||
+          null;
+
+
+        const results =
+          organic.map(
+            item => ({
+
+              title:
+                truncate(
+                  item?.title ||
+                  "",
+                  300
+                ),
+
+              link:
+                item?.link ||
+                "",
+
+              snippet:
+                truncate(
+                  item?.snippet ||
+                  "",
+                  1000
+                ),
+
+              date:
+                item?.date ||
+                null
+
+            })
+          );
+
+
+        return {
+
+          enabled: true,
+
+          category,
+
+          query,
+
+          status:
+            response.status,
+
+          success:
+            response.ok,
+
+          results,
+
+          knowledgeGraph,
+
+          error:
+            response.ok
+              ? null
+              : (
+                  response
+                    ?.data
+                    ?.message ||
+                  response
+                    ?.data
+                    ?.error ||
+                  response.error ||
+                  "Search request failed."
+                )
+
+        };
+
+      };
+
+
+    // ==========================================================
+    // RESOLVE TEAM IDENTITIES
+    // ==========================================================
+
+    const homeTeam =
+      await resolveTeam(
+        home
+      );
+
+
+    const awayTeam =
+      await resolveTeam(
+        away
+      );
+
+
+    // ==========================================================
+    // SEARCH QUERIES
+    //
+    // These are intentionally separated by signal.
+    // normalize-web.js can later decide whether evidence
+    // supports the signal.
+    // ==========================================================
+
+    const homeSearchName =
+      homeTeam.name ||
+      home;
+
+
+    const awaySearchName =
+      awayTeam.name ||
+      away;
+
+
+    const matchPhrase =
+      `"${homeSearchName}" vs "${awaySearchName}"`;
+
+
+    const searches = {};
+
+
+    // ==========================================================
+    // FORM
+    // ==========================================================
+
+    searches.form =
+      await webSearch(
+        `${matchPhrase} recent form last 5 matches ${date}`,
+        "form"
+      );
+
+
+    // ==========================================================
+    // STANDINGS
+    // ==========================================================
+
+    searches.standings =
+      await webSearch(
+        `${matchPhrase} league standings table ${date}`,
+        "standings"
+      );
+
+
+    // ==========================================================
+    // HOME / AWAY STRENGTH
+    // ==========================================================
+
+    searches.homeAway =
+      await webSearch(
+        `${homeSearchName} home record ${date} football`,
+        "homeAway"
+      );
+
+
+    searches.awayStrength =
+      await webSearch(
+        `${awaySearchName} away record ${date} football`,
+        "awayStrength"
+      );
+
+
+    // ==========================================================
+    // EXPECTED GOALS / GOAL MODEL
+    // ==========================================================
+
+    searches.xg =
+      await webSearch(
+        `${matchPhrase} xG expected goals statistics ${date}`,
+        "xg"
+      );
+
+
+    searches.goals =
+      await webSearch(
+        `${matchPhrase} goals statistics over under BTTS ${date}`,
+        "goals"
+      );
+
+
+    // ==========================================================
+    // RECENT VENUE FORM
+    // ==========================================================
+
+    searches.venue =
+      await webSearch(
+        `${homeSearchName} home form last 5 ${date}`,
+        "venue"
+      );
+
+
+    searches.awayVenue =
+      await webSearch(
+        `${awaySearchName} away form last 5 ${date}`,
+        "awayVenue"
+      );
+
+
+    // ==========================================================
+    // H2H
+    // ==========================================================
+
+    searches.h2h =
+      await webSearch(
+        `${matchPhrase} head to head H2H last 5`,
+        "h2h"
+      );
+
+
+    // ==========================================================
+    // INJURIES
+    // ==========================================================
+
+    searches.injuries =
+      await webSearch(
+        `${matchPhrase} injuries suspended players ${date}`,
+        "injuries"
+      );
+
+
+    // ==========================================================
+    // LINEUPS
+    // ==========================================================
+
+    searches.lineups =
+      await webSearch(
+        `${matchPhrase} predicted lineups team news ${date}`,
+        "lineups"
+      );
+
+
+    // ==========================================================
+    // ODDS
+    // ==========================================================
+
+    searches.odds =
+      await webSearch(
+        `${matchPhrase} odds 1X2 over under ${date}`,
+        "odds"
+      );
+
+
+    // ==========================================================
+    // API-FOOTBALL DIRECT DATA
+    //
+    // These requests are optional.
+    // If the API plan/season does not provide something,
+    // the endpoint still returns successfully.
+    // ==========================================================
+
+    const apiData = {
+
+      homeTeam: null,
+
+      awayTeam: null,
+
+      homeLastFive: null,
+
+      awayLastFive: null,
+
+      homeH2H: null,
+
+      awayH2H: null
+
+    };
+
+
+    // ==========================================================
+    // TEAM DETAILS
+    // ==========================================================
+
+    if (
+      homeTeam.teamId
+    ) {
+
+      apiData.homeTeam =
+        await apiFootball(
+          "teams",
+          {
+            id:
+              homeTeam.teamId
+          }
+        );
+
     }
+
+
+    if (
+      awayTeam.teamId
+    ) {
+
+      apiData.awayTeam =
+        await apiFootball(
+          "teams",
+          {
+            id:
+              awayTeam.teamId
+          }
+        );
+
+    }
+
+
+    // ==========================================================
+    // LAST FIVE HOME TEAM
+    // ==========================================================
+
+    if (
+      homeTeam.teamId
+    ) {
+
+      apiData.homeLastFive =
+        await apiFootball(
+          "fixtures",
+          {
+            team:
+              homeTeam.teamId,
+
+            last:
+              5
+          }
+        );
+
+    }
+
+
+    // ==========================================================
+    // LAST FIVE AWAY TEAM
+    // ==========================================================
+
+    if (
+      awayTeam.teamId
+    ) {
+
+      apiData.awayLastFive =
+        await apiFootball(
+          "fixtures",
+          {
+            team:
+              awayTeam.teamId,
+
+            last:
+              5
+          }
+        );
+
+    }
+
+
+    // ==========================================================
+    // H2H
+    // ==========================================================
+
+    if (
+      homeTeam.teamId &&
+      awayTeam.teamId
+    ) {
+
+      apiData.homeH2H =
+        await apiFootball(
+          "fixtures/headtohead",
+          {
+            h2h:
+              `${homeTeam.teamId}-${awayTeam.teamId}`,
+
+            last:
+              5
+          }
+        );
+
+    }
+
+
+    // ==========================================================
+    // SEARCH SUMMARY
+    // ==========================================================
+
+    const searchCategories =
+      Object.keys(
+        searches
+      );
+
+
+    const successfulSearches =
+      searchCategories.filter(
+        category =>
+          searches[
+            category
+          ]?.success === true
+      );
+
+
+    const failedSearches =
+      searchCategories.filter(
+        category =>
+          searches[
+            category
+          ]?.success !== true
+      );
+
+
+    // ==========================================================
+    // RAW EVIDENCE COUNTS
+    // ==========================================================
+
+    const evidenceCounts = {};
+
+
+    searchCategories.forEach(
+      category => {
+
+        evidenceCounts[
+          category
+        ] =
+          safeArray(
+            searches[
+              category
+            ]?.results
+          ).length;
+
+      }
+    );
+
+
+    // ==========================================================
+    // TEAM ID WARNING
+    // ==========================================================
+
+    const identityWarnings = [];
+
+
+    if (
+      !homeTeam.resolved
+    ) {
+
+      identityWarnings.push(
+        `Unable to reliably resolve API-Football ID for ${home}.`
+      );
+
+    }
+
+
+    if (
+      !awayTeam.resolved
+    ) {
+
+      identityWarnings.push(
+        `Unable to reliably resolve API-Football ID for ${away}.`
+      );
+
+    }
+
+
+    if (
+      homeTeam.resolved &&
+      awayTeam.resolved &&
+      Number(homeTeam.teamId) ===
+      Number(awayTeam.teamId)
+    ) {
+
+      identityWarnings.push(
+        "Home and away teams resolved to the same team ID."
+      );
+
+    }
+
+
+    // ==========================================================
+    // ENGINE SIGNAL MAP
+    //
+    // This tells normalize-web.js and predict.js exactly
+    // which evidence belongs to which prediction signal.
+    // ==========================================================
+
+    const signalMap = {
+
+      last5RecencyWeighted: {
+
+        weight:
+          0.45,
+
+        sources: [
+          "api.homeLastFive",
+          "api.awayLastFive",
+          "searches.form"
+        ]
+
+      },
+
+      leagueStandings: {
+
+        weight:
+          0.30,
+
+        sources: [
+          "searches.standings"
+        ]
+
+      },
+
+      seasonHomeAwayStrength: {
+
+        weight:
+          0.05,
+
+        sources: [
+          "searches.homeAway",
+          "searches.awayStrength"
+        ]
+
+      },
+
+      expectedGoals: {
+
+        weight:
+          0.10,
+
+        sources: [
+          "searches.xg",
+          "searches.goals"
+        ]
+
+      },
+
+      recentVenueForm: {
+
+        weight:
+          0.05,
+
+        sources: [
+          "searches.venue",
+          "searches.awayVenue"
+        ]
+
+      },
+
+      last5H2H: {
+
+        weight:
+          0.05,
+
+        sources: [
+          "api.homeH2H",
+          "searches.h2h"
+        ]
+
+      }
+
+    };
+
+
+    // ==========================================================
+    // RESPONSE
+    // ==========================================================
+
+    return res.status(200).json({
+
+      success: true,
+
+      version:
+        "Web Data V4.0",
+
+      searchedAt:
+        new Date()
+          .toISOString(),
+
+      durationMs:
+        Date.now() -
+        startedAt,
+
+
+      // ========================================================
+      // MATCH
+      // ========================================================
+
+      match: {
+
+        home:
+          home,
+
+        homeIdentity:
+          homeIdentity ||
+          normalizeIdentity(home),
+
+        away:
+          away,
+
+        awayIdentity:
+          awayIdentity ||
+          normalizeIdentity(away),
+
+        date:
+          date
+
+      },
+
+
+      // ========================================================
+      // RESOLVED TEAMS
+      // ========================================================
+
+      teams: {
+
+        home:
+          homeTeam,
+
+        away:
+          awayTeam
+
+      },
+
+
+      // ========================================================
+      // API DATA
+      // ========================================================
+
+      api: {
+
+        provider:
+          "API-Football",
+
+        available:
+          Boolean(apiFootballKey),
+
+        homeTeam:
+          apiData.homeTeam,
+
+        awayTeam:
+          apiData.awayTeam,
+
+        homeLastFive:
+          apiData.homeLastFive,
+
+        awayLastFive:
+          apiData.awayLastFive,
+
+        h2h:
+          apiData.homeH2H
+
+      },
+
+
+      // ========================================================
+      // WEB SEARCH DATA
+      // ========================================================
+
+      searches,
+
+
+      // ========================================================
+      // EVIDENCE
+      // ========================================================
+
+      evidence: {
+
+        categories:
+          searchCategories,
+
+        successfulSearches:
+          successfulSearches.length,
+
+        failedSearches:
+          failedSearches.length,
+
+        totalSearchResults:
+          Object.values(
+            evidenceCounts
+          ).reduce(
+            (
+              total,
+              count
+            ) =>
+              total + count,
+            0
+          ),
+
+        counts:
+          evidenceCounts
+
+      },
+
+
+      // ========================================================
+      // SIGNAL MAP
+      // ========================================================
+
+      signalMap,
+
+
+      // ========================================================
+      // WARNINGS
+      // ========================================================
+
+      warnings:
+        identityWarnings,
+
+
+      // ========================================================
+      // DOWNSTREAM STATUS
+      // ========================================================
+
+      downstream: {
+
+        normalizationRequired:
+          true,
+
+        predictionReady:
+          false,
+
+        predictionEndpoint:
+          "/api/predict",
+
+        normalizationEndpoint:
+          "/api/normalize-web"
+
+      },
+
+
+      // ========================================================
+      // ENGINE RULES
+      // ========================================================
+
+      engine: {
+
+        version:
+          "Prediction Engine V4.0",
+
+        weights: {
+
+          last5RecencyWeighted:
+            45,
+
+          leagueStandings:
+            30,
+
+          seasonHomeAwayStrength:
+            5,
+
+          expectedGoals:
+            10,
+
+          recentVenueForm:
+            5,
+
+          last5H2H:
+            5
+
+        },
+
+        totalWeight:
+          100,
+
+        excludedFromCoreScore: [
+          "injuries",
+          "lineups",
+          "odds"
+        ],
+
+        note:
+          "Injuries, lineups and odds are collected as contextual evidence but are not part of the six-signal 100% core score."
+
+      }
+
+    });
+
+
+  } catch (error) {
+
+    console.error(
+      "Web Data V4.0 error:",
+      error
+    );
+
+
+    return res.status(500).json({
+
+      success: false,
+
+      version:
+        "Web Data V4.0",
+
+      error:
+        "Unable to collect football web data.",
+
+      details:
+        error?.message ||
+        "Unknown server error."
+
+    });
+
+  }
+
 }
