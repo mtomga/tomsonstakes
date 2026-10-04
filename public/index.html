@@ -935,38 +935,105 @@ document.addEventListener(
 /* =====================================================
    LOAD PAGE
 ===================================================== */
+ let selectedDate = getToday();
+
 
 async function loadPage() {
+
+    await loadSelectedDate();
+
+    document.getElementById(
+        "prevDate"
+    ).addEventListener(
+        "click",
+        function() {
+            changeDate(-1);
+        }
+    );
+
+    document.getElementById(
+        "nextDate"
+    ).addEventListener(
+        "click",
+        function() {
+            changeDate(1);
+        }
+    );
+
+}
+
+
+async function loadSelectedDate() {
+
+    const title =
+        document.getElementById(
+            "predictionTitle"
+        );
+
+    const dateLabel =
+        document.getElementById(
+            "predictionDate"
+        );
 
     const today =
         getToday();
 
+    dateLabel.textContent =
+        formatDate(selectedDate);
 
-    document.getElementById(
-        "predictionDate"
-    ).textContent =
-        formatDate(today);
+    if (selectedDate === today) {
 
+        title.textContent =
+            "🔥 TODAY'S PREDICTIONS";
 
-    /*
-     * Load predictions and daily slip
-     * independently.
-     *
-     * This is important because the
-     * daily_slips record is a separate
-     * table from predictions.
-     */
+    }
+
+    else {
+
+        title.textContent =
+            "🔥 PREDICTIONS";
+
+    }
+
 
     await Promise.allSettled([
 
-        loadPredictions(today),
+        loadPredictions(selectedDate),
 
-        loadDailySlip(today)
+        loadDailySlip(selectedDate)
 
     ]);
 
 }
 
+
+async function changeDate(days) {
+
+    const parts =
+        selectedDate.split("-").map(
+            Number
+        );
+
+    const date =
+        new Date(
+            Date.UTC(
+                parts[0],
+                parts[1] - 1,
+                parts[2]
+            )
+        );
+
+    date.setUTCDate(
+        date.getUTCDate() + days
+    );
+
+    selectedDate =
+        date.toISOString()
+            .slice(0, 10);
+
+    await loadSelectedDate();
+
+}
 
 /* =====================================================
    LOAD PREDICTIONS
