@@ -1,6 +1,7 @@
 const { createClient } = require("@supabase/supabase-js");
 
 const supabaseUrl = process.env.SUPABASE_URL;
+
 const supabaseKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_ANON_KEY;
@@ -78,6 +79,77 @@ function readBody(req) {
         req.on("error", reject);
 
     });
+
+}
+
+
+/* =====================================================
+   NORMALIZE STATUS
+===================================================== */
+
+function normalizeStatus(status) {
+
+    const value =
+        String(
+            status || "DRAFT"
+        )
+        .trim()
+        .toUpperCase();
+
+
+    const allowed = [
+        "DRAFT",
+        "PUBLISHED",
+        "UNPUBLISHED"
+    ];
+
+
+    if (
+        allowed.includes(value)
+    ) {
+
+        return value;
+
+    }
+
+
+    return "DRAFT";
+
+}
+
+
+/* =====================================================
+   NORMALIZE RESULT
+===================================================== */
+
+function normalizeResult(result) {
+
+    const value =
+        String(
+            result || "PENDING"
+        )
+        .trim()
+        .toUpperCase();
+
+
+    const allowed = [
+        "PENDING",
+        "WIN",
+        "LOSS",
+        "VOID"
+    ];
+
+
+    if (
+        allowed.includes(value)
+    ) {
+
+        return value;
+
+    }
+
+
+    return "PENDING";
 
 }
 
@@ -218,13 +290,36 @@ module.exports = async function handler(req, res) {
             }
 
 
+            /*
+             * Daily slips have their own table,
+             * so their status is kept separate
+             * from predictions.status.
+             */
+
+            const slipStatus =
+                String(
+                    body.status ||
+                    "DRAFT"
+                )
+                .trim()
+                .toUpperCase();
+
+
+            const allowedSlipStatuses = [
+                "DRAFT",
+                "PUBLISHED",
+                "UNPUBLISHED"
+            ];
+
+
             const status =
-                body.status ===
-                "published"
+                allowedSlipStatuses.includes(
+                    slipStatus
+                )
                     ?
-                "published"
+                slipStatus
                     :
-                "draft";
+                "DRAFT";
 
 
             const slipData = {
@@ -241,7 +336,6 @@ module.exports = async function handler(req, res) {
                     null,
 
                 status:
-
                     status,
 
                 updated_at:
@@ -252,7 +346,7 @@ module.exports = async function handler(req, res) {
 
             if (
                 status ===
-                "published"
+                "PUBLISHED"
             ) {
 
                 slipData.published_at =
@@ -291,7 +385,15 @@ module.exports = async function handler(req, res) {
                     {
                         success: false,
                         error:
-                            error.message
+                            error.message,
+
+                        details:
+                            error.details ||
+                            null,
+
+                        hint:
+                            error.hint ||
+                            null
                     }
                 );
 
@@ -303,8 +405,10 @@ module.exports = async function handler(req, res) {
                 200,
                 {
                     success: true,
+
                     type:
                         "daily_slip",
+
                     slip:
                         data
                 }
@@ -342,6 +446,10 @@ module.exports = async function handler(req, res) {
                 body.confidence
             );
 
+
+        /* =============================================
+           VALIDATION
+        ============================================= */
 
         if (!predictionDate) {
 
@@ -420,7 +528,7 @@ module.exports = async function handler(req, res) {
 
         /* =============================================
            CONFIDENCE
-           Supabase constraint = 5 to 10
+           Database requires 5 to 10
         ============================================= */
 
         if (
@@ -444,14 +552,29 @@ module.exports = async function handler(req, res) {
         }
 
 
-        let status =
-            body.status ===
-            "published"
-                ?
-            "published"
-                :
-            "draft";
+        /* =============================================
+           NORMALIZE STATUS
+        ============================================= */
 
+        const status =
+            normalizeStatus(
+                body.status
+            );
+
+
+        /* =============================================
+           NORMALIZE RESULT
+        ============================================= */
+
+        const result =
+            normalizeResult(
+                body.result
+            );
+
+
+        /* =============================================
+           BUILD PREDICTION
+        ============================================= */
 
         const predictionData = {
 
@@ -505,8 +628,7 @@ module.exports = async function handler(req, res) {
                 status,
 
             result:
-                body.result ||
-                "pending",
+                result,
 
             updated_at:
                 new Date().toISOString()
@@ -520,7 +642,7 @@ module.exports = async function handler(req, res) {
 
         if (
             status ===
-            "published"
+            "PUBLISHED"
         ) {
 
             predictionData.published_at =
@@ -530,7 +652,7 @@ module.exports = async function handler(req, res) {
 
 
         /* =============================================
-           INSERT
+           INSERT INTO PREDICTIONS
         ============================================= */
 
         const {
@@ -558,6 +680,7 @@ module.exports = async function handler(req, res) {
                 500,
                 {
                     success: false,
+
                     error:
                         error.message,
 
@@ -567,6 +690,10 @@ module.exports = async function handler(req, res) {
 
                     hint:
                         error.hint ||
+                        null,
+
+                    code:
+                        error.code ||
                         null
                 }
             );
@@ -590,6 +717,11 @@ module.exports = async function handler(req, res) {
         );
 
     }
+
+
+    /* =================================================
+       GLOBAL ERROR HANDLER
+    ================================================= */
 
     catch (error) {
 
