@@ -30,70 +30,33 @@
 }
 
 body {
-
     margin: 0;
-
-    font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
-
+    font-family: Arial, Helvetica, sans-serif;
     background:
-        radial-gradient(
-            circle at 20% 0%,
-            #123b2a 0,
-            transparent 28%
-        ),
-        radial-gradient(
-            circle at 100% 10%,
-            #17395c 0,
-            transparent 30%
-        ),
+        radial-gradient(circle at 20% 0%, #123b2a 0, transparent 28%),
+        radial-gradient(circle at 100% 10%, #17395c 0, transparent 30%),
         #050b14;
-
     color: var(--text);
-
     min-height: 100vh;
 }
 
-
-/* =====================================================
-   CONTAINER
-===================================================== */
-
 .container {
-
     width: 100%;
-
     max-width: 1100px;
-
     margin: auto;
-
-    padding:
-        16px;
-
+    padding: 16px;
 }
-
 
 /* =====================================================
    HERO
 ===================================================== */
 
 .hero {
-
     position: relative;
-
     overflow: hidden;
-
-    border:
-        1px solid
-        var(--border);
-
+    border: 1px solid var(--border);
     border-radius: 24px;
-
-    padding:
-        30px 24px;
-
+    padding: 30px 24px;
     margin-bottom: 16px;
 
     background:
@@ -105,65 +68,34 @@ body {
         );
 
     box-shadow:
-        0 20px 70px
-        rgba(0,0,0,.3);
-
+        0 20px 70px rgba(0,0,0,.3);
 }
-
 
 .hero:after {
-
     content: "";
-
     position: absolute;
-
     width: 180px;
-
     height: 180px;
-
     border-radius: 50%;
-
-    background:
-        rgba(34,197,94,.10);
-
+    background: rgba(34,197,94,.10);
     right: -50px;
-
     top: -70px;
-
 }
-
 
 .brand {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
+    display: flex;
+    align-items: center;
     gap: 14px;
-
     position: relative;
-
     z-index: 2;
-
 }
 
-
 .logo {
-
     width: 60px;
-
     height: 60px;
-
-    display:
-        grid;
-
-    place-items:
-        center;
-
-    border-radius:
-        18px;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
 
     background:
         linear-gradient(
@@ -175,45 +107,29 @@ body {
     font-size: 28px;
 
     box-shadow:
-        0 10px 30px
-        rgba(34,197,94,.25);
-
+        0 10px 30px rgba(34,197,94,.25);
 }
-
 
 .hero h1 {
-
     margin: 0;
-
     font-size: 32px;
-
     font-weight: 950;
-
-    letter-spacing:
-        -1px;
-
+    letter-spacing: -1px;
 }
-
 
 .hero p {
-
-    margin:
-        7px 0 0;
-
-    color:
-        var(--muted);
-
-    font-size:
-        13px;
-
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: 13px;
 }
 
-
 /* =====================================================
-   DAILY SLIP CARD
+   TODAY'S BOOKING
 ===================================================== */
 
 .slip-card {
+
+    position: relative;
 
     background:
         linear-gradient(
@@ -224,113 +140,173 @@ body {
 
     border:
         1px solid
-        rgba(34,197,94,.35);
+        rgba(34,197,94,.45);
 
     border-radius:
-        18px;
-
-    padding:
         20px;
 
+    padding:
+        22px;
+
     margin-bottom:
-        18px;
+        20px;
+
+    box-shadow:
+        0 12px 35px
+        rgba(0,0,0,.20);
 
 }
 
+.slip-card:before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 90px;
+    height: 90px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(34,197,94,.08);
+
+    right: -25px;
+    top: -25px;
+
+}
 
 .slip-label {
+
+    position: relative;
 
     color:
         #86efac;
 
     font-size:
-        10px;
+        11px;
 
     font-weight:
-        900;
+        950;
 
     letter-spacing:
-        1.3px;
+        1.5px;
 
     text-transform:
         uppercase;
 
 }
 
-
 .slip-code {
 
+    position: relative;
+
     font-size:
-        27px;
+        29px;
 
     font-weight:
         950;
 
     margin-top:
-        5px;
+        8px;
 
     letter-spacing:
-        1px;
-
-}
-
-
-.slip-meta {
-
-    display:
-        flex;
-
-    flex-wrap:
-        wrap;
-
-    gap:
-        8px;
-
-    margin-top:
-        13px;
-
-}
-
-
-.meta {
-
-    padding:
-        7px 10px;
-
-    border-radius:
-        8px;
-
-    background:
-        rgba(0,0,0,.2);
+        1.5px;
 
     color:
-        #d1fae5;
-
-    font-size:
-        10px;
-
-    font-weight:
-        800;
+        #ffffff;
 
 }
 
+.slip-details {
+
+    position: relative;
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap:
+        10px;
+
+    margin-top:
+        16px;
+
+}
+
+.slip-detail {
+
+    background:
+        rgba(0,0,0,.20);
+
+    border:
+        1px solid
+        rgba(255,255,255,.07);
+
+    border-radius:
+        10px;
+
+    padding:
+        10px;
+
+}
+
+.slip-detail-label {
+
+    color:
+        #86efac;
+
+    font-size:
+        9px;
+
+    font-weight:
+        900;
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        .8px;
+
+}
+
+.slip-detail-value {
+
+    margin-top:
+        4px;
+
+    color:
+        #ffffff;
+
+    font-size:
+        14px;
+
+    font-weight:
+        900;
+
+}
 
 .copy-button {
 
+    position:
+        relative;
+
     margin-top:
-        13px;
+        15px;
 
     background:
         #22c55e;
 
     color:
-        white;
+        #ffffff;
 
     border:
         none;
 
     padding:
-        10px 14px;
+        11px 15px;
 
     border-radius:
         9px;
@@ -343,6 +319,9 @@ body {
 
 }
 
+.copy-button:hover {
+    background: #16a34a;
+}
 
 /* =====================================================
    SECTION
@@ -364,7 +343,6 @@ body {
 
 }
 
-
 .section-title h2 {
 
     margin:
@@ -378,7 +356,6 @@ body {
 
 }
 
-
 .date-label {
 
     color:
@@ -388,7 +365,6 @@ body {
         10px;
 
 }
-
 
 /* =====================================================
    LEAGUE
@@ -413,7 +389,6 @@ body {
         15px;
 
 }
-
 
 .league-header {
 
@@ -442,7 +417,6 @@ body {
 
 }
 
-
 .league-name {
 
     font-size:
@@ -452,7 +426,6 @@ body {
         950;
 
 }
-
 
 .league-country {
 
@@ -466,7 +439,6 @@ body {
         9px;
 
 }
-
 
 .league-count {
 
@@ -493,7 +465,6 @@ body {
         900;
 
 }
-
 
 /* =====================================================
    PREDICTION
@@ -526,7 +497,6 @@ body {
 
 }
 
-
 .pred-top {
 
     display:
@@ -549,7 +519,6 @@ body {
 
 }
 
-
 .pred-teams {
 
     display:
@@ -569,7 +538,6 @@ body {
 
 }
 
-
 .team {
 
     font-size:
@@ -580,14 +548,9 @@ body {
 
 }
 
-
 .away {
-
-    text-align:
-        right;
-
+    text-align: right;
 }
-
 
 .vs {
 
@@ -601,7 +564,6 @@ body {
         950;
 
 }
-
 
 /* =====================================================
    PICK
@@ -627,7 +589,6 @@ body {
 
 }
 
-
 .pick-market {
 
     color:
@@ -644,7 +605,6 @@ body {
 
 }
 
-
 .pick-selection {
 
     margin-top:
@@ -660,7 +620,6 @@ body {
         950;
 
 }
-
 
 .confidence {
 
@@ -690,7 +649,6 @@ body {
 
 }
 
-
 /* =====================================================
    ANALYSIS
 ===================================================== */
@@ -711,7 +669,6 @@ body {
 
 }
 
-
 .empty {
 
     text-align:
@@ -727,7 +684,6 @@ body {
         12px;
 
 }
-
 
 /* =====================================================
    FOOTER
@@ -749,7 +705,6 @@ body {
 
 }
 
-
 @media(max-width:600px) {
 
     .hero h1 {
@@ -769,17 +724,19 @@ body {
         font-size: 23px;
     }
 
+    .slip-details {
+        grid-template-columns: 1fr;
+    }
+
 }
 
 </style>
 
 </head>
 
-
 <body>
 
 <div class="container">
-
 
     <!-- HERO -->
 
@@ -809,7 +766,9 @@ body {
     </div>
 
 
-    <!-- DAILY SLIP -->
+    <!-- =================================================
+         TODAY'S BOOKING
+    ================================================== -->
 
     <div
         id="dailySlip"
@@ -818,7 +777,7 @@ body {
     >
 
         <div class="slip-label">
-            🎟️ TODAY'S BOOKING CODE
+            🎟️ TODAY'S BOOKING
         </div>
 
         <div
@@ -828,14 +787,44 @@ body {
             —
         </div>
 
-        <div
-            id="slipMeta"
-            class="slip-meta"
-        ></div>
+        <div class="slip-details">
+
+            <div class="slip-detail">
+
+                <div class="slip-detail-label">
+                    Booking Code
+                </div>
+
+                <div
+                    id="bookingCodeDetail"
+                    class="slip-detail-value"
+                >
+                    —
+                </div>
+
+            </div>
+
+            <div class="slip-detail">
+
+                <div class="slip-detail-label">
+                    Bookmaker
+                </div>
+
+                <div
+                    id="bookmakerDetail"
+                    class="slip-detail-value"
+                >
+                    —
+                </div>
+
+            </div>
+
+        </div>
 
         <button
             id="copyButton"
             class="copy-button"
+            type="button"
         >
             📋 COPY BOOKING CODE
         </button>
@@ -843,7 +832,9 @@ body {
     </div>
 
 
-    <!-- TITLE -->
+    <!-- =================================================
+         PREDICTIONS TITLE
+    ================================================== -->
 
     <div class="section-title">
 
@@ -889,7 +880,7 @@ let currentBookingCode = "";
 
 
 /* =====================================================
-   LOAD
+   START
 ===================================================== */
 
 document.addEventListener(
@@ -897,6 +888,10 @@ document.addEventListener(
     loadPage
 );
 
+
+/* =====================================================
+   LOAD PAGE
+===================================================== */
 
 async function loadPage() {
 
@@ -910,19 +905,51 @@ async function loadPage() {
         formatDate(today);
 
 
+    /*
+     * Load predictions and daily slip
+     * independently.
+     *
+     * This is important because the
+     * daily_slips record is a separate
+     * table from predictions.
+     */
+
+    await Promise.allSettled([
+
+        loadPredictions(today),
+
+        loadDailySlip(today)
+
+    ]);
+
+}
+
+
+/* =====================================================
+   LOAD PREDICTIONS
+===================================================== */
+
+async function loadPredictions(
+    date
+) {
+
+    const box =
+        document.getElementById(
+            "predictions"
+        );
+
+
     try {
 
         const response =
             await fetch(
                 "/api/predictions?date=" +
-                encodeURIComponent(today)
+                encodeURIComponent(date)
             );
 
 
         const data =
-            await readJson(
-                response
-            );
+            await readJson(response);
 
 
         if (!response.ok) {
@@ -946,6 +973,12 @@ async function loadPage() {
             [];
 
 
+        /*
+         * Only published predictions
+         * are visible on the public
+         * frontend.
+         */
+
         const published =
             predictions.filter(
                 function(item) {
@@ -962,32 +995,25 @@ async function loadPage() {
             published
         );
 
-
-        /*
-         * Daily slip is currently returned
-         * through the same API only if your
-         * backend provides it.
-         *
-         * If not, we attempt the dedicated
-         * daily slip endpoint.
-         */
-
-        await loadDailySlip(
-            today
-        );
-
     }
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "Prediction loading error:",
+            error
+        );
 
-        document.getElementById(
-            "predictions"
-        ).innerHTML = `
+
+        box.innerHTML = `
+
             <div class="empty">
-                Unable to load today's predictions.
+
+                Unable to load today's
+                predictions.
+
             </div>
+
         `;
 
     }
@@ -996,14 +1022,40 @@ async function loadPage() {
 
 
 /* =====================================================
-   DAILY SLIP
+   LOAD DAILY SLIP
 ===================================================== */
 
 async function loadDailySlip(
     date
 ) {
 
+    const card =
+        document.getElementById(
+            "dailySlip"
+        );
+
+
     try {
+
+        /*
+         * IMPORTANT:
+         *
+         * This endpoint must return
+         * the exact daily_slips row
+         * for the requested date.
+         *
+         * Example:
+         *
+         * {
+         *   success: true,
+         *   slip: {
+         *      prediction_date: "2026-10-04",
+         *      booking_code: "XXXXXXXX",
+         *      bookmaker: "Bet9ja",
+         *      status: "PUBLISHED"
+         *   }
+         * }
+         */
 
         const response =
             await fetch(
@@ -1014,29 +1066,44 @@ async function loadDailySlip(
 
         if (!response.ok) {
 
+            /*
+             * No published slip is not
+             * a page-breaking error.
+             */
+
+            card.style.display =
+                "none";
+
             return;
 
         }
 
 
         const data =
-            await readJson(
-                response
-            );
+            await readJson(response);
 
 
         const slip =
             data.slip ||
             data.daily_slip ||
-            data.data;
+            data.data ||
+            null;
 
 
         if (!slip) {
+
+            card.style.display =
+                "none";
 
             return;
 
         }
 
+
+        /*
+         * Never display a draft slip
+         * publicly.
+         */
 
         if (
             normalizeStatus(
@@ -1044,6 +1111,44 @@ async function loadDailySlip(
             ) !==
             "PUBLISHED"
         ) {
+
+            card.style.display =
+                "none";
+
+            return;
+
+        }
+
+
+        /*
+         * Make sure the returned row
+         * actually belongs to today.
+         */
+
+        if (
+            slip.prediction_date &&
+            String(
+                slip.prediction_date
+            ) !== String(date)
+        ) {
+
+            card.style.display =
+                "none";
+
+            return;
+
+        }
+
+
+        if (
+            !slip.booking_code ||
+            !String(
+                slip.booking_code
+            ).trim()
+        ) {
+
+            card.style.display =
+                "none";
 
             return;
 
@@ -1058,16 +1163,14 @@ async function loadDailySlip(
 
     catch (error) {
 
-        /*
-         * Do not break the prediction
-         * page if the optional slip
-         * endpoint is unavailable.
-         */
-
-        console.log(
-            "Daily slip unavailable:",
+        console.error(
+            "Daily slip loading error:",
             error
         );
+
+
+        card.style.display =
+            "none";
 
     }
 
@@ -1089,13 +1192,26 @@ function showDailySlip(
 
 
     const code =
-        slip.booking_code ||
-        "";
+        String(
+            slip.booking_code ||
+            ""
+        ).trim();
+
+
+    const bookmaker =
+        String(
+            slip.bookmaker ||
+            ""
+        ).trim();
 
 
     if (!code) {
 
+        card.style.display =
+            "none";
+
         return;
+
     }
 
 
@@ -1103,79 +1219,66 @@ function showDailySlip(
         code;
 
 
+    /*
+     * Main prominent booking code.
+     */
+
     document.getElementById(
         "bookingCode"
     ).textContent =
         code;
 
 
-    const meta =
-        document.getElementById(
-            "slipMeta"
-        );
+    /*
+     * Booking code detail.
+     */
+
+    document.getElementById(
+        "bookingCodeDetail"
+    ).textContent =
+        code;
 
 
-    meta.innerHTML = `
+    /*
+     * Bookmaker.
+     */
 
-        ${
-            slip.bookmaker
-            ?
-            `<span class="meta">
-                🏦 ${escapeHtml(
-                    slip.bookmaker
-                )}
-            </span>`
-            :
-            ""
-        }
+    document.getElementById(
+        "bookmakerDetail"
+    ).textContent =
+        bookmaker ||
+        "—";
 
-        <span class="meta">
-            📅 ${escapeHtml(
-                formatDate(
-                    slip.prediction_date
-                )
-            )}
-        </span>
 
-    `;
-
+    /*
+     * Show the card.
+     */
 
     card.style.display =
         "block";
 
 
+    /*
+     * Attach copy button.
+     */
+
     document.getElementById(
         "copyButton"
     ).onclick =
         copyBookingCode;
+
 }
 
 
 /* =====================================================
-   COPY
+   COPY BOOKING CODE
 ===================================================== */
 
-function copyBookingCode() {
+async function copyBookingCode() {
 
     if (!currentBookingCode) {
 
         return;
-    }
-
-
-    /*
-     * Clipboard API may not be available
-     * everywhere, so provide a fallback.
-     */
-
-    if (
-        navigator.clipboard &&
-        navigator.clipboard.writeText
-    ) {
-
-        navigator.clipboard.writeText(
-            currentBookingCode
-        );
 
     }
 
@@ -1186,23 +1289,88 @@ function copyBookingCode() {
         );
 
 
-    const old =
+    const oldText =
         button.textContent;
 
 
-    button.textContent =
-        "✅ COPIED";
+    try {
+
+        if (
+            navigator.clipboard &&
+            navigator.clipboard.writeText
+        ) {
+
+            await navigator.clipboard.writeText(
+                currentBookingCode
+            );
+
+        }
+
+        else {
+
+            /*
+             * Fallback for older browsers.
+             */
+
+            const textarea =
+                document.createElement(
+                    "textarea"
+                );
+
+            textarea.value =
+                currentBookingCode;
+
+            textarea.style.position =
+                "fixed";
+
+            textarea.style.opacity =
+                "0";
+
+            document.body.appendChild(
+                textarea
+            );
+
+            textarea.focus();
+
+            textarea.select();
+
+            document.execCommand(
+                "copy"
+            );
+
+            textarea.remove();
+
+        }
+
+
+        button.textContent =
+            "✅ COPIED";
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Copy error:",
+            error
+        );
+
+        button.textContent =
+            "⚠️ COPY FAILED";
+
+    }
 
 
     setTimeout(
         function() {
 
             button.textContent =
-                old;
+                oldText;
 
         },
         1500
     );
+
 }
 
 
@@ -1223,13 +1391,18 @@ function renderPredictions(
     if (!predictions.length) {
 
         box.innerHTML = `
+
             <div class="empty">
+
                 No published predictions
                 for this date yet.
+
             </div>
+
         `;
 
         return;
+
     }
 
 
@@ -1323,8 +1496,10 @@ function renderPredictions(
                         </div>
 
                         <div class="league-count">
+
                             ${league.items.length}
                             PICKS
+
                         </div>
 
                     </div>
@@ -1354,6 +1529,7 @@ function renderPredictions(
 
     box.innerHTML =
         html;
+
 }
 
 
@@ -1378,18 +1554,23 @@ function buildPrediction(
             <div class="pred-top">
 
                 <span>
+
                     #${escapeHtml(
                         String(
                             item.fixture_id ||
                             ""
                         )
                     )}
+
                 </span>
 
                 <span>
-                    🕐 ${escapeHtml(
+
+                    🕐
+                    ${escapeHtml(
                         kickoff
                     )}
+
                 </span>
 
             </div>
@@ -1398,19 +1579,27 @@ function buildPrediction(
             <div class="pred-teams">
 
                 <div class="team">
+
                     ${escapeHtml(
                         item.home_team
                     )}
+
                 </div>
+
 
                 <div class="vs">
+
                     VS
+
                 </div>
 
+
                 <div class="team away">
+
                     ${escapeHtml(
                         item.away_team
                     )}
+
                 </div>
 
             </div>
@@ -1419,24 +1608,32 @@ function buildPrediction(
             <div class="pick-box">
 
                 <div class="pick-market">
+
                     ${escapeHtml(
                         item.market
                     )}
+
                 </div>
 
+
                 <div class="pick-selection">
+
                     ${escapeHtml(
                         item.selection
                     )}
+
                 </div>
 
+
                 <span class="confidence">
+
                     ⭐ Confidence
                     ${escapeHtml(
                         String(
                             item.confidence
                         )
                     )}/10
+
                 </span>
 
             </div>
@@ -1461,11 +1658,12 @@ function buildPrediction(
         </article>
 
     `;
+
 }
 
 
 /* =====================================================
-   TODAY
+   TODAY — NIGERIA DATE
 ===================================================== */
 
 function getToday() {
@@ -1474,22 +1672,60 @@ function getToday() {
         new Date();
 
 
-    return (
-        now.getFullYear() +
-        "-" +
-        String(
-            now.getMonth() + 1
-        ).padStart(2, "0") +
-        "-" +
-        String(
-            now.getDate()
-        ).padStart(2, "0")
+    const parts =
+        new Intl.DateTimeFormat(
+            "en-CA",
+            {
+                timeZone:
+                    "Africa/Lagos",
+
+                year:
+                    "numeric",
+
+                month:
+                    "2-digit",
+
+                day:
+                    "2-digit"
+            }
+        ).formatToParts(now);
+
+
+    const values = {};
+
+
+    parts.forEach(
+        function(part) {
+
+            if (
+                part.type !==
+                "literal"
+            ) {
+
+                values[
+                    part.type
+                ] =
+                    part.value;
+
+            }
+
+        }
     );
+
+
+    return (
+        values.year +
+        "-" +
+        values.month +
+        "-" +
+        values.day
+    );
+
 }
 
 
 /* =====================================================
-   DATE
+   DATE DISPLAY
 ===================================================== */
 
 function formatDate(
@@ -1499,6 +1735,7 @@ function formatDate(
     if (!date) {
 
         return "";
+
     }
 
 
@@ -1509,11 +1746,14 @@ function formatDate(
         );
 
 
-    if (Number.isNaN(
-        d.getTime()
-    )) {
+    if (
+        Number.isNaN(
+            d.getTime()
+        )
+    ) {
 
         return date;
+
     }
 
 
@@ -1532,6 +1772,7 @@ function formatDate(
 
         }
     );
+
 }
 
 
@@ -1546,13 +1787,12 @@ function formatKickoff(
     if (!value) {
 
         return "Time unavailable";
+
     }
 
 
     const d =
-        new Date(
-            value
-        );
+        new Date(value);
 
 
     if (
@@ -1562,6 +1802,7 @@ function formatKickoff(
     ) {
 
         return "Time unavailable";
+
     }
 
 
@@ -1589,6 +1830,7 @@ function formatKickoff(
 
         }
     ) + " WAT";
+
 }
 
 
@@ -1603,7 +1845,10 @@ function normalizeStatus(
     return String(
         status ||
         ""
-    ).toUpperCase();
+    )
+    .trim()
+    .toUpperCase();
+
 }
 
 
@@ -1647,6 +1892,7 @@ const TOP_LEAGUES = [
 
     "CAF Champions League",
     "CAF Confederation Cup"
+
 ];
 
 
@@ -1679,12 +1925,14 @@ function getLeaguePriority(
         ) {
 
             return i;
+
         }
 
     }
 
 
     return 1000;
+
 }
 
 
@@ -1706,6 +1954,7 @@ function normalizeLeague(
         " "
     )
     .trim();
+
 }
 
 
@@ -1736,11 +1985,12 @@ async function readJson(
         );
 
     }
+
 }
 
 
 /* =====================================================
-   ESCAPE
+   ESCAPE HTML
 ===================================================== */
 
 function escapeHtml(
@@ -1770,6 +2020,7 @@ function escapeHtml(
         /'/g,
         "&#039;"
     );
+
 }
 
 </script>
