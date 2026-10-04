@@ -23,7 +23,6 @@ const supabase = createClient(
 ========================================================== */
 
 function sendJson(res, status, data) {
-
   res.statusCode = status;
 
   res.setHeader(
@@ -31,31 +30,82 @@ function sendJson(res, status, data) {
     "application/json"
   );
 
-  res.end(
-    JSON.stringify(data)
-  );
-
+  res.end(JSON.stringify(data));
 }
 
 
 function cleanStatus(value) {
 
   const status =
-    String(value || "DRAFT")
-      .toUpperCase();
+    String(value || "DRAFT").toUpperCase();
 
   if (
     status !== "DRAFT" &&
     status !== "PUBLISHED" &&
     status !== "UNPUBLISHED"
   ) {
-
     return null;
-
   }
 
   return status;
+}
 
+
+/*
+ * Convert the manual date + time into the timestamp
+ * required by Supabase.
+ *
+ * Example:
+ * 2026-10-04 + 14:30
+ * becomes
+ * 2026-10-04T14:30:00+01:00
+ *
+ * Nigeria uses WAT (UTC+1).
+ */
+function buildKickoff(predictionDate, time) {
+
+  if (!predictionDate || !time) {
+    return null;
+  }
+
+  const cleanTime = String(time).trim();
+
+  if (!/^\d{2}:\d{2}$/.test(cleanTime)) {
+    return null;
+  }
+
+  return `${predictionDate}T${cleanTime}:00+01:00`;
+}
+
+
+/*
+ * Convert database timestamp back into HH:MM
+ * for the admin time input.
+ */
+function formatKickoff(kickoff) {
+
+  if (!kickoff) {
+    return "";
+  }
+
+  const value = String(kickoff);
+
+  const match =
+    value.match(/T(\d{2}):(\d{2})/);
+
+  if (match) {
+    return `${match[1]}:${match[2]}`;
+  }
+
+  /*
+   * If database somehow contains just HH:MM,
+   * leave it unchanged.
+   */
+  if (/^\d{2}:\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return value;
 }
 
 
@@ -64,91 +114,60 @@ function normalizePrediction(row) {
   return {
     ...row,
 
-    // Frontend uses "prediction".
-    // Database currently uses "selection".
     prediction:
       row.prediction ||
       row.selection ||
-      ""
-  };
+      "",
 
+    kickoff:
+      formatKickoff(row.kickoff)
+  };
 }
 
 
 function validatePrediction(body) {
 
-  const predictionDate =
-    body.prediction_date;
-
-  const homeTeam =
-    body.home_team;
-
-  const awayTeam =
-    body.away_team;
-
-  const country =
-    body.country;
-
-  const league =
-    body.league;
-
-  const kickoff =
-    body.kickoff;
-
-  const prediction =
-    body.prediction ||
-    body.selection;
-
-
-  if (!predictionDate) {
-
+  if (!body.prediction_date) {
     return "prediction_date is required.";
-
   }
 
-  if (!homeTeam) {
-
+  if (!body.home_team) {
     return "home_team is required.";
-
   }
 
-  if (!awayTeam) {
-
+  if (!body.away_team) {
     return "away_team is required.";
-
   }
 
-  if (!country) {
-
+  if (!body.country) {
     return "country is required.";
-
   }
 
-  if (!league) {
-
+  if (!body.league) {
     return "league is required.";
-
   }
 
-  if (!kickoff) {
-
+  if (!body.kickoff) {
     return "kickoff/time is required.";
-
   }
 
-  if (!prediction) {
+  if (!/^\d{2}:\d{2}$/.test(String(body.kickoff))) {
+    return "kickoff must be in HH:MM format.";
+  }
 
+  if (
+    !body.prediction &&
+    !body.selection
+  ) {
     return "prediction is required.";
-
   }
 
   return null;
-
 }
 
 
 /* ==========================================================
-   MAIN HANDLER
+   HANDLER
 ========================================================== */
 
 module.exports = async function handler(req, res) {
@@ -167,14 +186,13 @@ module.exports = async function handler(req, res) {
       } = req.query || {};
 
 
-      /* -----------------------------------------------
+      /* ----------------------------------------------------
          DAILY SLIP
-      ------------------------------------------------ */
+      ---------------------------------------------------- */
 
       if (type === "daily_slip") {
 
         if (!date) {
-
           return sendJson(
             res,
             400,
@@ -183,7 +201,6 @@ module.exports = async function handler(req, res) {
               error: "date is required."
             }
           );
-
         }
 
 
@@ -212,7 +229,6 @@ module.exports = async function handler(req, res) {
               error: error.message
             }
           );
-
         }
 
 
@@ -224,13 +240,12 @@ module.exports = async function handler(req, res) {
             slip: data || null
           }
         );
-
       }
 
 
-      /* -----------------------------------------------
+      /* ----------------------------------------------------
          PREDICTIONS
-      ------------------------------------------------ */
+      ---------------------------------------------------- */
 
       let query = supabase
         .from("predictions")
@@ -244,12 +259,10 @@ module.exports = async function handler(req, res) {
 
 
       if (date) {
-
         query = query.eq(
           "prediction_date",
           date
         );
-
       }
 
 
@@ -274,7 +287,6 @@ module.exports = async function handler(req, res) {
             error: error.message
           }
         );
-
       }
 
 
@@ -284,11 +296,11 @@ module.exports = async function handler(req, res) {
         {
           success: true,
           predictions:
-            (data || [])
-              .map(normalizePrediction)
+            (data || []).map(
+              normalizePrediction
+            )
         }
       );
-
     }
 
 
@@ -304,13 +316,11 @@ module.exports = async function handler(req, res) {
           : (req.body || {});
 
 
-      /* -----------------------------------------------
+      /* ----------------------------------------------------
          DAILY SLIP
-      ------------------------------------------------ */
+      ---------------------------------------------------- */
 
-      if (
-        body.type === "daily_slip"
-      ) {
+      if (body.type === "daily_slip") {
 
         const predictionDate =
           body.prediction_date;
@@ -326,13 +336,10 @@ module.exports = async function handler(req, res) {
           ).trim();
 
         const status =
-          cleanStatus(
-            body.status
-          );
+          cleanStatus(body.status);
 
 
         if (!predictionDate) {
-
           return sendJson(
             res,
             400,
@@ -342,12 +349,9 @@ module.exports = async function handler(req, res) {
                 "prediction_date is required."
             }
           );
-
         }
 
-
         if (!bookingCode) {
-
           return sendJson(
             res,
             400,
@@ -357,12 +361,9 @@ module.exports = async function handler(req, res) {
                 "booking_code is required."
             }
           );
-
         }
 
-
         if (!bookmaker) {
-
           return sendJson(
             res,
             400,
@@ -372,12 +373,9 @@ module.exports = async function handler(req, res) {
                 "bookmaker is required."
             }
           );
-
         }
 
-
         if (!status) {
-
           return sendJson(
             res,
             400,
@@ -387,7 +385,6 @@ module.exports = async function handler(req, res) {
                 "Invalid slip status."
             }
           );
-
         }
 
 
@@ -426,26 +423,81 @@ module.exports = async function handler(req, res) {
         }
 
 
-        const {
-          data,
-          error
-        } = await supabase
-          .from("daily_slips")
-          .upsert(
-            slipData,
+        /*
+         * Don't use upsert here.
+         *
+         * First find the existing slip for this date.
+         * Then UPDATE or INSERT.
+         */
+        const existing =
+          await supabase
+            .from("daily_slips")
+            .select("id")
+            .eq(
+              "prediction_date",
+              predictionDate
+            )
+            .maybeSingle();
+
+
+        if (existing.error) {
+
+          console.error(
+            "Daily slip lookup error:",
+            existing.error
+          );
+
+          return sendJson(
+            res,
+            500,
             {
-              onConflict:
-                "prediction_date"
+              success: false,
+              error:
+                existing.error.message
             }
-          )
-          .select()
-          .single();
+          );
+        }
+
+
+        let data;
+        let error;
+
+
+        if (existing.data) {
+
+          const result =
+            await supabase
+              .from("daily_slips")
+              .update(slipData)
+              .eq(
+                "id",
+                existing.data.id
+              )
+              .select()
+              .single();
+
+          data = result.data;
+          error = result.error;
+
+        } else {
+
+          const result =
+            await supabase
+              .from("daily_slips")
+              .insert(slipData)
+              .select()
+              .single();
+
+          data = result.data;
+          error = result.error;
+
+        }
 
 
         if (error) {
 
           console.error(
-            "Daily slip POST error:",
+            "Daily slip save error:",
             error
           );
 
@@ -457,7 +509,6 @@ module.exports = async function handler(req, res) {
               error: error.message
             }
           );
-
         }
 
 
@@ -469,13 +520,12 @@ module.exports = async function handler(req, res) {
             slip: data
           }
         );
-
       }
 
 
-      /* -----------------------------------------------
-         NORMAL MANUAL PREDICTION
-      ------------------------------------------------ */
+      /* ----------------------------------------------------
+         NORMAL PREDICTION
+      ---------------------------------------------------- */
 
       const validationError =
         validatePrediction(body);
@@ -491,14 +541,11 @@ module.exports = async function handler(req, res) {
             error: validationError
           }
         );
-
       }
 
 
       const status =
-        cleanStatus(
-          body.status
-        );
+        cleanStatus(body.status);
 
 
       if (!status) {
@@ -512,7 +559,6 @@ module.exports = async function handler(req, res) {
               "Invalid prediction status."
           }
         );
-
       }
 
 
@@ -524,15 +570,26 @@ module.exports = async function handler(req, res) {
         ).trim();
 
 
-      /*
-       * IMPORTANT:
-       *
-       * Manual matches do not come from a football API.
-       * Therefore fixture_id and team IDs are intentionally null.
-       *
-       * "market" and "confidence" are retained for compatibility
-       * with the existing database.
-       */
+      const kickoff =
+        buildKickoff(
+          body.prediction_date,
+          body.kickoff
+        );
+
+
+      if (!kickoff) {
+
+        return sendJson(
+          res,
+          400,
+          {
+            success: false,
+            error:
+              "Invalid match time."
+          }
+        );
+      }
+
 
       const predictionData = {
 
@@ -540,8 +597,7 @@ module.exports = async function handler(req, res) {
           body.prediction_date,
 
         fixture_id:
-          body.fixture_id ||
-          null,
+          body.fixture_id || null,
 
         home_team:
           body.home_team,
@@ -550,36 +606,25 @@ module.exports = async function handler(req, res) {
           body.away_team,
 
         home_team_id:
-          body.home_team_id ||
-          null,
+          body.home_team_id || null,
 
         away_team_id:
-          body.away_team_id ||
-          null,
+          body.away_team_id || null,
 
         country:
-          body.country ||
-          null,
+          body.country || null,
 
         league:
-          body.league ||
-          null,
+          body.league || null,
 
         kickoff:
-          body.kickoff ||
-          null,
+          kickoff,
 
         market:
-          body.market ||
-          "MANUAL",
+          body.market || "MANUAL",
 
         selection:
           selection,
-
-        /*
-         * Keep an ordinary default so an older NOT NULL
-         * confidence column will not break manual entries.
-         */
 
         confidence:
           Number.isInteger(
@@ -589,15 +634,13 @@ module.exports = async function handler(req, res) {
             : 7,
 
         analysis:
-          body.analysis ||
-          null,
+          body.analysis || null,
 
         status:
           status,
 
         result:
-          body.result ||
-          "pending",
+          body.result || "pending",
 
         updated_at:
           new Date().toISOString()
@@ -638,7 +681,6 @@ module.exports = async function handler(req, res) {
             error: error.message
           }
         );
-
       }
 
 
@@ -651,7 +693,6 @@ module.exports = async function handler(req, res) {
             normalizePrediction(data)
         }
       );
-
     }
 
 
@@ -667,8 +708,7 @@ module.exports = async function handler(req, res) {
           : (req.body || {});
 
 
-      const id =
-        body.id;
+      const id = body.id;
 
 
       if (!id) {
@@ -682,7 +722,6 @@ module.exports = async function handler(req, res) {
               "Prediction id is required."
           }
         );
-
       }
 
 
@@ -706,14 +745,11 @@ module.exports = async function handler(req, res) {
               "Invalid prediction status."
           }
         );
-
       }
 
 
       /*
-       * If this is only a Publish action,
-       * update the existing record without requiring
-       * all the manual-entry fields again.
+       * PUBLISH EXISTING PREDICTION
        */
 
       const onlyStatusUpdate =
@@ -758,11 +794,6 @@ module.exports = async function handler(req, res) {
 
         if (error) {
 
-          console.error(
-            "Prediction status update error:",
-            error
-          );
-
           return sendJson(
             res,
             500,
@@ -771,7 +802,6 @@ module.exports = async function handler(req, res) {
               error: error.message
             }
           );
-
         }
 
 
@@ -784,13 +814,12 @@ module.exports = async function handler(req, res) {
               normalizePrediction(data)
           }
         );
-
       }
 
 
-      /* -----------------------------------------------
+      /* ----------------------------------------------------
          FULL EDIT
-      ------------------------------------------------ */
+      ---------------------------------------------------- */
 
       const validationError =
         validatePrediction(body);
@@ -806,13 +835,11 @@ module.exports = async function handler(req, res) {
             error: validationError
           }
         );
-
       }
 
 
       const finalStatus =
-        status ||
-        "DRAFT";
+        status || "DRAFT";
 
 
       const selection =
@@ -821,6 +848,13 @@ module.exports = async function handler(req, res) {
           body.selection ||
           ""
         ).trim();
+
+
+      const kickoff =
+        buildKickoff(
+          body.prediction_date,
+          body.kickoff
+        );
 
 
       const updateData = {
@@ -835,20 +869,16 @@ module.exports = async function handler(req, res) {
           body.away_team,
 
         country:
-          body.country ||
-          null,
+          body.country || null,
 
         league:
-          body.league ||
-          null,
+          body.league || null,
 
         kickoff:
-          body.kickoff ||
-          null,
+          kickoff,
 
         market:
-          body.market ||
-          "MANUAL",
+          body.market || "MANUAL",
 
         selection:
           selection,
@@ -861,8 +891,7 @@ module.exports = async function handler(req, res) {
             : 7,
 
         analysis:
-          body.analysis ||
-          null,
+          body.analysis || null,
 
         status:
           finalStatus,
@@ -894,11 +923,6 @@ module.exports = async function handler(req, res) {
 
       if (error) {
 
-        console.error(
-          "Prediction PUT error:",
-          error
-        );
-
         return sendJson(
           res,
           500,
@@ -907,7 +931,6 @@ module.exports = async function handler(req, res) {
             error: error.message
           }
         );
-
       }
 
 
@@ -920,7 +943,6 @@ module.exports = async function handler(req, res) {
             normalizePrediction(data)
         }
       );
-
     }
 
 
@@ -946,7 +968,6 @@ module.exports = async function handler(req, res) {
               "Prediction id is required."
           }
         );
-
       }
 
 
@@ -960,11 +981,6 @@ module.exports = async function handler(req, res) {
 
       if (error) {
 
-        console.error(
-          "Prediction DELETE error:",
-          error
-        );
-
         return sendJson(
           res,
           500,
@@ -973,7 +989,6 @@ module.exports = async function handler(req, res) {
             error: error.message
           }
         );
-
       }
 
 
@@ -986,13 +1001,8 @@ module.exports = async function handler(req, res) {
             "Prediction deleted successfully."
         }
       );
-
     }
 
-
-    /* ======================================================
-       METHOD NOT ALLOWED
-    ====================================================== */
 
     return sendJson(
       res,
@@ -1008,7 +1018,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
 
     console.error(
-      "TomsonStakes predictions API error:",
+      "TomsonStakes API error:",
       error
     );
 
