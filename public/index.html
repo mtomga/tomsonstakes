@@ -1058,10 +1058,10 @@ async function loadDailySlip(
          */
 
         const response =
-            await fetch(
-                "/api/daily-slip?date=" +
-                encodeURIComponent(date)
-            );
+    await fetch(
+        "/api/predictions?type=daily_slip&date=" +
+        encodeURIComponent(date)
+    );
 
 
         if (!response.ok) {
