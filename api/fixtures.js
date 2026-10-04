@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
       error: "APIFOOTBALL_KEY is not configured."
     });
   }
-
+ 
   /*
    * ============================================================
    * API-FOOTBALL ACCOUNT STATUS CHECK
