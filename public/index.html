@@ -704,6 +704,32 @@ body {
         10px;
 
 }
+    .date-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-controls button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.date-controls button:hover {
+    background: var(--green-dark);
+}
+
+.date-label {
+    min-width: 95px;
+    text-align: center;
+}
 
 @media(max-width:600px) {
 
@@ -835,12 +861,20 @@ body {
     <!-- =================================================
          PREDICTIONS TITLE
     ================================================== -->
+<div class="section-title">
 
-    <div class="section-title">
+    <h2 id="predictionTitle">
+        🔥 TODAY'S PREDICTIONS
+    </h2>
 
-        <h2>
-            🔥 TODAY'S PREDICTIONS
-        </h2>
+    <div class="date-controls">
+
+        <button
+            id="prevDate"
+            type="button"
+        >
+            ‹
+        </button>
 
         <div
             id="predictionDate"
@@ -849,7 +883,16 @@ body {
             Loading...
         </div>
 
+        <button
+            id="nextDate"
+            type="button"
+        >
+            ›
+        </button>
+
     </div>
+
+</div>
 
 
     <div id="predictions">
