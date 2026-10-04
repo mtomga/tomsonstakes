@@ -122,7 +122,17 @@ body {
     color: var(--muted);
     font-size: 13px;
 }
+<div class="hero-support">
 
+    <button
+        id="supportButton"
+        type="button"
+    >
+        ❤️ SUPPORT TOMSONSTAKES
+    </button>
+
+</div>
+    
 /* =====================================================
    TODAY'S BOOKING
 ===================================================== */
@@ -730,7 +740,27 @@ body {
     min-width: 95px;
     text-align: center;
 }
+.hero-support {
+    position: relative;
+    z-index: 2;
+    margin-top: 22px;
+}
 
+.hero-support button {
+    width: 100%;
+    padding: 13px 18px;
+    border: 1px solid rgba(245,158,11,.45);
+    border-radius: 10px;
+    background: rgba(245,158,11,.12);
+    color: #fbbf24;
+    font-size: 12px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.hero-support button:hover {
+    background: rgba(245,158,11,.20);
+}
 @media(max-width:600px) {
 
     .hero h1 {
@@ -930,7 +960,33 @@ document.addEventListener(
     "DOMContentLoaded",
     loadPage
 );
+const SUPPORT_URL = "";
 
+
+document.getElementById(
+    "supportButton"
+).addEventListener(
+    "click",
+    function() {
+
+        if (!SUPPORT_URL) {
+
+            alert(
+                "TomsonStakes support link will be available soon."
+            );
+
+            return;
+
+        }
+
+        window.open(
+            SUPPORT_URL,
+            "_blank",
+            "noopener,noreferrer"
+        );
+
+    }
+);
 
 /* =====================================================
    LOAD PAGE
