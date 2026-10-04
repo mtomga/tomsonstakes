@@ -122,23 +122,38 @@ body {
     color: var(--muted);
     font-size: 13px;
 }
-<div class="hero-support">
 
-    <button
-        id="supportButton"
-        type="button"
-    >
-        ❤️ SUPPORT TOMSONSTAKES
-    </button>
+/* =====================================================
+   SUPPORT
+===================================================== */
 
-</div>
-    
+.hero-support {
+    position: relative;
+    z-index: 2;
+    margin-top: 22px;
+}
+
+.hero-support button {
+    width: 100%;
+    padding: 13px 18px;
+    border: 1px solid rgba(245,158,11,.45);
+    border-radius: 10px;
+    background: rgba(245,158,11,.12);
+    color: #fbbf24;
+    font-size: 12px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.hero-support button:hover {
+    background: rgba(245,158,11,.20);
+}
+
 /* =====================================================
    TODAY'S BOOKING
 ===================================================== */
 
 .slip-card {
-
     position: relative;
 
     background:
@@ -164,11 +179,9 @@ body {
     box-shadow:
         0 12px 35px
         rgba(0,0,0,.20);
-
 }
 
 .slip-card:before {
-
     content: "";
 
     position: absolute;
@@ -183,11 +196,9 @@ body {
 
     right: -25px;
     top: -25px;
-
 }
 
 .slip-label {
-
     position: relative;
 
     color:
@@ -204,11 +215,9 @@ body {
 
     text-transform:
         uppercase;
-
 }
 
 .slip-code {
-
     position: relative;
 
     font-size:
@@ -225,11 +234,9 @@ body {
 
     color:
         #ffffff;
-
 }
 
 .slip-details {
-
     position: relative;
 
     display:
@@ -243,11 +250,9 @@ body {
 
     margin-top:
         16px;
-
 }
 
 .slip-detail {
-
     background:
         rgba(0,0,0,.20);
 
@@ -260,11 +265,9 @@ body {
 
     padding:
         10px;
-
 }
 
 .slip-detail-label {
-
     color:
         #86efac;
 
@@ -279,11 +282,9 @@ body {
 
     letter-spacing:
         .8px;
-
 }
 
 .slip-detail-value {
-
     margin-top:
         4px;
 
@@ -295,11 +296,9 @@ body {
 
     font-weight:
         900;
-
 }
 
 .copy-button {
-
     position:
         relative;
 
@@ -326,11 +325,11 @@ body {
 
     cursor:
         pointer;
-
 }
 
 .copy-button:hover {
-    background: #16a34a;
+    background:
+        #16a34a;
 }
 
 /* =====================================================
@@ -338,7 +337,6 @@ body {
 ===================================================== */
 
 .section-title {
-
     display:
         flex;
 
@@ -350,11 +348,9 @@ body {
 
     margin:
         20px 0 10px;
-
 }
 
 .section-title h2 {
-
     margin:
         0;
 
@@ -363,17 +359,66 @@ body {
 
     font-weight:
         950;
+}
 
+.date-controls {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+}
+
+.date-controls button {
+    width:
+        34px;
+
+    height:
+        34px;
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius:
+        9px;
+
+    background:
+        var(--panel2);
+
+    color:
+        var(--text);
+
+    font-size:
+        20px;
+
+    font-weight:
+        900;
+
+    cursor:
+        pointer;
+}
+
+.date-controls button:hover {
+    background:
+        var(--green-dark);
 }
 
 .date-label {
+    min-width:
+        95px;
+
+    text-align:
+        center;
 
     color:
         var(--muted);
 
     font-size:
         10px;
-
 }
 
 /* =====================================================
@@ -381,7 +426,6 @@ body {
 ===================================================== */
 
 .league {
-
     background:
         rgba(11,23,38,.92);
 
@@ -397,11 +441,9 @@ body {
 
     margin-bottom:
         15px;
-
 }
 
 .league-header {
-
     display:
         flex;
 
@@ -424,21 +466,17 @@ body {
     border-left:
         5px solid
         var(--green);
-
 }
 
 .league-name {
-
     font-size:
         14px;
 
     font-weight:
         950;
-
 }
 
 .league-country {
-
     margin-top:
         3px;
 
@@ -447,11 +485,9 @@ body {
 
     font-size:
         9px;
-
 }
 
 .league-count {
-
     background:
         rgba(34,197,94,.13);
 
@@ -473,7 +509,6 @@ body {
 
     font-weight:
         900;
-
 }
 
 /* =====================================================
@@ -481,7 +516,6 @@ body {
 ===================================================== */
 
 .prediction {
-
     margin:
         9px;
 
@@ -504,11 +538,9 @@ body {
     box-shadow:
         0 5px 18px
         rgba(0,0,0,.13);
-
 }
 
 .pred-top {
-
     display:
         flex;
 
@@ -526,11 +558,9 @@ body {
 
     font-weight:
         800;
-
 }
 
 .pred-teams {
-
     display:
         grid;
 
@@ -545,25 +575,22 @@ body {
 
     margin-top:
         12px;
-
 }
 
 .team {
-
     font-size:
         14px;
 
     font-weight:
         950;
-
 }
 
 .away {
-    text-align: right;
+    text-align:
+        right;
 }
 
 .vs {
-
     text-align:
         center;
 
@@ -572,7 +599,6 @@ body {
 
     font-weight:
         950;
-
 }
 
 /* =====================================================
@@ -580,7 +606,6 @@ body {
 ===================================================== */
 
 .pick-box {
-
     margin-top:
         13px;
 
@@ -596,11 +621,9 @@ body {
     border:
         1px solid
         #bbf7d0;
-
 }
 
 .pick-market {
-
     color:
         #15803d;
 
@@ -612,11 +635,9 @@ body {
 
     text-transform:
         uppercase;
-
 }
 
 .pick-selection {
-
     margin-top:
         3px;
 
@@ -628,11 +649,9 @@ body {
 
     font-weight:
         950;
-
 }
 
 .confidence {
-
     display:
         inline-block;
 
@@ -656,7 +675,6 @@ body {
 
     font-weight:
         900;
-
 }
 
 /* =====================================================
@@ -664,7 +682,6 @@ body {
 ===================================================== */
 
 .analysis {
-
     margin-top:
         11px;
 
@@ -676,11 +693,9 @@ body {
 
     line-height:
         1.6;
-
 }
 
 .empty {
-
     text-align:
         center;
 
@@ -692,7 +707,6 @@ body {
 
     font-size:
         12px;
-
 }
 
 /* =====================================================
@@ -700,7 +714,6 @@ body {
 ===================================================== */
 
 .footer {
-
     text-align:
         center;
 
@@ -712,59 +725,17 @@ body {
 
     font-size:
         10px;
-
-}
-    .date-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
-.date-controls button {
-    width: 34px;
-    height: 34px;
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    background: var(--panel2);
-    color: var(--text);
-    font-size: 20px;
-    font-weight: 900;
-    cursor: pointer;
-}
+/* =====================================================
+   MOBILE
+===================================================== */
 
-.date-controls button:hover {
-    background: var(--green-dark);
-}
-
-.date-label {
-    min-width: 95px;
-    text-align: center;
-}
-.hero-support {
-    position: relative;
-    z-index: 2;
-    margin-top: 22px;
-}
-
-.hero-support button {
-    width: 100%;
-    padding: 13px 18px;
-    border: 1px solid rgba(245,158,11,.45);
-    border-radius: 10px;
-    background: rgba(245,158,11,.12);
-    color: #fbbf24;
-    font-size: 12px;
-    font-weight: 950;
-    cursor: pointer;
-}
-
-.hero-support button:hover {
-    background: rgba(245,158,11,.20);
-}
 @media(max-width:600px) {
 
     .hero h1 {
-        font-size: 25px;
+        font-size:
+            25px;
     }
 
     .pred-teams {
@@ -773,15 +744,36 @@ body {
     }
 
     .team {
-        font-size: 12px;
+        font-size:
+            12px;
     }
 
     .slip-code {
-        font-size: 23px;
+        font-size:
+            23px;
     }
 
     .slip-details {
-        grid-template-columns: 1fr;
+        grid-template-columns:
+            1fr;
+    }
+
+    .section-title {
+        align-items:
+            flex-start;
+
+        gap:
+            10px;
+    }
+
+    .section-title h2 {
+        font-size:
+            15px;
+    }
+
+    .date-controls {
+        flex-shrink:
+            0;
     }
 
 }
@@ -819,12 +811,22 @@ body {
 
         </div>
 
+
+        <div class="hero-support">
+
+            <button
+                id="supportButton"
+                type="button"
+            >
+                ❤️ SUPPORT TOMSONSTAKES
+            </button>
+
+        </div>
+
     </div>
 
 
-    <!-- =================================================
-         TODAY'S BOOKING
-    ================================================== -->
+    <!-- DAILY BOOKING -->
 
     <div
         id="dailySlip"
@@ -888,41 +890,40 @@ body {
     </div>
 
 
-    <!-- =================================================
-         PREDICTIONS TITLE
-    ================================================== -->
-<div class="section-title">
+    <!-- PREDICTIONS TITLE -->
 
-    <h2 id="predictionTitle">
-        🔥 TODAY'S PREDICTIONS
-    </h2>
+    <div class="section-title">
 
-    <div class="date-controls">
+        <h2 id="predictionTitle">
+            🔥 TODAY'S PREDICTIONS
+        </h2>
 
-        <button
-            id="prevDate"
-            type="button"
-        >
-            ‹
-        </button>
+        <div class="date-controls">
 
-        <div
-            id="predictionDate"
-            class="date-label"
-        >
-            Loading...
+            <button
+                id="prevDate"
+                type="button"
+            >
+                ‹
+            </button>
+
+            <div
+                id="predictionDate"
+                class="date-label"
+            >
+                Loading...
+            </div>
+
+            <button
+                id="nextDate"
+                type="button"
+            >
+                ›
+            </button>
+
         </div>
 
-        <button
-            id="nextDate"
-            type="button"
-        >
-            ›
-        </button>
-
     </div>
-
-</div>
 
 
     <div id="predictions">
@@ -946,10 +947,19 @@ body {
 <script>
 
 /* =====================================================
+   CONFIG
+===================================================== */
+
+const SUPPORT_URL = "";
+
+
+/* =====================================================
    STATE
 ===================================================== */
 
 let currentBookingCode = "";
+
+let selectedDate = getToday();
 
 
 /* =====================================================
@@ -960,64 +970,80 @@ document.addEventListener(
     "DOMContentLoaded",
     loadPage
 );
-const SUPPORT_URL = "";
 
-
-document.getElementById(
-    "supportButton"
-).addEventListener(
-    "click",
-    function() {
-
-        if (!SUPPORT_URL) {
-
-            alert(
-                "TomsonStakes support link will be available soon."
-            );
-
-            return;
-
-        }
-
-        window.open(
-            SUPPORT_URL,
-            "_blank",
-            "noopener,noreferrer"
-        );
-
-    }
-);
 
 /* =====================================================
    LOAD PAGE
 ===================================================== */
- let selectedDate = getToday();
-
 
 async function loadPage() {
 
-    await loadSelectedDate();
+    document.getElementById(
+        "supportButton"
+    ).addEventListener(
+        "click",
+        handleSupport
+    );
+
 
     document.getElementById(
         "prevDate"
     ).addEventListener(
         "click",
         function() {
+
             changeDate(-1);
+
         }
     );
+
 
     document.getElementById(
         "nextDate"
     ).addEventListener(
         "click",
         function() {
+
             changeDate(1);
+
         }
+    );
+
+
+    await loadSelectedDate();
+
+}
+
+
+/* =====================================================
+   SUPPORT
+===================================================== */
+
+function handleSupport() {
+
+    if (!SUPPORT_URL) {
+
+        alert(
+            "TomsonStakes support link will be available soon."
+        );
+
+        return;
+
+    }
+
+
+    window.open(
+        SUPPORT_URL,
+        "_blank",
+        "noopener,noreferrer"
     );
 
 }
 
+
+/* =====================================================
+   LOAD SELECTED DATE
+===================================================== */
 
 async function loadSelectedDate() {
 
@@ -1026,18 +1052,27 @@ async function loadSelectedDate() {
             "predictionTitle"
         );
 
+
     const dateLabel =
         document.getElementById(
             "predictionDate"
         );
 
+
     const today =
         getToday();
 
-    dateLabel.textContent =
-        formatDate(selectedDate);
 
-    if (selectedDate === today) {
+    dateLabel.textContent =
+        formatDate(
+            selectedDate
+        );
+
+
+    if (
+        selectedDate ===
+        today
+    ) {
 
         title.textContent =
             "🔥 TODAY'S PREDICTIONS";
@@ -1052,23 +1087,45 @@ async function loadSelectedDate() {
     }
 
 
+    /*
+     * Hide an old booking slip
+     * while changing dates.
+     */
+
+    document.getElementById(
+        "dailySlip"
+    ).style.display =
+        "none";
+
+
     await Promise.allSettled([
 
-        loadPredictions(selectedDate),
+        loadPredictions(
+            selectedDate
+        ),
 
-        loadDailySlip(selectedDate)
+        loadDailySlip(
+            selectedDate
+        )
 
     ]);
 
 }
 
 
-async function changeDate(days) {
+/* =====================================================
+   CHANGE DATE
+===================================================== */
+
+async function changeDate(
+    days
+) {
 
     const parts =
-        selectedDate.split("-").map(
-            Number
-        );
+        selectedDate
+            .split("-")
+            .map(Number);
+
 
     const date =
         new Date(
@@ -1079,17 +1136,26 @@ async function changeDate(days) {
             )
         );
 
+
     date.setUTCDate(
-        date.getUTCDate() + days
+        date.getUTCDate() +
+        days
     );
 
+
     selectedDate =
-        date.toISOString()
-            .slice(0, 10);
+        date
+            .toISOString()
+            .slice(
+                0,
+                10
+            );
+
 
     await loadSelectedDate();
 
 }
+
 
 /* =====================================================
    LOAD PREDICTIONS
@@ -1105,17 +1171,32 @@ async function loadPredictions(
         );
 
 
+    box.innerHTML = `
+
+        <div class="empty">
+
+            Loading predictions...
+
+        </div>
+
+    `;
+
+
     try {
 
         const response =
             await fetch(
                 "/api/predictions?date=" +
-                encodeURIComponent(date)
+                encodeURIComponent(
+                    date
+                )
             );
 
 
         const data =
-            await readJson(response);
+            await readJson(
+                response
+            );
 
 
         if (!response.ok) {
@@ -1140,18 +1221,20 @@ async function loadPredictions(
 
 
         /*
-         * Only published predictions
-         * are visible on the public
-         * frontend.
+         * Public page only displays
+         * published predictions.
          */
 
         const published =
             predictions.filter(
                 function(item) {
 
-                    return normalizeStatus(
-                        item.status
-                    ) === "PUBLISHED";
+                    return (
+                        normalizeStatus(
+                            item.status
+                        ) ===
+                        "PUBLISHED"
+                    );
 
                 }
             );
@@ -1175,8 +1258,7 @@ async function loadPredictions(
 
             <div class="empty">
 
-                Unable to load today's
-                predictions.
+                Unable to load predictions.
 
             </div>
 
@@ -1203,39 +1285,16 @@ async function loadDailySlip(
 
     try {
 
-        /*
-         * IMPORTANT:
-         *
-         * This endpoint must return
-         * the exact daily_slips row
-         * for the requested date.
-         *
-         * Example:
-         *
-         * {
-         *   success: true,
-         *   slip: {
-         *      prediction_date: "2026-10-04",
-         *      booking_code: "XXXXXXXX",
-         *      bookmaker: "Bet9ja",
-         *      status: "PUBLISHED"
-         *   }
-         * }
-         */
-
         const response =
-    await fetch(
-        "/api/predictions?type=daily_slip&date=" +
-        encodeURIComponent(date)
-    );
+            await fetch(
+                "/api/predictions?type=daily_slip&date=" +
+                encodeURIComponent(
+                    date
+                )
+            );
 
 
         if (!response.ok) {
-
-            /*
-             * No published slip is not
-             * a page-breaking error.
-             */
 
             card.style.display =
                 "none";
@@ -1246,7 +1305,9 @@ async function loadDailySlip(
 
 
         const data =
-            await readJson(response);
+            await readJson(
+                response
+            );
 
 
         const slip =
@@ -1266,11 +1327,6 @@ async function loadDailySlip(
         }
 
 
-        /*
-         * Never display a draft slip
-         * publicly.
-         */
-
         if (
             normalizeStatus(
                 slip.status
@@ -1286,16 +1342,12 @@ async function loadDailySlip(
         }
 
 
-        /*
-         * Make sure the returned row
-         * actually belongs to today.
-         */
-
         if (
             slip.prediction_date &&
             String(
                 slip.prediction_date
-            ) !== String(date)
+            ) !==
+            String(date)
         ) {
 
             card.style.display =
@@ -1385,29 +1437,17 @@ function showDailySlip(
         code;
 
 
-    /*
-     * Main prominent booking code.
-     */
-
     document.getElementById(
         "bookingCode"
     ).textContent =
         code;
 
 
-    /*
-     * Booking code detail.
-     */
-
     document.getElementById(
         "bookingCodeDetail"
     ).textContent =
         code;
 
-
-    /*
-     * Bookmaker.
-     */
 
     document.getElementById(
         "bookmakerDetail"
@@ -1417,16 +1457,23 @@ function showDailySlip(
 
 
     /*
-     * Show the card.
+     * Change the label according
+     * to the selected date.
      */
+
+    document.querySelector(
+        ".slip-label"
+    ).textContent =
+        selectedDate === getToday()
+        ?
+        "🎟️ TODAY'S BOOKING"
+        :
+        "🎟️ BOOKING";
+
 
     card.style.display =
         "block";
 
-
-    /*
-     * Attach copy button.
-     */
 
     document.getElementById(
         "copyButton"
@@ -1474,35 +1521,38 @@ async function copyBookingCode() {
 
         else {
 
-            /*
-             * Fallback for older browsers.
-             */
-
             const textarea =
                 document.createElement(
                     "textarea"
                 );
 
+
             textarea.value =
                 currentBookingCode;
+
 
             textarea.style.position =
                 "fixed";
 
+
             textarea.style.opacity =
                 "0";
+
 
             document.body.appendChild(
                 textarea
             );
 
+
             textarea.focus();
 
             textarea.select();
 
+
             document.execCommand(
                 "copy"
             );
+
 
             textarea.remove();
 
@@ -1520,6 +1570,7 @@ async function copyBookingCode() {
             "Copy error:",
             error
         );
+
 
         button.textContent =
             "⚠️ COPY FAILED";
@@ -1604,7 +1655,9 @@ function renderPredictions(
 
             groups[key]
                 .items
-                .push(item);
+                .push(
+                    item
+                );
 
         }
     );
@@ -1647,16 +1700,20 @@ function renderPredictions(
                         <div>
 
                             <div class="league-name">
+
                                 🏆
                                 ${escapeHtml(
                                     league.name
                                 )}
+
                             </div>
 
                             <div class="league-country">
+
                                 ${escapeHtml(
                                     league.country
                                 )}
+
                             </div>
 
                         </div>
@@ -1721,12 +1778,18 @@ function buildPrediction(
 
                 <span>
 
-                    #${escapeHtml(
-                        String(
-                            item.fixture_id ||
-                            ""
+                    ${
+                        item.fixture_id
+                        ?
+                        "#" +
+                        escapeHtml(
+                            String(
+                                item.fixture_id
+                            )
                         )
-                    )}
+                        :
+                        "MANUAL"
+                    }
 
                 </span>
 
@@ -1776,7 +1839,8 @@ function buildPrediction(
                 <div class="pick-market">
 
                     ${escapeHtml(
-                        item.market
+                        item.market ||
+                        "PREDICTION"
                     )}
 
                 </div>
@@ -1785,7 +1849,9 @@ function buildPrediction(
                 <div class="pick-selection">
 
                     ${escapeHtml(
-                        item.selection
+                        item.selection ||
+                        item.prediction ||
+                        ""
                     )}
 
                 </div>
@@ -1796,7 +1862,8 @@ function buildPrediction(
                     ⭐ Confidence
                     ${escapeHtml(
                         String(
-                            item.confidence
+                            item.confidence ??
+                            "—"
                         )
                     )}/10
 
@@ -1854,10 +1921,13 @@ function getToday() {
                 day:
                     "2-digit"
             }
-        ).formatToParts(now);
+        ).formatToParts(
+            now
+        );
 
 
-    const values = {};
+    const values =
+        {};
 
 
     parts.forEach(
@@ -1926,7 +1996,6 @@ function formatDate(
     return d.toLocaleDateString(
         "en-NG",
         {
-
             day:
                 "2-digit",
 
@@ -1935,7 +2004,6 @@ function formatDate(
 
             year:
                 "numeric"
-
         }
     );
 
@@ -1958,7 +2026,9 @@ function formatKickoff(
 
 
     const d =
-        new Date(value);
+        new Date(
+            value
+        );
 
 
     if (
@@ -1975,7 +2045,6 @@ function formatKickoff(
     return d.toLocaleString(
         "en-NG",
         {
-
             timeZone:
                 "Africa/Lagos",
 
@@ -1993,7 +2062,6 @@ function formatKickoff(
 
             hour12:
                 false
-
         }
     ) + " WAT";
 
@@ -2109,7 +2177,9 @@ function normalizeLeague(
     return String(
         name || ""
     )
-    .normalize("NFD")
+    .normalize(
+        "NFD"
+    )
     .replace(
         /[\u0300-\u036f]/g,
         ""
@@ -2145,6 +2215,12 @@ async function readJson(
     }
 
     catch {
+
+        console.error(
+            "Invalid JSON response:",
+            raw
+        );
+
 
         throw new Error(
             "Server returned invalid JSON."
