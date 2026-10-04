@@ -1,4 +1,6 @@
-export default async function handler(req, res) {
+const fetch = global.fetch;
+
+module.exports = async function handler(req, res) {
   // Only allow GET
   if (req.method !== "GET") {
     return res.status(405).json({
@@ -9,12 +11,12 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.APIFOOTBALL_KEY;
 
-  // Check that the Vercel environment variable exists
+  // Check API key configuration
   if (!apiKey) {
     return res.status(500).json({
       success: false,
       error: "APIFOOTBALL_KEY is not configured.",
-      hint: "Add APIFOOTBALL_KEY to the Vercel environment variables and redeploy."
+      hint: "Check Vercel Environment Variables and redeploy."
     });
   }
 
@@ -45,15 +47,14 @@ export default async function handler(req, res) {
       });
     }
 
-    // API-Football may return HTTP 200 while reporting an
-    // account-level problem inside the errors object.
     const providerErrors =
-      data && typeof data.errors === "object"
+      data &&
+      typeof data.errors === "object" &&
+      data.errors !== null
         ? data.errors
         : {};
 
     const hasProviderErrors =
-      providerErrors &&
       Object.keys(providerErrors).length > 0;
 
     if (!response.ok || hasProviderErrors) {
@@ -61,39 +62,62 @@ export default async function handler(req, res) {
         success: false,
         error: "API-Football status check reported an error.",
         providerStatus: response.status,
-        providerErrors,
-        providerMessage: data?.message || null,
+        providerErrors: providerErrors,
+        providerMessage: data && data.message
+          ? data.message
+          : null,
         providerResponse: data
       });
     }
 
-    // Return the complete status information so we can inspect
-    // account/subscription/request information.
     return res.status(200).json({
       success: true,
       message: "API-Football status request completed successfully.",
       providerStatus: response.status,
-      account: data?.response?.account || null,
-      subscription: data?.response?.subscription || null,
-      requests: data?.response?.requests || null,
+      account: data &&
+        data.response &&
+        data.response.account
+        ? data.response.account
+        : null,
+      subscription: data &&
+        data.response &&
+        data.response.subscription
+        ? data.response.subscription
+        : null,
+      requests: data &&
+        data.response &&
+        data.response.requests
+        ? data.response.requests
+        : null,
       providerResponse: data
     });
 
   } catch (error) {
-    console.error("API-Football status check error:", error);
+    console.error(
+      "API-Football status check error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
       error: "Unable to connect to API-Football.",
-      message: error?.message || "Unknown server error."
+      message: error && error.message
+        ? error.message
+        : "Unknown server error."
     });
   }
-}
+};
 
-After deploying, open:
+Then deploy
 
-"https://YOUR-VERCEL-DOMAIN.vercel.app/api/fixtures-status"
+After Vercel finishes deploying, open:
 
-Then paste the entire JSON response here. Don't paste your API key—the endpoint above never exposes it.
+https://YOUR-VERCEL-DOMAIN.vercel.app/api/fixtures-status
 
-That response should tell us whether API-Football is reporting anything beyond the dashboard's generic “account suspended” message.
+For example:
+
+https://tomsonstakes.vercel.app/api/fixtures-status
+
+Don't change "APIFOOTBALL_KEY".
+
+Send me the JSON response you get. That will let us determine whether the suspension is being reported by the API status endpoint and what information API-Football is exposing about the account.
