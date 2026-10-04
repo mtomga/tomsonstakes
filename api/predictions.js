@@ -640,7 +640,7 @@ module.exports = async function handler(req, res) {
           status,
 
         result:
-          body.result || "pending",
+          body.result || "PENDING",
 
         updated_at:
           new Date().toISOString()
