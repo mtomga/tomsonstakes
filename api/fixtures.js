@@ -1,683 +1,311 @@
-// /api/fixtures.js
-// ============================================================
-// TOMSONSTAKES GLOBAL FIXTURE ENGINE
-// Version 4.0
-//
-// Purpose:
-// - Retrieve global football fixtures for a selected date
-// - Act as the frontend fixture-discovery layer
-// - Preserve complete API-Football fixture objects
-// - Provide clean metadata for the frontend
-//
-// IMPORTANT:
-// - This endpoint DOES NOT predict matches.
-// - This endpoint DOES NOT analyze teams.
-// - This endpoint DOES NOT call api/predict.js.
-// - This endpoint DOES NOT call api/analyze.js.
-// - Prediction and analysis happen only after the user
-//   selects an individual fixture.
-//
-// API-Football endpoint:
-// GET /fixtures?date=YYYY-MM-DD
-// ============================================================
-
-export default async function handler(req, res) {
-
-  try {
-
-    // ==========================================================
-    // REQUEST METHOD
-    // ==========================================================
-
-    if (req.method !== "GET") {
-
-      return res.status(405).json({
-        success: false,
-        error: "Method not allowed. Use GET."
-      });
-
-    }
-
-
-    // ==========================================================
-    // REQUEST PARAMETERS
-    // ==========================================================
-
-    const rawDate =
-      req.query?.date;
-
-
-    // ==========================================================
-    // VALIDATE DATE
-    // ==========================================================
-
-    if (!rawDate) {
-
-      return res.status(400).json({
-
-        success: false,
-
-        error:
-          "Date is required. Use YYYY-MM-DD."
-
-      });
-
-    }
-
-
-    const date =
-      String(rawDate).trim();
-
-
-    // Strict YYYY-MM-DD format
-    const datePattern =
-      /^\d{4}-\d{2}-\d{2}$/;
-
-
-    if (!datePattern.test(date)) {
-
-      return res.status(400).json({
-
-        success: false,
-
-        error:
-          "Invalid date format. Use YYYY-MM-DD."
-
-      });
-
-    }
-
-
-    // ==========================================================
-    // VALIDATE THAT THE DATE ACTUALLY EXISTS
-    // ==========================================================
-
-    const dateParts =
-      date.split("-").map(Number);
-
-
-    const year =
-      dateParts[0];
-
-    const month =
-      dateParts[1];
-
-    const day =
-      dateParts[2];
-
-
-    const dateObject =
-      new Date(
-        Date.UTC(
-          year,
-          month - 1,
-          day
-        )
-      );
-
-
-    const validDate =
-      dateObject.getUTCFullYear() === year &&
-      dateObject.getUTCMonth() === month - 1 &&
-      dateObject.getUTCDate() === day;
-
-
-    if (!validDate) {
-
-      return res.status(400).json({
-
-        success: false,
-
-        error:
-          "Invalid calendar date."
-
-      });
-
-    }
-
-
-    // ==========================================================
-    // API KEY
-    // ==========================================================
-
-    const apiKey =
-      process.env.APIFOOTBALL_KEY;
-
-
-    if (!apiKey) {
-
-      console.error(
-        "APIFOOTBALL_KEY is not configured."
-      );
-
-
-      return res.status(500).json({
-
-        success: false,
-
-        error:
-          "APIFOOTBALL_KEY is not configured."
-
-      });
-
-    }
-
-
-    // ==========================================================
-    // API URL
-    // ==========================================================
-
-    const apiUrl =
-      "https://v3.football.api-sports.io/fixtures";
-
-
-    const url =
-      `${apiUrl}?date=${encodeURIComponent(date)}`;
-
-
-    // ==========================================================
-    // API REQUEST
-    // ==========================================================
-
-    const response =
-      await fetch(
-        url,
+const fetch = global.fetch;
+
+module.exports = async function handler(req, res) {
+  if (req.method !== "GET") {
+    return res.status(405).json({
+      success: false,
+      error: "Method not allowed. Use GET."
+    });
+  }
+
+  const apiKey = process.env.APIFOOTBALL_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({
+      success: false,
+      error: "APIFOOTBALL_KEY is not configured."
+    });
+  }
+
+  /*
+   * ============================================================
+   * API-FOOTBALL ACCOUNT STATUS CHECK
+   *
+   * Open:
+   * /api/fixtures?status=1
+   *
+   * This uses the existing serverless function, so it does NOT
+   * create another Vercel function.
+   * ============================================================
+   */
+
+  if (req.query.status === "1") {
+    try {
+      const response = await fetch(
+        "https://v3.football.api-sports.io/status",
         {
           method: "GET",
-
           headers: {
-
-            "x-apisports-key":
-              apiKey,
-
-            "Accept":
-              "application/json"
-
+            "x-apisports-key": apiKey,
+            "Accept": "application/json"
           }
         }
       );
 
+      const rawText = await response.text();
 
-    // ==========================================================
-    // READ RESPONSE SAFELY
-    // ==========================================================
+      let data;
 
-    const text =
-      await response.text();
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseError) {
+        return res.status(502).json({
+          success: false,
+          diagnostic: true,
+          error: "API-Football returned a non-JSON response.",
+          providerStatus: response.status,
+          providerResponse: rawText.slice(0, 2000)
+        });
+      }
 
+      return res.status(response.ok ? 200 : response.status).json({
+        success: response.ok,
+        diagnostic: true,
+        providerStatus: response.status,
+        providerErrors: data && data.errors
+          ? data.errors
+          : {},
+        providerMessage: data && data.message
+          ? data.message
+          : null,
+        account: data &&
+          data.response &&
+          data.response.account
+          ? data.response.account
+          : null,
+        subscription: data &&
+          data.response &&
+          data.response.subscription
+          ? data.response.subscription
+          : null,
+        requests: data &&
+          data.response &&
+          data.response.requests
+          ? data.response.requests
+          : null,
+        providerResponse: data
+      });
+
+    } catch (error) {
+      console.error(
+        "API-Football status check error:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        diagnostic: true,
+        error: "Unable to connect to API-Football.",
+        message: error && error.message
+          ? error.message
+          : "Unknown server error."
+      });
+    }
+  }
+
+  /*
+   * ============================================================
+   * NORMAL FIXTURE ENGINE
+   * ============================================================
+   */
+
+  const date = String(req.query.date || "").trim();
+
+  // Require YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({
+      success: false,
+      error: "A valid date is required in YYYY-MM-DD format."
+    });
+  }
+
+  // Validate calendar date
+  const [year, month, day] = date.split("-").map(Number);
+  const checkDate = new Date(
+    Date.UTC(year, month - 1, day)
+  );
+
+  if (
+    checkDate.getUTCFullYear() !== year ||
+    checkDate.getUTCMonth() !== month - 1 ||
+    checkDate.getUTCDate() !== day
+  ) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid calendar date."
+    });
+  }
+
+  try {
+    const providerUrl =
+      `https://v3.football.api-sports.io/fixtures?date=${encodeURIComponent(date)}`;
+
+    const response = await fetch(providerUrl, {
+      method: "GET",
+      headers: {
+        "x-apisports-key": apiKey,
+        "Accept": "application/json"
+      }
+    });
+
+    const rawText = await response.text();
 
     let data;
 
-
     try {
-
-      data =
-        text
-          ? JSON.parse(text)
-          : {};
-
+      data = JSON.parse(rawText);
     } catch (parseError) {
-
-      console.error(
-        "API-Football returned non-JSON:",
-        text?.slice(0, 500)
-      );
-
-
       return res.status(502).json({
-
         success: false,
-
-        error:
-          "Football data provider returned an invalid response.",
-
-        providerStatus:
-          response.status
-
+        error: "Football data provider returned invalid JSON.",
+        providerStatus: response.status
       });
-
     }
 
-
-    // ==========================================================
-    // HTTP ERROR
-    // ==========================================================
-
+    // HTTP-level provider error
     if (!response.ok) {
-
-      console.error(
-        "API-Football HTTP error:",
-        response.status,
-        data
-      );
-
-
-      return res.status(
-        response.status >= 400 &&
-        response.status <= 599
-          ? response.status
-          : 502
-      ).json({
-
+      return res.status(502).json({
         success: false,
-
-        error:
-          "Football data provider request failed.",
-
-        providerStatus:
-          response.status,
-
-        providerErrors:
-          data?.errors || {},
-
-        message:
-          data?.message ||
-          null
-
+        error: "Football data provider request failed.",
+        providerStatus: response.status,
+        providerErrors: data && data.errors
+          ? data.errors
+          : {},
+        message: data && data.message
+          ? data.message
+          : null
       });
-
     }
 
-
-    // ==========================================================
-    // API-FOOTBALL APPLICATION ERRORS
-    // ==========================================================
-
+    // API-Football application-level error
     if (
-      data?.errors &&
+      data &&
+      data.errors &&
       typeof data.errors === "object" &&
       Object.keys(data.errors).length > 0
     ) {
-
-      console.error(
-        "API-Football application errors:",
-        data.errors
-      );
-
-
       return res.status(502).json({
-
         success: false,
-
-        error:
-          "Football data provider returned an error.",
-
-        providerErrors:
-          data.errors
-
+        error: "Football data provider returned an error.",
+        providerErrors: data.errors,
+        providerMessage: data.message || null
       });
-
     }
 
-
-    // ==========================================================
-    // FIXTURE ARRAY
-    // ==========================================================
-
     const fixtures =
-      Array.isArray(data?.response)
+      Array.isArray(data && data.response)
         ? data.response
         : [];
 
+    /*
+     * ============================================================
+     * SUMMARY INFORMATION
+     * ============================================================
+     */
 
-    // ==========================================================
-    // PAGINATION
-    // ==========================================================
+    const countries = [
+      ...new Set(
+        fixtures
+          .map(f => f && f.league && f.league.country)
+          .filter(Boolean)
+      )
+    ].sort();
 
-    const paging =
-      data?.paging || {};
+    const leagues = [
+      ...new Set(
+        fixtures
+          .map(f => f && f.league && f.league.name)
+          .filter(Boolean)
+      )
+    ].sort();
 
-
-    const currentPage =
-      Number(paging.current) || 1;
-
-
-    const totalPages =
-      Number(paging.total) || 1;
-
-
-    // ==========================================================
-    // BASIC FIXTURE METADATA
-    // ==========================================================
-
-    const fixtureCount =
-      fixtures.length;
-
-
-    const countries =
-      [
-        ...new Set(
-          fixtures
-            .map(
-              fixture =>
-                fixture?.league?.country
-            )
-            .filter(Boolean)
-        )
-      ]
-      .sort(
-        (a, b) =>
-          String(a).localeCompare(
-            String(b)
-          )
-      );
-
-
-    const leagues =
-      [
-        ...new Map(
-          fixtures
-            .filter(
-              fixture =>
-                fixture?.league?.id
-            )
-            .map(
-              fixture => [
-                fixture.league.id,
-                {
-                  id:
-                    fixture.league.id,
-
-                  name:
-                    fixture.league.name ||
-                    null,
-
-                  country:
-                    fixture.league.country ||
-                    null,
-
-                  logo:
-                    fixture.league.logo ||
-                    null,
-
-                  flag:
-                    fixture.league.flag ||
-                    null
-                }
-              ]
-            )
-        ).values()
-      ];
-
-
-    // ==========================================================
-    // STATUS SUMMARY
-    // ==========================================================
+    const summary = {
+      total: fixtures.length,
+      upcoming: 0,
+      live: 0,
+      finished: 0,
+      postponed: 0,
+      cancelled: 0,
+      other: 0
+    };
 
     const statusSummary = {};
 
+    fixtures.forEach(fixture => {
+      const status =
+        fixture &&
+        fixture.fixture &&
+        fixture.fixture.status
+          ? fixture.fixture.status
+          : {};
 
-    fixtures.forEach(
-      fixture => {
+      const short = String(
+        status.short || "UNKNOWN"
+      ).toUpperCase();
 
-        const status =
-          String(
-            fixture
-              ?.fixture
-              ?.status
-              ?.short ||
-            "UNKNOWN"
-          )
-          .toUpperCase();
+      statusSummary[short] =
+        (statusSummary[short] || 0) + 1;
 
-
-        statusSummary[status] =
-          (
-            statusSummary[status] ||
-            0
-          ) + 1;
-
+      if (
+        ["NS", "TBD"].includes(short)
+      ) {
+        summary.upcoming++;
+      } else if (
+        ["1H", "HT", "2H", "ET", "BT", "P"].includes(short)
+      ) {
+        summary.live++;
+      } else if (
+        ["FT", "AET", "PEN"].includes(short)
+      ) {
+        summary.finished++;
+      } else if (short === "PST") {
+        summary.postponed++;
+      } else if (
+        ["CANC", "ABD", "AWD", "WO"].includes(short)
+      ) {
+        summary.cancelled++;
+      } else {
+        summary.other++;
       }
-    );
+    });
 
-
-    // ==========================================================
-    // UPCOMING / LIVE / FINISHED SUMMARY
-    // ==========================================================
-
-    const upcomingStatuses =
-      new Set([
-        "NS",
-        "TBD"
-      ]);
-
-
-    const liveStatuses =
-      new Set([
-        "1H",
-        "HT",
-        "2H",
-        "ET",
-        "BT",
-        "P",
-        "LIVE"
-      ]);
-
-
-    const finishedStatuses =
-      new Set([
-        "FT",
-        "AET",
-        "PEN",
-        "AWD",
-        "WO"
-      ]);
-
-
-    const postponedStatuses =
-      new Set([
-        "PST"
-      ]);
-
-
-    const cancelledStatuses =
-      new Set([
-        "CANC",
-        "ABD"
-      ]);
-
-
-    let upcoming =
-      0;
-
-    let live =
-      0;
-
-    let finished =
-      0;
-
-    let postponed =
-      0;
-
-    let cancelled =
-      0;
-
-
-    fixtures.forEach(
-      fixture => {
-
-        const status =
-          String(
-            fixture
-              ?.fixture
-              ?.status
-              ?.short ||
-            ""
-          )
-          .toUpperCase();
-
-
-        if (
-          upcomingStatuses.has(
-            status
-          )
-        ) {
-
-          upcoming++;
-
-        }
-
-        else if (
-          liveStatuses.has(
-            status
-          )
-        ) {
-
-          live++;
-
-        }
-
-        else if (
-          finishedStatuses.has(
-            status
-          )
-        ) {
-
-          finished++;
-
-        }
-
-        else if (
-          postponedStatuses.has(
-            status
-          )
-        ) {
-
-          postponed++;
-
-        }
-
-        else if (
-          cancelledStatuses.has(
-            status
-          )
-        ) {
-
-          cancelled++;
-
-        }
-
-      }
-    );
-
-
-    // ==========================================================
-    // API QUOTA INFORMATION
-    //
-    // API-Sports exposes rate-limit information through
-    // response headers. We read it when available.
-    // ==========================================================
-
-    const requestsRemaining =
-      response.headers.get(
-        "x-ratelimit-requests-remaining"
-      );
-
-
-    const requestsLimit =
-      response.headers.get(
-        "x-ratelimit-requests-limit"
-      );
-
-
-    const quota = {
-
-      requestsRemaining:
-        requestsRemaining !== null
-          ? Number(
-              requestsRemaining
-            )
-          : null,
-
-      requestsLimit:
-        requestsLimit !== null
-          ? Number(
-              requestsLimit
-            )
-          : null
-
-    };
-
-
-    // ==========================================================
-    // RESPONSE HEADERS
-    //
-    // The frontend normally fetches fresh fixture data.
-    // Avoid aggressive caching because live fixture states
-    // can change.
-    // ==========================================================
+    /*
+     * ============================================================
+     * CACHE CONTROL
+     * ============================================================
+     */
 
     res.setHeader(
       "Cache-Control",
-      "no-store"
+      "no-store, max-age=0"
     );
 
-
-    // ==========================================================
-    // FINAL RESPONSE
-    // ==========================================================
+    /*
+     * ============================================================
+     * NORMAL RESPONSE
+     * ============================================================
+     */
 
     return res.status(200).json({
-
       success: true,
 
-      version:
-        "TomsonStakes Fixtures V4.0",
+      version: "TomsonStakes Fixtures V4.0",
 
-      source:
-        "API-Football",
+      source: "API-Football",
 
       request: {
-
         date,
-
-        timezone:
-          "Africa/Lagos",
-
-        timezoneLabel:
-          "WAT"
-
+        timezone: "Africa/Lagos",
+        timezoneLabel: "WAT"
       },
 
       results: {
-
-        count:
-          fixtureCount,
-
-        countries:
-          countries.length,
-
-        leagues:
-          leagues.length
-
+        count: fixtures.length,
+        countries,
+        leagues
       },
 
-      summary: {
-
-        total:
-          fixtureCount,
-
-        upcoming,
-
-        live,
-
-        finished,
-
-        postponed,
-
-        cancelled,
-
-        other:
-          fixtureCount -
-          (
-            upcoming +
-            live +
-            finished +
-            postponed +
-            cancelled
-          )
-
-      },
+      summary,
 
       statusSummary,
 
@@ -685,63 +313,52 @@ export default async function handler(req, res) {
 
       leagues,
 
-      paging: {
+      paging: data && data.paging
+        ? data.paging
+        : null,
 
-        current:
-          currentPage,
+      quota: data && data.response
+        ? null
+        : null,
 
-        total:
-          totalPages
-
-      },
-
-      quota,
-
-      /*
-       * Keep the original API-Football fixture objects intact.
-       *
-       * This is important because the frontend uses:
-       *
-       * fixture.id
-       * fixture.date
-       * fixture.timestamp
-       * fixture.status
-       * league
-       * teams
-       * goals
-       *
-       * and other fields.
-       */
-
-      response:
-        fixtures
-
+      response: fixtures
     });
 
   } catch (error) {
-
     console.error(
-      "TOMSONSTAKES FIXTURES V4.0 ERROR:",
+      "Fixture provider error:",
       error
     );
 
-
     return res.status(500).json({
-
       success: false,
-
-      version:
-        "TomsonStakes Fixtures V4.0",
-
-      error:
-        "Unable to retrieve football fixtures.",
-
-      details:
-        error?.message ||
-        "Unknown server error."
-
+      error: "Unable to connect to football data provider.",
+      message: error && error.message
+        ? error.message
+        : "Unknown server error."
     });
-
   }
+};
 
-}
+After deployment
+
+Don't create another file.
+
+Open this:
+
+https://YOUR-VERCEL-DOMAIN.vercel.app/api/fixtures?status=1
+
+For example:
+
+https://tomsonstakes.vercel.app/api/fixtures?status=1
+
+Then send me the complete JSON response.
+
+The key part we're looking for is:
+
+"account": {...},
+"subscription": {...},
+"requests": {...},
+"providerErrors": {...}
+
+This keeps us within your Vercel Hobby limit and lets us diagnose the suspended API-Football account using the function you already have.
