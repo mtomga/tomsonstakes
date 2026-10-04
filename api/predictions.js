@@ -3,895 +3,1026 @@ const { createClient } = require("@supabase/supabase-js");
 const supabaseUrl = process.env.SUPABASE_URL;
 
 const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY;
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-    throw new Error(
-        "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable."
-    );
+  throw new Error(
+    "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable."
+  );
 }
 
 const supabase = createClient(
-    supabaseUrl,
-    supabaseKey
+  supabaseUrl,
+  supabaseKey
 );
 
-/* =========================================================
+
+/* ==========================================================
    HELPERS
-========================================================= */
+========================================================== */
 
 function sendJson(res, status, data) {
-    res.status(status);
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify(data));
+
+  res.statusCode = status;
+
+  res.setHeader(
+    "Content-Type",
+    "application/json"
+  );
+
+  res.end(
+    JSON.stringify(data)
+  );
+
 }
 
-function readBody(req) {
-    return new Promise((resolve, reject) => {
-        let body = "";
-
-        req.on("data", chunk => {
-            body += chunk;
-        });
-
-        req.on("end", () => {
-            if (!body) {
-                resolve({});
-                return;
-            }
-
-            try {
-                resolve(JSON.parse(body));
-            } catch (error) {
-                reject(
-                    new Error("Invalid JSON request body.")
-                );
-            }
-        });
-
-        req.on("error", reject);
-    });
-}
 
 function cleanStatus(value) {
-    const status =
-        String(value || "DRAFT")
-            .trim()
-            .toUpperCase();
 
-    if (
-        status !== "DRAFT" &&
-        status !== "PUBLISHED" &&
-        status !== "UNPUBLISHED"
-    ) {
-        return null;
-    }
+  const status =
+    String(value || "DRAFT")
+      .toUpperCase();
 
-    return status;
+  if (
+    status !== "DRAFT" &&
+    status !== "PUBLISHED" &&
+    status !== "UNPUBLISHED"
+  ) {
+
+    return null;
+
+  }
+
+  return status;
+
 }
 
-function cleanText(value) {
-    if (
-        value === undefined ||
-        value === null
-    ) {
-        return null;
-    }
 
-    const text = String(value).trim();
+function normalizePrediction(row) {
 
-    return text || null;
+  return {
+    ...row,
+
+    // Frontend uses "prediction".
+    // Database currently uses "selection".
+    prediction:
+      row.prediction ||
+      row.selection ||
+      ""
+  };
+
 }
 
-/* =========================================================
-   MANUAL PREDICTION VALIDATION
-
-   New TomsonStakes structure:
-
-   prediction_date
-   country
-   league
-   home_team
-   away_team
-   kickoff
-   prediction
-========================================================= */
 
 function validatePrediction(body) {
 
-    if (!body.prediction_date) {
-        return "Prediction date is required.";
-    }
+  const predictionDate =
+    body.prediction_date;
 
-    if (!body.country) {
-        return "Country is required.";
-    }
+  const homeTeam =
+    body.home_team;
 
-    if (!body.league) {
-        return "League is required.";
-    }
+  const awayTeam =
+    body.away_team;
 
-    if (!body.home_team) {
-        return "Team A is required.";
-    }
+  const country =
+    body.country;
 
-    if (!body.away_team) {
-        return "Team B is required.";
-    }
+  const league =
+    body.league;
 
-    if (!body.kickoff) {
-        return "Match time is required.";
-    }
+  const kickoff =
+    body.kickoff;
 
-    if (!body.prediction) {
-        return "Prediction is required.";
-    }
+  const prediction =
+    body.prediction ||
+    body.selection;
 
-    return null;
+
+  if (!predictionDate) {
+
+    return "prediction_date is required.";
+
+  }
+
+  if (!homeTeam) {
+
+    return "home_team is required.";
+
+  }
+
+  if (!awayTeam) {
+
+    return "away_team is required.";
+
+  }
+
+  if (!country) {
+
+    return "country is required.";
+
+  }
+
+  if (!league) {
+
+    return "league is required.";
+
+  }
+
+  if (!kickoff) {
+
+    return "kickoff/time is required.";
+
+  }
+
+  if (!prediction) {
+
+    return "prediction is required.";
+
+  }
+
+  return null;
+
 }
 
-/* =========================================================
-   DAILY SLIP VALIDATION
-========================================================= */
 
-function validateDailySlip(body) {
-
-    if (!body.prediction_date) {
-        return "Prediction date is required.";
-    }
-
-    if (!body.booking_code) {
-        return "Booking code is required.";
-    }
-
-    if (!body.bookmaker) {
-        return "Bookmaker is required.";
-    }
-
-    return null;
-}
-
-/* =========================================================
-   BUILD MANUAL PREDICTION
-========================================================= */
-
-function buildPredictionData(body, status) {
-
-    const predictionData = {
-
-        prediction_date:
-            body.prediction_date,
-
-        country:
-            cleanText(body.country),
-
-        league:
-            cleanText(body.league),
-
-        home_team:
-            cleanText(body.home_team),
-
-        away_team:
-            cleanText(body.away_team),
-
-        kickoff:
-            cleanText(body.kickoff),
-
-        prediction:
-            cleanText(body.prediction),
-
-        status:
-            status,
-
-        updated_at:
-            new Date().toISOString()
-    };
-
-    /*
-     * These old fields are intentionally retained only
-     * when the existing Supabase table still contains them.
-     *
-     * They are NOT required by the new manual system.
-     */
-
-    if (body.fixture_id !== undefined) {
-        predictionData.fixture_id =
-            body.fixture_id || null;
-    }
-
-    if (body.home_team_id !== undefined) {
-        predictionData.home_team_id =
-            body.home_team_id || null;
-    }
-
-    if (body.away_team_id !== undefined) {
-        predictionData.away_team_id =
-            body.away_team_id || null;
-    }
-
-    /*
-     * Keep compatibility with the existing admin.html
-     * while the frontend is being migrated.
-     */
-
-    if (body.market !== undefined) {
-        predictionData.market =
-            body.market || null;
-    }
-
-    if (body.confidence !== undefined) {
-
-        const confidence =
-            Number(body.confidence);
-
-        if (
-            Number.isInteger(confidence) &&
-            confidence >= 5 &&
-            confidence <= 10
-        ) {
-            predictionData.confidence =
-                confidence;
-        }
-    }
-
-    if (body.analysis !== undefined) {
-        predictionData.analysis =
-            cleanText(body.analysis);
-    }
-
-    if (body.selection !== undefined) {
-        predictionData.selection =
-            cleanText(body.selection);
-    }
-
-    if (body.result !== undefined) {
-        predictionData.result =
-            cleanText(body.result) ||
-            "pending";
-    }
-
-    if (status === "PUBLISHED") {
-        predictionData.published_at =
-            new Date().toISOString();
-    }
-
-    return predictionData;
-}
-
-/* =========================================================
-   HANDLER
-========================================================= */
+/* ==========================================================
+   MAIN HANDLER
+========================================================== */
 
 module.exports = async function handler(req, res) {
 
-    try {
+  try {
 
-        /* =====================================================
-           GET PREDICTIONS
-           
-           /api/predictions?date=2026-10-04
-        ===================================================== */
+    /* ======================================================
+       GET
+    ====================================================== */
 
-        if (req.method === "GET") {
+    if (req.method === "GET") {
 
-            const date =
-                req.query?.date ||
-                req.query?.prediction_date;
+      const {
+        date,
+        type
+      } = req.query || {};
 
-            let query =
-                supabase
-                    .from("predictions")
-                    .select("*")
-                    .order(
-                        "kickoff",
-                        {
-                            ascending: true
-                        }
-                    );
 
-            if (date) {
+      /* -----------------------------------------------
+         DAILY SLIP
+      ------------------------------------------------ */
 
-                query =
-                    query.eq(
-                        "prediction_date",
-                        date
-                    );
+      if (type === "daily_slip") {
 
-            }
+        if (!date) {
 
-            const {
-                data,
-                error
-            } = await query;
-
-            if (error) {
-
-                console.error(
-                    "GET predictions error:",
-                    error
-                );
-
-                return sendJson(
-                    res,
-                    500,
-                    {
-                        success: false,
-                        error:
-                            error.message,
-                        details:
-                            error.details ||
-                            null,
-                        hint:
-                            error.hint ||
-                            null
-                    }
-                );
-            }
-
-            return sendJson(
-                res,
-                200,
-                {
-                    success: true,
-                    count:
-                        data?.length || 0,
-                    predictions:
-                        data || []
-                }
-            );
-        }
-
-
-        /* =====================================================
-           POST
-           
-           CREATE MANUAL PREDICTION
-           
-           OR
-           
-           CREATE / UPDATE DAILY SLIP
-        ===================================================== */
-
-        if (req.method === "POST") {
-
-            const body =
-                await readBody(req);
-
-
-            /* =================================================
-               DAILY SLIP
-            ================================================= */
-
-            if (
-                body.type ===
-                "daily_slip"
-            ) {
-
-                const validationError =
-                    validateDailySlip(
-                        body
-                    );
-
-                if (validationError) {
-
-                    return sendJson(
-                        res,
-                        400,
-                        {
-                            success: false,
-                            error:
-                                validationError
-                        }
-                    );
-                }
-
-                const status =
-                    cleanStatus(
-                        body.status
-                    ) ||
-                    "DRAFT";
-
-                const isPublished =
-                    status ===
-                    "PUBLISHED";
-
-                const now =
-                    new Date()
-                        .toISOString();
-
-                const slipData = {
-
-                    prediction_date:
-                        body.prediction_date,
-
-                    booking_code:
-                        cleanText(
-                            body.booking_code
-                        ),
-
-                    bookmaker:
-                        cleanText(
-                            body.bookmaker
-                        ),
-
-                    status:
-                        status,
-
-                    is_published:
-                        isPublished,
-
-                    updated_at:
-                        now
-                };
-
-                if (isPublished) {
-
-                    slipData.published_at =
-                        now;
-
-                }
-
-                const {
-                    data,
-                    error
-                } =
-                    await supabase
-                        .from(
-                            "daily_slips"
-                        )
-                        .upsert(
-                            slipData,
-                            {
-                                onConflict:
-                                    "prediction_date"
-                            }
-                        )
-                        .select()
-                        .single();
-
-                if (error) {
-
-                    console.error(
-                        "Daily slip error:",
-                        error
-                    );
-
-                    return sendJson(
-                        res,
-                        500,
-                        {
-                            success: false,
-                            error:
-                                error.message,
-                            details:
-                                error.details ||
-                                null,
-                            hint:
-                                error.hint ||
-                                null
-                        }
-                    );
-                }
-
-                return sendJson(
-                    res,
-                    200,
-                    {
-                        success: true,
-                        type:
-                            "daily_slip",
-                        slip:
-                            data
-                    }
-                );
-            }
-
-
-            /* =================================================
-               MANUAL PREDICTION
-            ================================================= */
-
-            const validationError =
-                validatePrediction(
-                    body
-                );
-
-            if (validationError) {
-
-                return sendJson(
-                    res,
-                    400,
-                    {
-                        success: false,
-                        error:
-                            validationError
-                    }
-                );
-            }
-
-            const status =
-                cleanStatus(
-                    body.status
-                ) ||
-                "DRAFT";
-
-            const predictionData =
-                buildPredictionData(
-                    body,
-                    status
-                );
-
-            const {
-                data,
-                error
-            } =
-                await supabase
-                    .from("predictions")
-                    .insert(
-                        predictionData
-                    )
-                    .select()
-                    .single();
-
-            if (error) {
-
-                console.error(
-                    "Prediction insert error:",
-                    error
-                );
-
-                return sendJson(
-                    res,
-                    500,
-                    {
-                        success: false,
-                        error:
-                            error.message,
-                        details:
-                            error.details ||
-                            null,
-                        hint:
-                            error.hint ||
-                            null
-                    }
-                );
-            }
-
-            return sendJson(
-                res,
-                200,
-                {
-                    success: true,
-                    prediction:
-                        data
-                }
-            );
-        }
-
-
-        /* =====================================================
-           PUT
-           
-           EDIT / PUBLISH EXISTING PREDICTION
-        ===================================================== */
-
-        if (req.method === "PUT") {
-
-            const body =
-                await readBody(req);
-
-            const id =
-                body.id ||
-                req.query?.id;
-
-            if (!id) {
-
-                return sendJson(
-                    res,
-                    400,
-                    {
-                        success: false,
-                        error:
-                            "Prediction id is required."
-                    }
-                );
-            }
-
-
-            /*
-             * Special case:
-             * Publishing an existing record.
-             *
-             * The current admin page sends only:
-             *
-             * {
-             *   id,
-             *   status: "PUBLISHED"
-             * }
-             *
-             * So don't require the complete form
-             * for this operation.
-             */
-
-            if (
-                String(
-                    body.status || ""
-                ).toUpperCase() ===
-                "PUBLISHED" &&
-                !body.home_team &&
-                !body.away_team
-            ) {
-
-                const {
-                    data,
-                    error
-                } =
-                    await supabase
-                        .from(
-                            "predictions"
-                        )
-                        .update({
-                            status:
-                                "PUBLISHED",
-
-                            published_at:
-                                new Date()
-                                    .toISOString(),
-
-                            updated_at:
-                                new Date()
-                                    .toISOString()
-                        })
-                        .eq(
-                            "id",
-                            id
-                        )
-                        .select()
-                        .single();
-
-                if (error) {
-
-                    console.error(
-                        "Prediction publish error:",
-                        error
-                    );
-
-                    return sendJson(
-                        res,
-                        500,
-                        {
-                            success: false,
-                            error:
-                                error.message,
-                            details:
-                                error.details ||
-                                null,
-                            hint:
-                                error.hint ||
-                                null
-                        }
-                    );
-                }
-
-                return sendJson(
-                    res,
-                    200,
-                    {
-                        success: true,
-                        prediction:
-                            data
-                    }
-                );
-            }
-
-
-            /* =================================================
-               NORMAL EDIT
-            ================================================= */
-
-            const validationError =
-                validatePrediction(
-                    body
-                );
-
-            if (validationError) {
-
-                return sendJson(
-                    res,
-                    400,
-                    {
-                        success: false,
-                        error:
-                            validationError
-                    }
-                );
-            }
-
-            const status =
-                cleanStatus(
-                    body.status
-                );
-
-            if (!status) {
-
-                return sendJson(
-                    res,
-                    400,
-                    {
-                        success: false,
-                        error:
-                            "Invalid prediction status."
-                    }
-                );
-            }
-
-            const updateData =
-                buildPredictionData(
-                    body,
-                    status
-                );
-
-            const {
-                data,
-                error
-            } =
-                await supabase
-                    .from(
-                        "predictions"
-                    )
-                    .update(
-                        updateData
-                    )
-                    .eq(
-                        "id",
-                        id
-                    )
-                    .select()
-                    .single();
-
-            if (error) {
-
-                console.error(
-                    "Prediction update error:",
-                    error
-                );
-
-                return sendJson(
-                    res,
-                    500,
-                    {
-                        success: false,
-                        error:
-                            error.message,
-                        details:
-                            error.details ||
-                            null,
-                        hint:
-                            error.hint ||
-                            null
-                    }
-                );
-            }
-
-            return sendJson(
-                res,
-                200,
-                {
-                    success: true,
-                    prediction:
-                        data
-                }
-            );
-        }
-
-
-        /* =====================================================
-           DELETE
-        ===================================================== */
-
-        if (req.method === "DELETE") {
-
-            const id =
-                req.query?.id;
-
-            if (!id) {
-
-                return sendJson(
-                    res,
-                    400,
-                    {
-                        success: false,
-                        error:
-                            "Prediction id is required."
-                    }
-                );
-            }
-
-            const {
-                data,
-                error
-            } =
-                await supabase
-                    .from(
-                        "predictions"
-                    )
-                    .delete()
-                    .eq(
-                        "id",
-                        id
-                    )
-                    .select()
-                    .single();
-
-            if (error) {
-
-                console.error(
-                    "Prediction delete error:",
-                    error
-                );
-
-                return sendJson(
-                    res,
-                    500,
-                    {
-                        success: false,
-                        error:
-                            error.message,
-                        details:
-                            error.details ||
-                            null,
-                        hint:
-                            error.hint ||
-                            null
-                    }
-                );
-            }
-
-            return sendJson(
-                res,
-                200,
-                {
-                    success: true,
-                    deleted:
-                        data
-                }
-            );
-        }
-
-
-        /* =====================================================
-           METHOD NOT ALLOWED
-        ===================================================== */
-
-        return sendJson(
+          return sendJson(
             res,
-            405,
+            400,
             {
-                success: false,
-                error:
-                    "Method not allowed."
+              success: false,
+              error: "date is required."
             }
-        );
+          );
 
-    }
+        }
 
-    catch (error) {
 
-        console.error(
-            "Predictions API error:",
+        const {
+          data,
+          error
+        } = await supabase
+          .from("daily_slips")
+          .select("*")
+          .eq("prediction_date", date)
+          .maybeSingle();
+
+
+        if (error) {
+
+          console.error(
+            "Daily slip GET error:",
             error
-        );
+          );
 
-        return sendJson(
+          return sendJson(
             res,
             500,
             {
-                success: false,
-                error:
-                    error.message ||
-                    "Internal server error."
+              success: false,
+              error: error.message
             }
+          );
+
+        }
+
+
+        return sendJson(
+          res,
+          200,
+          {
+            success: true,
+            slip: data || null
+          }
         );
+
+      }
+
+
+      /* -----------------------------------------------
+         PREDICTIONS
+      ------------------------------------------------ */
+
+      let query = supabase
+        .from("predictions")
+        .select("*")
+        .order(
+          "created_at",
+          {
+            ascending: false
+          }
+        );
+
+
+      if (date) {
+
+        query = query.eq(
+          "prediction_date",
+          date
+        );
+
+      }
+
+
+      const {
+        data,
+        error
+      } = await query;
+
+
+      if (error) {
+
+        console.error(
+          "Prediction GET error:",
+          error
+        );
+
+        return sendJson(
+          res,
+          500,
+          {
+            success: false,
+            error: error.message
+          }
+        );
+
+      }
+
+
+      return sendJson(
+        res,
+        200,
+        {
+          success: true,
+          predictions:
+            (data || [])
+              .map(normalizePrediction)
+        }
+      );
+
     }
+
+
+    /* ======================================================
+       POST
+    ====================================================== */
+
+    if (req.method === "POST") {
+
+      const body =
+        typeof req.body === "string"
+          ? JSON.parse(req.body || "{}")
+          : (req.body || {});
+
+
+      /* -----------------------------------------------
+         DAILY SLIP
+      ------------------------------------------------ */
+
+      if (
+        body.type === "daily_slip"
+      ) {
+
+        const predictionDate =
+          body.prediction_date;
+
+        const bookingCode =
+          String(
+            body.booking_code || ""
+          ).trim();
+
+        const bookmaker =
+          String(
+            body.bookmaker || ""
+          ).trim();
+
+        const status =
+          cleanStatus(
+            body.status
+          );
+
+
+        if (!predictionDate) {
+
+          return sendJson(
+            res,
+            400,
+            {
+              success: false,
+              error:
+                "prediction_date is required."
+            }
+          );
+
+        }
+
+
+        if (!bookingCode) {
+
+          return sendJson(
+            res,
+            400,
+            {
+              success: false,
+              error:
+                "booking_code is required."
+            }
+          );
+
+        }
+
+
+        if (!bookmaker) {
+
+          return sendJson(
+            res,
+            400,
+            {
+              success: false,
+              error:
+                "bookmaker is required."
+            }
+          );
+
+        }
+
+
+        if (!status) {
+
+          return sendJson(
+            res,
+            400,
+            {
+              success: false,
+              error:
+                "Invalid slip status."
+            }
+          );
+
+        }
+
+
+        const isPublished =
+          status === "PUBLISHED";
+
+
+        const slipData = {
+
+          prediction_date:
+            predictionDate,
+
+          booking_code:
+            bookingCode,
+
+          bookmaker:
+            bookmaker,
+
+          status:
+            status,
+
+          is_published:
+            isPublished,
+
+          updated_at:
+            new Date().toISOString()
+
+        };
+
+
+        if (isPublished) {
+
+          slipData.published_at =
+            new Date().toISOString();
+
+        }
+
+
+        const {
+          data,
+          error
+        } = await supabase
+          .from("daily_slips")
+          .upsert(
+            slipData,
+            {
+              onConflict:
+                "prediction_date"
+            }
+          )
+          .select()
+          .single();
+
+
+        if (error) {
+
+          console.error(
+            "Daily slip POST error:",
+            error
+          );
+
+          return sendJson(
+            res,
+            500,
+            {
+              success: false,
+              error: error.message
+            }
+          );
+
+        }
+
+
+        return sendJson(
+          res,
+          200,
+          {
+            success: true,
+            slip: data
+          }
+        );
+
+      }
+
+
+      /* -----------------------------------------------
+         NORMAL MANUAL PREDICTION
+      ------------------------------------------------ */
+
+      const validationError =
+        validatePrediction(body);
+
+
+      if (validationError) {
+
+        return sendJson(
+          res,
+          400,
+          {
+            success: false,
+            error: validationError
+          }
+        );
+
+      }
+
+
+      const status =
+        cleanStatus(
+          body.status
+        );
+
+
+      if (!status) {
+
+        return sendJson(
+          res,
+          400,
+          {
+            success: false,
+            error:
+              "Invalid prediction status."
+          }
+        );
+
+      }
+
+
+      const selection =
+        String(
+          body.prediction ||
+          body.selection ||
+          ""
+        ).trim();
+
+
+      /*
+       * IMPORTANT:
+       *
+       * Manual matches do not come from a football API.
+       * Therefore fixture_id and team IDs are intentionally null.
+       *
+       * "market" and "confidence" are retained for compatibility
+       * with the existing database.
+       */
+
+      const predictionData = {
+
+        prediction_date:
+          body.prediction_date,
+
+        fixture_id:
+          body.fixture_id ||
+          null,
+
+        home_team:
+          body.home_team,
+
+        away_team:
+          body.away_team,
+
+        home_team_id:
+          body.home_team_id ||
+          null,
+
+        away_team_id:
+          body.away_team_id ||
+          null,
+
+        country:
+          body.country ||
+          null,
+
+        league:
+          body.league ||
+          null,
+
+        kickoff:
+          body.kickoff ||
+          null,
+
+        market:
+          body.market ||
+          "MANUAL",
+
+        selection:
+          selection,
+
+        /*
+         * Keep an ordinary default so an older NOT NULL
+         * confidence column will not break manual entries.
+         */
+
+        confidence:
+          Number.isInteger(
+            Number(body.confidence)
+          )
+            ? Number(body.confidence)
+            : 7,
+
+        analysis:
+          body.analysis ||
+          null,
+
+        status:
+          status,
+
+        result:
+          body.result ||
+          "pending",
+
+        updated_at:
+          new Date().toISOString()
+
+      };
+
+
+      if (status === "PUBLISHED") {
+
+        predictionData.published_at =
+          new Date().toISOString();
+
+      }
+
+
+      const {
+        data,
+        error
+      } = await supabase
+        .from("predictions")
+        .insert(predictionData)
+        .select()
+        .single();
+
+
+      if (error) {
+
+        console.error(
+          "Prediction POST error:",
+          error
+        );
+
+        return sendJson(
+          res,
+          500,
+          {
+            success: false,
+            error: error.message
+          }
+        );
+
+      }
+
+
+      return sendJson(
+        res,
+        201,
+        {
+          success: true,
+          prediction:
+            normalizePrediction(data)
+        }
+      );
+
+    }
+
+
+    /* ======================================================
+       PUT
+    ====================================================== */
+
+    if (req.method === "PUT") {
+
+      const body =
+        typeof req.body === "string"
+          ? JSON.parse(req.body || "{}")
+          : (req.body || {});
+
+
+      const id =
+        body.id;
+
+
+      if (!id) {
+
+        return sendJson(
+          res,
+          400,
+          {
+            success: false,
+            error:
+              "Prediction id is required."
+          }
+        );
+
+      }
+
+
+      const status =
+        body.status
+          ? cleanStatus(body.status)
+          : null;
+
+
+      if (
+        body.status &&
+        !status
+      ) {
+
+        return sendJson(
+          res,
+          400,
+          {
+            success: false,
+            error:
+              "Invalid prediction status."
+          }
+        );
+
+      }
+
+
+      /*
+       * If this is only a Publish action,
+       * update the existing record without requiring
+       * all the manual-entry fields again.
+       */
+
+      const onlyStatusUpdate =
+        status &&
+        !body.home_team &&
+        !body.away_team &&
+        !body.prediction &&
+        !body.selection;
+
+
+      if (onlyStatusUpdate) {
+
+        const updateData = {
+
+          status:
+            status,
+
+          updated_at:
+            new Date().toISOString()
+
+        };
+
+
+        if (status === "PUBLISHED") {
+
+          updateData.published_at =
+            new Date().toISOString();
+
+        }
+
+
+        const {
+          data,
+          error
+        } = await supabase
+          .from("predictions")
+          .update(updateData)
+          .eq("id", id)
+          .select()
+          .single();
+
+
+        if (error) {
+
+          console.error(
+            "Prediction status update error:",
+            error
+          );
+
+          return sendJson(
+            res,
+            500,
+            {
+              success: false,
+              error: error.message
+            }
+          );
+
+        }
+
+
+        return sendJson(
+          res,
+          200,
+          {
+            success: true,
+            prediction:
+              normalizePrediction(data)
+          }
+        );
+
+      }
+
+
+      /* -----------------------------------------------
+         FULL EDIT
+      ------------------------------------------------ */
+
+      const validationError =
+        validatePrediction(body);
+
+
+      if (validationError) {
+
+        return sendJson(
+          res,
+          400,
+          {
+            success: false,
+            error: validationError
+          }
+        );
+
+      }
+
+
+      const finalStatus =
+        status ||
+        "DRAFT";
+
+
+      const selection =
+        String(
+          body.prediction ||
+          body.selection ||
+          ""
+        ).trim();
+
+
+      const updateData = {
+
+        prediction_date:
+          body.prediction_date,
+
+        home_team:
+          body.home_team,
+
+        away_team:
+          body.away_team,
+
+        country:
+          body.country ||
+          null,
+
+        league:
+          body.league ||
+          null,
+
+        kickoff:
+          body.kickoff ||
+          null,
+
+        market:
+          body.market ||
+          "MANUAL",
+
+        selection:
+          selection,
+
+        confidence:
+          Number.isInteger(
+            Number(body.confidence)
+          )
+            ? Number(body.confidence)
+            : 7,
+
+        analysis:
+          body.analysis ||
+          null,
+
+        status:
+          finalStatus,
+
+        updated_at:
+          new Date().toISOString()
+
+      };
+
+
+      if (finalStatus === "PUBLISHED") {
+
+        updateData.published_at =
+          new Date().toISOString();
+
+      }
+
+
+      const {
+        data,
+        error
+      } = await supabase
+        .from("predictions")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+
+      if (error) {
+
+        console.error(
+          "Prediction PUT error:",
+          error
+        );
+
+        return sendJson(
+          res,
+          500,
+          {
+            success: false,
+            error: error.message
+          }
+        );
+
+      }
+
+
+      return sendJson(
+        res,
+        200,
+        {
+          success: true,
+          prediction:
+            normalizePrediction(data)
+        }
+      );
+
+    }
+
+
+    /* ======================================================
+       DELETE
+    ====================================================== */
+
+    if (req.method === "DELETE") {
+
+      const id =
+        req.query &&
+        req.query.id;
+
+
+      if (!id) {
+
+        return sendJson(
+          res,
+          400,
+          {
+            success: false,
+            error:
+              "Prediction id is required."
+          }
+        );
+
+      }
+
+
+      const {
+        error
+      } = await supabase
+        .from("predictions")
+        .delete()
+        .eq("id", id);
+
+
+      if (error) {
+
+        console.error(
+          "Prediction DELETE error:",
+          error
+        );
+
+        return sendJson(
+          res,
+          500,
+          {
+            success: false,
+            error: error.message
+          }
+        );
+
+      }
+
+
+      return sendJson(
+        res,
+        200,
+        {
+          success: true,
+          message:
+            "Prediction deleted successfully."
+        }
+      );
+
+    }
+
+
+    /* ======================================================
+       METHOD NOT ALLOWED
+    ====================================================== */
+
+    return sendJson(
+      res,
+      405,
+      {
+        success: false,
+        error:
+          "Method not allowed."
+      }
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "TomsonStakes predictions API error:",
+      error
+    );
+
+    return sendJson(
+      res,
+      500,
+      {
+        success: false,
+        error:
+          error.message ||
+          "Internal server error."
+      }
+    );
+
+  }
+
 };
